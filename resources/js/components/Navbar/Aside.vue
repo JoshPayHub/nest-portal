@@ -23,7 +23,7 @@
     <!-- Logout pinned at bottom Start -->
     <div class="mt-4">
       <a
-        href="/logout"
+        href="/"
         class="bg-white hover:bg-gray-100 text-brand-blue text-xl py-2 px-3 flex gap-3 justify-center items-center rounded-md w-full"
       >
         <div class="ps-1">
