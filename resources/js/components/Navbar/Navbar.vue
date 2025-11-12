@@ -1,7 +1,138 @@
 <script setup>
+import { usePage } from '@inertiajs/vue3'
 import { useDropdown } from '@/composables/dropdown.js'
 
 const { openDropdown, toggleDropdown } = useDropdown()
+const user = usePage().props.auth.user
+
+// Role-based dropdown configurations
+const dropdownsByRole = {
+  Admin: [
+    {
+      label: 'Admin Tools',
+      options: [
+        { name: 'Manage Users', href: '/admin/users' },
+        { name: 'System Settings', href: '/admin/settings' },
+        { name: 'Reports', href: '/admin/reports' }
+      ]
+    },
+    {
+      label: 'Monitoring',
+      options: [
+        { name: 'Audit Logs', href: '/admin/logs' },
+        { name: 'Performance Overview', href: '/admin/performance' }
+      ]
+    },
+    {
+      label: 'Maintenance',
+      options: [
+        { name: 'Backups', href: '/admin/backups' },
+        { name: 'Database Tools', href: '/admin/db' }
+      ]
+    }
+  ],
+
+  Manager: [
+    {
+      label: 'Manager Tools',
+      options: [
+        { name: 'Employee Management', href: '/manager/employees' },
+        { name: 'Team Reports', href: '/manager/reports' }
+      ]
+    },
+    {
+      label: 'Requests',
+      options: [
+        { name: 'Approvals', href: '/manager/approvals' },
+        { name: 'Pending Tasks', href: '/manager/tasks' }
+      ]
+    },
+    {
+      label: 'Department',
+      options: [
+        { name: 'Department Goals', href: '/manager/goals' },
+        { name: 'Budget', href: '/manager/budget' }
+      ]
+    }
+  ],
+
+  Supervisor: [
+    {
+      label: 'Supervisor Tools',
+      options: [
+        { name: 'Team Overview', href: '/supervisor/team' },
+        { name: 'Task Assignments', href: '/supervisor/tasks' }
+      ]
+    },
+    {
+      label: 'Monitoring',
+      options: [
+        { name: 'Attendance Logs', href: '/supervisor/attendance' },
+        { name: 'Performance Reports', href: '/supervisor/performance' }
+      ]
+    },
+    {
+      label: 'Operations',
+      options: [
+        { name: 'Shift Schedules', href: '/supervisor/schedules' },
+        { name: 'Incident Reports', href: '/supervisor/incidents' }
+      ]
+    }
+  ],
+
+  Employee: [
+    {
+      label: 'My Tools',
+      options: [
+        { name: 'My Tasks', href: '/employee/tasks' },
+        { name: 'Attendance', href: '/employee/attendance' },
+        { name: 'Performance', href: '/employee/performance' }
+      ]
+    },
+    {
+      label: 'Resources',
+      options: [
+        { name: 'Company Handbook', href: '/employee/resources' },
+        { name: 'Training Modules', href: '/employee/training' }
+      ]
+    },
+    {
+      label: 'Support',
+      options: [
+        { name: 'Submit Request', href: '/employee/support' },
+        { name: 'Contact HR', href: '/employee/hr' }
+      ]
+    }
+  ],
+
+  Client: [
+    {
+      label: 'Client Tools',
+      options: [
+        { name: 'Browse Services', href: '/client/services' },
+        { name: 'My Orders', href: '/client/orders' },
+        { name: 'Payments', href: '/client/payments' }
+      ]
+    },
+    {
+      label: 'Reports',
+      options: [
+        { name: 'Invoices', href: '/client/invoices' },
+        { name: 'Transaction History', href: '/client/transactions' }
+      ]
+    },
+    {
+      label: 'Support',
+      options: [
+        { name: 'Submit Ticket', href: '/client/support' },
+        { name: 'Chat with Agent', href: '/client/chat' }
+      ]
+    }
+  ]
+}
+
+// Get dropdowns for current user type
+const roleDropdowns = dropdownsByRole[user?.type] || []
 </script>
 
 <template>
@@ -12,50 +143,34 @@ const { openDropdown, toggleDropdown } = useDropdown()
                 <h1 class="font-bold text-[29px] text-brand-blue">NEST PORTAL</h1>
 
                 <div class="flex items-center gap-3 ps-12">
+                    <div
+                        v-for="(dropdown, index) in roleDropdowns"
+                        :key="index"
+                        class="relative dropdown-wrapper"
+                    >
+                        <button
+                        @click.stop="toggleDropdown(index)"
+                        class="py-1 px-4 bg-light-blue border text-xl border-brand-blue rounded-md flex items-center gap-1"
+                        >
+                        {{ dropdown.label }}
+                        <i class="fa-solid fa-angle-down ps-1 text-sm text-brand-blue"></i>
+                        </button>
 
-                    <!-- Dropdown 1 -->
-                    <div class="relative dropdown-wrapper">
-                    <button @click.stop="toggleDropdown(1)"
-                            class="py-1 px-4 bg-light-blue border text-xl border-brand-blue rounded-md flex items-center gap-1">
-                        Sample Tools <i class="fa-solid fa-angle-down ps-1 text-sm text-brand-blue"></i>
-                    </button>
-                    <div v-show="openDropdown === 1"
-                        class="absolute mt-1 bg-white border border-brand-blue w-full rounded-md shadow-lg z-10 p-2">
-                        <a href="#" class="block px-4 py-2 hover:bg-gray-100 rounded-md">Option 1</a>
-                        <a href="#" class="block px-4 py-2 hover:bg-gray-100 rounded-md">Option 2</a>
-                        <a href="#" class="block px-4 py-2 hover:bg-gray-100 rounded-md">Option 3</a>
+                        <div
+                        v-show="openDropdown === index"
+                        class="absolute mt-1 bg-white border border-brand-blue w-full rounded-md shadow-lg z-10 p-2"
+                        >
+                        <a
+                            v-for="(option, i) in dropdown.options"
+                            :key="i"
+                            :href="option.href"
+                            class="block px-2 py-2 hover:bg-gray-100 rounded-md"
+                        >
+                            {{ option.name }}
+                        </a>
+                        </div>
                     </div>
                     </div>
-
-                    <!-- Dropdown 2 -->
-                    <div class="relative dropdown-wrapper">
-                    <button @click.stop="toggleDropdown(2)"
-                            class="py-1 px-4 bg-light-blue border text-xl border-brand-blue rounded-md flex items-center gap-1">
-                        Sample Tools <i class="fa-solid fa-angle-down ps-1 text-sm text-brand-blue"></i>
-                    </button>
-                    <div v-show="openDropdown === 2"
-                        class="absolute mt-1 bg-white border border-brand-blue w-full rounded-md shadow-lg z-10 p-2">
-                        <a href="#" class="block px-4 py-2 hover:bg-gray-100 rounded-md">Option A</a>
-                        <a href="#" class="block px-4 py-2 hover:bg-gray-100 rounded-md">Option B</a>
-                        <a href="#" class="block px-4 py-2 hover:bg-gray-100 rounded-md">Option C</a>
-                    </div>
-                    </div>
-
-                    <!-- Dropdown 3 -->
-                    <div class="relative dropdown-wrapper">
-                    <button @click.stop="toggleDropdown(3)"
-                            class="py-1 px-4 bg-light-blue border text-xl border-brand-blue rounded-md flex items-center gap-1">
-                        Sample Tools <i class="fa-solid fa-angle-down ps-1 text-sm text-brand-blue"></i>
-                    </button>
-                    <div v-show="openDropdown === 3"
-                        class="absolute mt-1 bg-white border border-brand-blue w-full rounded-md shadow-lg z-10 p-2">
-                        <a href="#" class="block px-4 py-2 hover:bg-gray-100 rounded-md">Item X</a>
-                        <a href="#" class="block px-4 py-2 hover:bg-gray-100 rounded-md">Item Y</a>
-                        <a href="#" class="block px-4 py-2 hover:bg-gray-100 rounded-md">Item Z</a>
-                    </div>
-                    </div>
-
-                </div>
 
             </div>
 

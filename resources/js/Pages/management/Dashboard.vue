@@ -1,31 +1,32 @@
+<script setup>
+import { usePage } from '@inertiajs/vue3'
+
+// Import dashboards (adjust paths to your actual structure)
+import AdminDashboard from '@/Pages/management/Admin/Index.vue'
+import ManagerDashboard from '@/Pages/management/Manager/Index.vue'
+import SupervisorDashboard from '@/Pages/management/Supervisor/Index.vue'
+import EmployeeDashboard from '@/Pages/management/Employee/Index.vue'
+import ClientDashboard from '@/Pages/management/Client/Index.vue'
+
+// Get user data from Inertia
+const page = usePage()
+const user = page.props.auth.user
+
+// Map roles to dashboards
+const dashboards = {
+  Admin: AdminDashboard,
+  Manager: ManagerDashboard,
+  Supervisor: SupervisorDashboard,
+  Employee: EmployeeDashboard,
+  Client: ClientDashboard,
+}
+
+// Determine which dashboard to render
+const currentDashboard = dashboards[user?.type] || EmployeeDashboard
+</script>
+
 <template>
-    <!-- Main Content Start -->
-    <div>
-        <div class="w-full bg-white grid place-items-center h-[340px] rounded-2xl">
-            <h1 class="font-bold text-brand-blue text-2xl">Table</h1>
-        </div>
-
-        <div class="pt-7">
-            <div class="grid grid-cols-12 gap-7">
-                <div class="col-span-6 w-full bg-white grid place-items-center h-[200px] rounded-2xl">
-                    <h1 class="font-bold text-brand-blue text-2xl">Audit Trial</h1>
-                </div>
-
-                <div class="col-span-6 w-full bg-white grid place-items-center h-[200px] rounded-2xl">
-                    <h1 class="font-bold text-brand-blue text-2xl">Latest Updated on Specific Task</h1>
-                </div>
-
-                <div class="col-span-6 w-full bg-white grid place-items-center h-[200px] rounded-2xl">
-                    <h1 class="font-bold text-brand-blue text-2xl">Announcement</h1>
-                </div>
-
-                <div class="col-span-6 w-full bg-white grid place-items-center h-[200px] rounded-2xl">
-                    <h1 class="font-bold text-brand-blue text-2xl">Additional Info</h1>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Main Content End -->
-
+  <div>
+    <component :is="currentDashboard" />
+  </div>
 </template>
-
