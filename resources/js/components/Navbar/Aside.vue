@@ -27,7 +27,7 @@
         class="bg-white hover:bg-gray-100 text-brand-blue text-xl py-2 px-3 flex gap-3 justify-center items-center rounded-md w-full"
       >
         <div class="ps-1">
-          <img src="@/assets/dashboard/logout.png" class="h-6" alt="">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
         </div>
         <div>Log Out</div>
       </a>

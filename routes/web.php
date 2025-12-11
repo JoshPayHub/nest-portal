@@ -17,6 +17,10 @@ Route::get('/register', function () {
     return Inertia::render('Auth/Register');
 });
 
+Route::get('/forgot-password', function () {
+    return Inertia::render('Auth/Forgot_Password');
+});
+
 Route::get('/management', function () {
     return Inertia::render('management/Dashboard');
 });
