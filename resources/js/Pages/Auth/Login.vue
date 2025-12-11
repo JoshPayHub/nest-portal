@@ -57,14 +57,14 @@
             </button>
 
             <!-- Link -->
-            <p class="text-sm text-center mt-4">
+            <!-- <p class="text-sm text-center mt-4">
                 Don’t have an account?
                 <a
                     href="/register"
                     class="text-brand-blue hover:underline font-semibold"
                     >Register</a
                 >
-            </p>
+            </p> -->
 
             <p class="text-sm text-center mt-2">
                 <a

@@ -23,7 +23,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => [
                     'id' => 1,
                     'name' => 'Full Name',
-                    'type' => 'Client',  // --- Admin, Manager, Supervisor, Employee, Client ---
+                    'type' => 'HR',  // --- Admin, Manager, HR, Supervisor, Employee, Client ---
                 ],
             ],
         ]);

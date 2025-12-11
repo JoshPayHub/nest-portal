@@ -24,3 +24,7 @@ Route::get('/forgot-password', function () {
 Route::get('/management', function () {
     return Inertia::render('management/Dashboard');
 });
+
+Route::get('/management/register', function () {
+    return Inertia::render('management/Register');
+});
