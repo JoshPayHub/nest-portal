@@ -1,171 +1,163 @@
 <script setup>
-import { usePage } from "@inertiajs/vue3";
+import { Link, usePage } from "@inertiajs/vue3";
 import { useDropdown } from "@/composables/dropdown.js";
+import { ref } from "vue";
 
 const { openDropdown, toggleDropdown } = useDropdown();
 const user = usePage().props.auth.user;
 
-// Role-based dropdown configurations
+/**
+ * ROLE-BASED NAVBAR DROPDOWNS
+ * (Aligned with HRIS modules + Aside)
+ */
 const dropdownsByRole = {
     Admin: [
         {
-            label: "Admin Tools",
+            label: "Administration",
             options: [
-                { name: "Manage Users", href: "/admin/users" },
+                { name: "User Management", href: "/admin/users" },
+                { name: "Departments & Positions", href: "/admin/departments" },
                 { name: "System Settings", href: "/admin/settings" },
-                { name: "Reports", href: "/admin/reports" },
             ],
         },
         {
             label: "Monitoring",
             options: [
-                { name: "Audit Logs", href: "/admin/logs" },
-                { name: "Performance Overview", href: "/admin/performance" },
+                { name: "Audit Logs", href: "/admin/audit-logs" },
+                { name: "System Reports", href: "/admin/reports" },
+            ],
+        },
+    ],
+
+    HR: [
+        {
+            label: "HR Operations",
+            options: [
+                { name: "Employee Records", href: "/management/Employees" },
+                {
+                    name: "Recruitment & Onboarding",
+                    href: "/management/Recruitment",
+                },
+                {
+                    name: "Attendance & Leave",
+                    href: "/management/AttendanceLeave",
+                },
             ],
         },
         {
-            label: "Maintenance",
+            label: "Employee Welfare",
             options: [
-                { name: "Backups", href: "/admin/backups" },
-                { name: "Database Tools", href: "/admin/db" },
+                {
+                    name: "Training & Development",
+                    href: "/management/TrainingDevelopment",
+                },
+                {
+                    name: "Medical & Wellness",
+                    href: "/management/MedicalWellness",
+                },
+                {
+                    name: "Discipline & Cases",
+                    href: "/management/DisciplineCases",
+                },
             ],
+        },
+        {
+            label: "Reports",
+            options: [{ name: "HR Reports", href: "/management/Reports" }],
         },
     ],
 
     Manager: [
         {
-            label: "Manager Tools",
-            options: [
-                { name: "Employee Management", href: "/manager/employees" },
-                { name: "Team Reports", href: "/manager/reports" },
-            ],
-        },
-        {
-            label: "Requests",
-            options: [
-                { name: "Approvals", href: "/manager/approvals" },
-                { name: "Pending Tasks", href: "/manager/tasks" },
-            ],
-        },
-        {
             label: "Department",
             options: [
-                { name: "Department Goals", href: "/manager/goals" },
-                { name: "Budget", href: "/manager/budget" },
-            ],
-        },
-    ],
-
-    // 🔥 HR Role Added
-    HR: [
-        {
-            label: "HR Tools",
-            options: [
-                { name: "Employee Records", href: "/hr/employees" },
-                { name: "Recruitment", href: "/hr/recruitment" },
-                { name: "Applicant Tracking", href: "/hr/applicants" },
-            ],
-        },
-        {
-            label: "Attendance & Leave",
-            options: [
-                { name: "Leave Management", href: "/hr/leave" },
-                { name: "Attendance Logs", href: "/hr/attendance" },
+                { name: "Department Employees", href: "/manager/employees" },
+                {
+                    name: "Approvals & Endorsements",
+                    href: "/manager/approvals",
+                },
             ],
         },
         {
             label: "Reports",
-            options: [
-                { name: "HR Analytics", href: "/hr/reports" },
-                { name: "Employee Performance", href: "/hr/performance" },
-            ],
+            options: [{ name: "Department Reports", href: "/manager/reports" }],
         },
     ],
 
     Supervisor: [
         {
-            label: "Supervisor Tools",
+            label: "Team Management",
             options: [
                 { name: "Team Overview", href: "/supervisor/team" },
-                { name: "Task Assignments", href: "/supervisor/tasks" },
-            ],
-        },
-        {
-            label: "Monitoring",
-            options: [
-                { name: "Attendance Logs", href: "/supervisor/attendance" },
                 {
-                    name: "Performance Reports",
-                    href: "/supervisor/performance",
+                    name: "Attendance Monitoring",
+                    href: "/supervisor/attendance",
                 },
             ],
         },
         {
-            label: "Operations",
+            label: "Performance",
             options: [
-                { name: "Shift Schedules", href: "/supervisor/schedules" },
-                { name: "Incident Reports", href: "/supervisor/incidents" },
+                {
+                    name: "Performance Reviews",
+                    href: "/supervisor/performance",
+                },
+                { name: "Training Nominations", href: "/supervisor/training" },
             ],
         },
     ],
 
     Employee: [
         {
-            label: "My Tools",
+            label: "My Account",
             options: [
-                { name: "My Tasks", href: "/employee/tasks" },
-                { name: "Attendance", href: "/employee/attendance" },
-                { name: "Performance", href: "/employee/performance" },
+                { name: "My Profile", href: "/employee/profile" },
+                { name: "My Performance", href: "/employee/performance" },
             ],
         },
         {
-            label: "Resources",
+            label: "Requests",
             options: [
-                { name: "Company Handbook", href: "/employee/resources" },
-                { name: "Training Modules", href: "/employee/training" },
-            ],
-        },
-        {
-            label: "Support",
-            options: [
-                { name: "Submit Request", href: "/employee/support" },
-                { name: "Contact HR", href: "/employee/hr" },
+                { name: "Leave & Requests", href: "/employee/leave" },
+                { name: "My Training", href: "/employee/training" },
             ],
         },
     ],
 
     Client: [
         {
-            label: "Client Tools",
+            label: "Client Services",
             options: [
                 { name: "Browse Services", href: "/client/services" },
-                { name: "My Orders", href: "/client/orders" },
+                { name: "My Transactions", href: "/client/transactions" },
                 { name: "Payments", href: "/client/payments" },
-            ],
-        },
-        {
-            label: "Reports",
-            options: [
-                { name: "Invoices", href: "/client/invoices" },
-                { name: "Transaction History", href: "/client/transactions" },
-            ],
-        },
-        {
-            label: "Support",
-            options: [
-                { name: "Submit Ticket", href: "/client/support" },
-                { name: "Chat with Agent", href: "/client/chat" },
             ],
         },
     ],
 };
 
-// Get dropdowns for current user type
 const roleDropdowns = dropdownsByRole[user?.type] || [];
+
+// Example Notifications for HR module
+const notifications = ref([
+    { title: "New Employee Registered", date: "Jan 18, 2026", read: false },
+    { title: "Leave Request Approved", date: "Jan 17, 2026", read: true },
+    {
+        title: "Training Completed by Employee",
+        date: "Jan 16, 2026",
+        read: false,
+    },
+    { title: "Disciplinary Case Updated", date: "Jan 15, 2026", read: true },
+    {
+        title: "Medical Wellness Form Submitted",
+        date: "Jan 14, 2026",
+        read: false,
+    },
+]);
 </script>
 
 <template>
-    <nav class="bg-white shadow-blue py-5 px-6 relative z-1">
+    <nav class="bg-white shadow-green py-5 px-6 relative z-1">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-4">
                 <img
@@ -197,14 +189,14 @@ const roleDropdowns = dropdownsByRole[user?.type] || [];
                             v-show="openDropdown === index"
                             class="absolute mt-1 bg-white border border-brand-blue w-full rounded-md shadow-lg z-10 p-2"
                         >
-                            <a
+                            <Link
                                 v-for="(option, i) in dropdown.options"
                                 :key="i"
                                 :href="option.href"
                                 class="block px-2 py-2 hover:bg-gray-100 rounded-md"
                             >
                                 {{ option.name }}
-                            </a>
+                            </Link>
                         </div>
                     </div>
                 </div>
@@ -215,41 +207,64 @@ const roleDropdowns = dropdownsByRole[user?.type] || [];
                 <div class="relative dropdown-wrapper">
                     <div
                         @click.stop="toggleDropdown('notif')"
-                        class="h-[50px] w-[50px] rounded-full grid place-items-center bg-light-blue cursor-pointer"
+                        class="h-[50px] w-[50px] rounded-full grid place-items-center bg-light-blue cursor-pointer relative"
                     >
                         <i
                             class="fa-solid fa-bell text-3xl text-brand-blue"
                         ></i>
+                        <!-- Badge for unread -->
+                        <span
+                            v-if="
+                                notifications.filter((n) => !n.read).length > 0
+                            "
+                            class="absolute top-0 right-0 h-4 w-4 bg-red-500 text-white rounded-full text-xs grid place-items-center"
+                        >
+                            {{ notifications.filter((n) => !n.read).length }}
+                        </span>
                     </div>
 
                     <div
                         v-show="openDropdown === 'notif'"
-                        class="absolute right-0 mt-2 w-60 bg-white border border-brand-blue rounded-md shadow-lg z-10"
+                        class="absolute right-0 mt-2 w-72 bg-white border border-brand-blue rounded-md shadow-lg z-10"
                     >
                         <div
                             class="p-2 font-bold bg-light-blue border-b border-brand-blue rounded-t-md"
                         >
                             Notifications
                         </div>
+
                         <div
-                            class="p-2 hover:bg-gray-100 cursor-pointer rounded-md"
+                            v-if="notifications.length === 0"
+                            class="p-2 text-gray-500 text-sm text-center"
                         >
-                            You have a new message
+                            No notifications
                         </div>
+
                         <div
-                            class="p-2 hover:bg-gray-100 cursor-pointer rounded-md"
+                            v-for="(notif, index) in notifications.slice(0, 5)"
+                            :key="index"
+                            class="p-2 hover:bg-gray-100 cursor-pointer rounded-md flex justify-between items-center"
                         >
-                            Server updated successfully
+                            <div>
+                                <p class="text-sm font-medium text-brand-blue">
+                                    {{ notif.title }}
+                                </p>
+                                <p class="text-xs text-gray-500">
+                                    {{ notif.date }}
+                                </p>
+                            </div>
+                            <span
+                                v-if="!notif.read"
+                                class="h-2 w-2 bg-red-500 rounded-full"
+                            ></span>
                         </div>
-                        <div
-                            class="p-2 hover:bg-gray-100 cursor-pointer rounded-md m-1"
-                        >
-                            New comment on your post
-                        </div>
+
                         <div
                             class="p-2 text-center text-sm text-gray-500 border-t border-brand-blue rounded-b-md cursor-pointer hover:bg-gray-100"
                         >
-                            View All
+                            <Link href="/management/Notification"
+                                >View All</Link
+                            >
                         </div>
                     </div>
                 </div>
@@ -267,22 +282,30 @@ const roleDropdowns = dropdownsByRole[user?.type] || [];
 
                     <div
                         v-show="openDropdown === 'settings'"
-                        class="absolute right-0 mt-2 w-48 bg-white border border-brand-blue rounded-md shadow-lg z-10"
+                        class="absolute right-0 mt-2 w-60 bg-white border border-brand-blue rounded-md shadow-lg z-10"
                     >
                         <div
+                            class="p-2 font-bold bg-light-blue border-b border-brand-blue rounded-t-md"
+                        >
+                            Settings
+                        </div>
+
+                        <div
                             class="p-2 hover:bg-gray-100 cursor-pointer rounded-md"
                         >
-                            General Settings
+                            <Link href="/settings/general"
+                                >General Settings</Link
+                            >
                         </div>
                         <div
                             class="p-2 hover:bg-gray-100 cursor-pointer rounded-md"
                         >
-                            Security
+                            <Link href="/settings/security">Security</Link>
                         </div>
                         <div
                             class="p-2 hover:bg-gray-100 cursor-pointer rounded-md"
                         >
-                            Appearance
+                            <Link href="/settings/appearance">Appearance</Link>
                         </div>
                     </div>
                 </div>
@@ -300,23 +323,31 @@ const roleDropdowns = dropdownsByRole[user?.type] || [];
 
                     <div
                         v-show="openDropdown === 'profile'"
-                        class="absolute right-0 mt-2 w-48 bg-white border border-brand-blue rounded-md shadow-lg z-10"
+                        class="absolute right-0 mt-2 w-60 bg-white border border-brand-blue rounded-md shadow-lg z-10"
                     >
                         <div
+                            class="p-2 font-bold bg-light-blue border-b border-brand-blue rounded-t-md"
+                        >
+                            {{ user.name }}
+                        </div>
+
+                        <div
                             class="p-2 hover:bg-gray-100 cursor-pointer rounded-md"
                         >
-                            Profile
+                            <Link href="/profile">View Profile</Link>
                         </div>
                         <div
                             class="p-2 hover:bg-gray-100 cursor-pointer rounded-md"
                         >
-                            Account
+                            <Link href="/profile/account"
+                                >Account Settings</Link
+                            >
                         </div>
-                        <a
-                            href="/"
-                            class="block p-2 hover:bg-gray-100 cursor-pointer rounded-md"
-                            >Logout</a
+                        <div
+                            class="p-2 hover:bg-gray-100 cursor-pointer rounded-md"
                         >
+                            <Link href="/logout">Logout</Link>
+                        </div>
                     </div>
                 </div>
             </div>

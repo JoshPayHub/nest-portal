@@ -1,4 +1,4 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 @import "@fontsource/poppins/index.css"; /* ← Add this line to load Poppins */
 
 /* Source paths */
@@ -8,22 +8,21 @@
 @source '../**/*.js';
 
 @theme {
-  /* ✅ Use Poppins as your main sans font */
-  --font-sans: 'Poppins', Arial, ui-sans-serif, system-ui, sans-serif;
-  /* --shadow-blue: rgba(6, 89, 141, 0.3) 0px 10px 20px, rgba(6, 89, 141, 0.25) 0px 6px 6px; */
-  --shadow-black: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+    /* ✅ Use Poppins as your main sans font */
+    --font-sans: "Poppins", Arial, ui-sans-serif, system-ui, sans-serif;
+    /* --shadow-blue: rgba(6, 89, 141, 0.3) 0px 10px 20px, rgba(6, 89, 141, 0.25) 0px 6px 6px; */
+    --shadow-black: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+    --shadow-green: rgba(82, 164, 71, 0.5) 0px 3px 8px;
 
-  --color-brand-blue: #52a447;
-  --color-light-blue: #cce7c9;
+    --color-brand-blue: #52a447;
+    --color-light-blue: #cce7c9;
 
-  --shadow-brand-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
-  /* --shadow-blue: rgba(0, 71, 160, 0.35) 0px 5px 15px; */
+    --shadow-brand-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+    /* --shadow-blue: rgba(0, 71, 160, 0.35) 0px 5px 15px; */
 }
 
 /* Custom Scrollbar for Sidebar and Main Content */
 .scrollbar-custom {
     scrollbar-width: thin !important;
-    scrollbar-color: #46923c #D9E7F1 !important;
+    scrollbar-color: #46923c #d9e7f1 !important;
 }
-
-

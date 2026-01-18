@@ -1,5 +1,5 @@
 <template>
-    <aside class="bg-brand-blue p-4 w-[300px] flex flex-col h-full min-h-0">
+    <aside class="bg-brand-blue p-4 w-[310px] flex flex-col h-full min-h-0">
         <!-- Scrollable sidebar buttons Start -->
         <div class="flex-1 overflow-y-auto min-h-0 scrollbar-custom">
             <div class="grid gap-2">
@@ -7,7 +7,7 @@
                 <button
                     v-for="(item, index) in filteredMenu"
                     :key="index"
-                    class="bg-white hover:bg-gray-100 text-brand-blue cursor-pointer text-xl py-2 px-3 flex gap-3 items-center rounded-md w-full mt-2"
+                    class="bg-white hover:bg-gray-100 text-brand-blue cursor-pointer text-md py-2 px-3 flex gap-3 items-center rounded-md w-full mt-2"
                     @click="goTo(item.href)"
                 >
                     <div class="ps-1">
@@ -38,20 +38,27 @@
 <script setup>
 import { usePage, router } from "@inertiajs/vue3";
 
-// Get the logged-in user from Inertia
 const user = usePage().props.auth.user;
 
-// Define all possible menu items
+/**
+ * ASIDE MENU – SAME MODULES AS NAVBAR
+ */
 const menuItems = [
-    // --- Admin, Manager, Supervisor, Employee, Client ---
+    // ===== COMMON =====
     {
         label: "Dashboard",
         href: "/management",
         icon: "fa-solid fa-gauge",
-        roles: ["Admin", "Manager", "Supervisor", "Employee", "Client"],
+        roles: ["Admin", "HR", "Manager", "Supervisor", "Employee", "Client"],
+    },
+    {
+        label: "Announcements & Policies",
+        href: "/management/AnnouncementAndPolicy",
+        icon: "fa-solid fa-scroll",
+        roles: ["Admin", "HR", "Manager", "Supervisor", "Employee"],
     },
 
-    // --- ADMIN ---
+    // ===== ADMIN =====
     {
         label: "User Management",
         href: "/admin/users",
@@ -59,198 +66,168 @@ const menuItems = [
         roles: ["Admin"],
     },
     {
-        label: "Departments",
-        href: "#",
+        label: "Departments & Positions",
+        href: "/admin/departments",
         icon: "fa-solid fa-building",
         roles: ["Admin"],
     },
     {
-        label: "Reports & Analytics",
-        href: "#",
-        icon: "fa-solid fa-flag",
-        roles: ["Admin"],
-    },
-    {
         label: "System Settings",
-        href: "#",
+        href: "/admin/settings",
         icon: "fa-solid fa-gear",
         roles: ["Admin"],
     },
     {
         label: "Audit Logs",
-        href: "#",
-        icon: "fa-regular fa-font-awesome",
+        href: "/admin/audit-logs",
+        icon: "fa-solid fa-clipboard-list",
+        roles: ["Admin"],
+    },
+    {
+        label: "Reports & Analytics",
+        href: "/admin/reports",
+        icon: "fa-solid fa-chart-line",
         roles: ["Admin"],
     },
 
-    // --- MANAGER ---
-    {
-        label: "Employees",
-        href: "#",
-        icon: "fa-solid fa-users",
-        roles: ["Manager"],
-    },
-    {
-        label: "Department Reports",
-        href: "#",
-        icon: "fa-solid fa-building",
-        roles: ["Manager"],
-    },
-    {
-        label: "Approvals/Requests",
-        href: "#",
-        icon: "fa-solid fa-clock",
-        roles: ["Manager"],
-    },
-    {
-        label: "Messages",
-        href: "#",
-        icon: "fa-solid fa-message",
-        roles: ["Manager"],
-    },
-    {
-        label: "Department Settings",
-        href: "#",
-        icon: "fa-solid fa-building",
-        roles: ["Manager"],
-    },
-
-    // --- HR ---
-    {
-        label: "HR Dashboard",
-        href: "/management",
-        icon: "fa-solid fa-user-tie",
-        roles: ["HR"],
-    },
+    // ===== HR =====
     {
         label: "Employee Records",
-        href: "#",
+        href: "/management/Employees",
         icon: "fa-solid fa-id-card",
         roles: ["HR"],
     },
     {
-        label: "Recruitment",
-        href: "#",
+        label: "Recruitment & Onboarding",
+        href: "/management/Recruitment",
         icon: "fa-solid fa-user-plus",
         roles: ["HR"],
     },
     {
-        label: "Leave Management",
-        href: "#",
+        label: "Attendance & Leave",
+        href: "/management/AttendanceLeave",
         icon: "fa-solid fa-calendar-days",
         roles: ["HR"],
     },
     {
-        label: "HR Reports",
-        href: "#",
-        icon: "fa-solid fa-chart-column",
+        label: "Training & Development",
+        href: "/management/TrainingDevelopment",
+        icon: "fa-solid fa-graduation-cap",
+        roles: ["HR"],
+    },
+    {
+        label: "Medical & Wellness",
+        href: "/management/MedicalWellness",
+        icon: "fa-solid fa-heart-pulse",
+        roles: ["HR"],
+    },
+    {
+        label: "Discipline & Cases",
+        href: "/management/DisciplineCases",
+        icon: "fa-solid fa-shield-halved",
         roles: ["HR"],
     },
 
-    // --- Supervisor ---
+    // ===== MANAGER =====
+    {
+        label: "Department Employees",
+        href: "/manager/employees",
+        icon: "fa-solid fa-users",
+        roles: ["Manager"],
+    },
+    {
+        label: "Approvals & Endorsements",
+        href: "/manager/approvals",
+        icon: "fa-solid fa-clock",
+        roles: ["Manager"],
+    },
+    {
+        label: "Department Reports",
+        href: "/manager/reports",
+        icon: "fa-solid fa-chart-pie",
+        roles: ["Manager"],
+    },
+
+    // ===== SUPERVISOR =====
     {
         label: "Team Overview",
-        href: "#",
+        href: "/supervisor/team",
         icon: "fa-solid fa-binoculars",
         roles: ["Supervisor"],
     },
     {
-        label: "Tasks",
-        href: "#",
-        icon: "fa-solid fa-list-check",
-        roles: ["Supervisor"],
-    },
-    {
-        label: "Attendance",
-        href: "#",
+        label: "Attendance Monitoring",
+        href: "/supervisor/attendance",
         icon: "fa-solid fa-clipboard-user",
         roles: ["Supervisor"],
     },
     {
-        label: "Reports",
-        href: "#",
-        icon: "fa-solid fa-flag",
-        roles: ["Supervisor"],
-    },
-    {
-        label: "Announcements",
-        href: "#",
-        icon: "fa-solid fa-scroll",
+        label: "Performance Reviews",
+        href: "/supervisor/performance",
+        icon: "fa-solid fa-star",
         roles: ["Supervisor"],
     },
 
-    // --- Employee ---
+    // ===== EMPLOYEE =====
     {
-        label: "My Tasks",
-        href: "#",
-        icon: "fa-solid fa-list-check",
+        label: "My Profile",
+        href: "/employee/profile",
+        icon: "fa-solid fa-id-badge",
         roles: ["Employee"],
     },
     {
-        label: "Attendance",
-        href: "#",
-        icon: "fa-solid fa-clipboard-user",
+        label: "Leave & Requests",
+        href: "/employee/leave",
+        icon: "fa-solid fa-calendar-check",
         roles: ["Employee"],
     },
     {
-        label: "Performance",
-        href: "#",
-        icon: "fa-solid fa-chart-simple",
+        label: "My Training",
+        href: "/employee/training",
+        icon: "fa-solid fa-book-open",
         roles: ["Employee"],
     },
     {
-        label: "Announcements",
-        href: "#",
-        icon: "fa-solid fa-scroll",
-        roles: ["Employee"],
-    },
-    {
-        label: "Support / Help Desk",
-        href: "#",
-        icon: "fa-solid fa-gear",
+        label: "My Performance",
+        href: "/employee/performance",
+        icon: "fa-solid fa-chart-column",
         roles: ["Employee"],
     },
 
-    // --- Client ---
+    // ===== CLIENT =====
     {
         label: "Browse Services",
-        href: "#",
+        href: "/client/services",
         icon: "fa-solid fa-earth-americas",
         roles: ["Client"],
     },
     {
+        label: "My Transactions",
+        href: "/client/transactions",
+        icon: "fa-solid fa-receipt",
+        roles: ["Client"],
+    },
+    {
         label: "Make a Payment",
-        href: "#",
+        href: "/client/payments",
         icon: "fa-solid fa-peso-sign",
         roles: ["Client"],
     },
     {
-        label: "My Transactions",
-        href: "#",
-        icon: "fa-solid fa-tent-arrow-left-right",
-        roles: ["Client"],
-    },
-    {
-        label: "Support",
-        href: "#",
-        icon: "fa-solid fa-gear",
-        roles: ["Client"],
-    },
-    {
         label: "Profile Settings",
-        href: "#",
+        href: "/client/profile",
         icon: "fa-solid fa-user",
         roles: ["Client"],
     },
 ];
 
-// Filter menu based on user type
 const filteredMenu = menuItems.filter((item) =>
     item.roles.includes(user?.type)
 );
 
-// Navigation handler
 const goTo = (href) => {
-    router.visit(href);
+    if (href && href !== "#") {
+        router.visit(href);
+    }
 };
 </script>
