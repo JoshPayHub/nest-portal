@@ -1,20 +1,73 @@
 <template>
-    <aside class="bg-brand-blue p-4 w-[310px] flex flex-col h-full min-h-0">
+    <aside
+        class="bg-brand-blue ps-4 py-4 pe-2 w-[310px] flex flex-col h-full min-h-0 overflow-hidden"
+    >
         <!-- Scrollable sidebar buttons Start -->
         <div class="flex-1 overflow-y-auto min-h-0 scrollbar-custom">
             <div class="grid gap-2">
-                <!-- Loop through filtered menu -->
-                <button
-                    v-for="(item, index) in filteredMenu"
-                    :key="index"
-                    class="bg-white hover:bg-gray-100 text-brand-blue cursor-pointer text-md py-2 px-3 flex gap-3 items-center rounded-md w-full mt-2"
-                    @click="goTo(item.href)"
-                >
-                    <div class="ps-1">
-                        <i :class="item.icon"></i>
+                <template v-for="(item, index) in filteredMenu" :key="index">
+                    <!-- CATEGORY -->
+                    <div v-if="item.children" class="relative">
+                        <!-- Category Button -->
+                        <button
+                            class="bg-white hover:bg-gray-100 text-brand-blue cursor-pointer text-md py-2 px-3 flex justify-between items-center rounded-md w-full mt-2 transition-all"
+                            @click="toggleCategory(item.category)"
+                        >
+                            <div class="flex items-center gap-2">
+                                <i v-if="item.icon" :class="item.icon"></i>
+                                <span class="font-semibold">{{
+                                    item.category
+                                }}</span>
+                            </div>
+                            <i
+                                class="fa-solid fa-chevron-down transition-transform duration-300"
+                                :class="{
+                                    'rotate-180': openCategories[item.category],
+                                }"
+                            ></i>
+                        </button>
+
+                        <!-- Vertical Line (only for dropdown) -->
+                        <div
+                            v-if="
+                                item.children && openCategories[item.category]
+                            "
+                            class="h-78 w-0.5 bg-white absolute top-14 bottom-0 start-1 rounded"
+                        ></div>
+
+                        <!-- Dropdown with smooth transition -->
+                        <transition name="slide-fade">
+                            <div
+                                v-show="openCategories[item.category]"
+                                class="pl-4 mt-1 space-y-1"
+                            >
+                                <button
+                                    v-for="child in item.children"
+                                    :key="child.href"
+                                    class="hover:bg-white/20 text-white bg-transparent cursor-pointer text-sm py-2 px-3 flex gap-3 items-center rounded-md w-full transition-all"
+                                    @click="goTo(child.href)"
+                                >
+                                    <div class="ps-1">
+                                        <i :class="child.icon"></i>
+                                    </div>
+                                    <div>{{ child.label }}</div>
+                                </button>
+                            </div>
+                        </transition>
                     </div>
-                    <div>{{ item.label }}</div>
-                </button>
+
+                    <!-- NORMAL MENU -->
+                    <button
+                        v-else
+                        class="bg-white hover:bg-gray-100 text-brand-blue cursor-pointer text-md py-2 px-3 flex gap-3 items-center rounded-md w-full mt-2"
+                        @click="goTo(item.href)"
+                    >
+                        <div class="ps-1">
+                            <i :class="item.icon"></i>
+                        </div>
+                        <div>{{ item.label }}</div>
+                    </button>
+                </template>
             </div>
         </div>
         <!-- Scrollable sidebar buttons End -->
@@ -36,12 +89,21 @@
 </template>
 
 <script setup>
+import { ref } from "vue";
 import { usePage, router } from "@inertiajs/vue3";
 
 const user = usePage().props.auth.user;
 
+// Track open/closed state of dropdown categories
+const openCategories = ref({});
+
+const toggleCategory = (category) => {
+    openCategories.value[category] = !openCategories.value[category];
+};
+
 /**
  * ASIDE MENU – SAME MODULES AS NAVBAR
+ * Added only FORMS category for HR & Employee
  */
 const menuItems = [
     // ===== COMMON =====
@@ -171,27 +233,75 @@ const menuItems = [
     // ===== EMPLOYEE =====
     {
         label: "My Profile",
-        href: "/employee/profile",
+        href: "/management/Profile",
         icon: "fa-solid fa-id-badge",
         roles: ["Employee"],
     },
     {
-        label: "Leave & Requests",
-        href: "/employee/leave",
-        icon: "fa-solid fa-calendar-check",
+        label: "Training & Development",
+        href: "/management/TrainingDevelopment",
+        icon: "fa-solid fa-graduation-cap",
         roles: ["Employee"],
     },
     {
-        label: "My Training",
-        href: "/employee/training",
-        icon: "fa-solid fa-book-open",
+        label: "Medical & Wellness",
+        href: "/management/MedicalWellness",
+        icon: "fa-solid fa-heart-pulse",
         roles: ["Employee"],
     },
     {
-        label: "My Performance",
-        href: "/employee/performance",
-        icon: "fa-solid fa-chart-column",
+        label: "Discipline & Cases",
+        href: "/management/DisciplineCases",
+        icon: "fa-solid fa-shield-halved",
         roles: ["Employee"],
+    },
+    // ===== FORMS CATEGORY (HR & Employee only) =====
+    {
+        category: "Employee Forms",
+        icon: "fa-solid fa-file-lines",
+        roles: ["HR", "Employee"],
+        children: [
+            {
+                label: "Accomplishment Report",
+                href: "/forms/accomplishment-report",
+                icon: "fa-solid fa-file-lines",
+            },
+            {
+                label: "Change Off",
+                href: "/forms/change-off",
+                icon: "fa-solid fa-right-left",
+            },
+            {
+                label: "Leave Form",
+                href: "/forms/leave-form",
+                icon: "fa-solid fa-calendar-plus",
+            },
+            {
+                label: "Leave of Absence Report",
+                href: "/forms/leave-of-absence",
+                icon: "fa-solid fa-calendar-xmark",
+            },
+            {
+                label: "Manpower Requisition Form",
+                href: "/forms/manpower-requisition",
+                icon: "fa-solid fa-user-group",
+            },
+            {
+                label: "Official Business Notification",
+                href: "/forms/official-business",
+                icon: "fa-solid fa-briefcase",
+            },
+            {
+                label: "Overtime Request Form",
+                href: "/forms/overtime-request",
+                icon: "fa-solid fa-clock-rotate-left",
+            },
+            {
+                label: "Undertime Form",
+                href: "/forms/undertime",
+                icon: "fa-solid fa-clock",
+            },
+        ],
     },
 
     // ===== CLIENT =====
@@ -221,13 +331,64 @@ const menuItems = [
     },
 ];
 
+// Filter menu based on user type
 const filteredMenu = menuItems.filter((item) =>
-    item.roles.includes(user?.type)
+    item.roles?.includes(user?.type),
 );
 
+// Navigation handler
 const goTo = (href) => {
     if (href && href !== "#") {
         router.visit(href);
     }
 };
 </script>
+
+<style scoped>
+/* === Sidebar Scrollbar: Prevent layout shift === */
+.scrollbar-custom {
+    /* 'auto' for functionality, 'stable' reserves the space so buttons don't resize */
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+
+    /* Firefox support */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(70, 146, 60, 0.45) transparent;
+}
+
+/* WebKit Browsers (Chrome, Edge, Safari) */
+.scrollbar-custom::-webkit-scrollbar {
+    width: 6px;
+}
+
+.scrollbar-custom::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.scrollbar-custom::-webkit-scrollbar-thumb {
+    background-color: rgba(70, 146, 60, 0.45);
+    border-radius: 999px;
+}
+
+.scrollbar-custom::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(70, 146, 60, 0.7);
+}
+
+/* Slide + Fade effect for dropdown */
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+    transition: all 0.3s ease;
+}
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-5px);
+}
+.slide-fade-enter-to,
+.slide-fade-leave-from {
+    max-height: 500px; /* enough to fit all items */
+    opacity: 1;
+    transform: translateY(0);
+}
+</style>

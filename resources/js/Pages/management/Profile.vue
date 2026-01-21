@@ -2,9 +2,8 @@
 import { usePage } from "@inertiajs/vue3";
 
 // Import dashboards (adjust paths to your actual structure)
-// import AdminDashboard from "@/Pages/management/Admin/Index.vue";
-import TrainingDevelopmentHR from "@/Pages/management/HR/TrainingDevelopment.vue";
-import TrainingDevelopmentEmployee from "@/Pages/management/Employee/TrainingDevelopment.vue";
+import ProfileEmployee from "@/Pages/management/Employee/Profile.vue";
+import ProfileHR from "@/Pages/management/HR/Profile.vue";
 
 // Get user data from Inertia
 const page = usePage();
@@ -13,9 +12,8 @@ const user = page.props.auth.user;
 // Map roles to dashboards
 const dashboards = {
     // Admin: AdminDashboard,
-    // Manager: ManagerDashboard,
-    Employee: TrainingDevelopmentEmployee,
-    HR: TrainingDevelopmentHR,
+    Employee: ProfileEmployee,
+    HR: ProfileHR,
 };
 
 // Determine which dashboard to render

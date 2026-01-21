@@ -61,6 +61,10 @@ Route::get('/management/Notification', function () {
     return Inertia::render('management/Notification');
 });
 
+Route::get('/management/Profile', function () {
+    return Inertia::render('management/Profile');
+});
+
 Route::get('/management/register', function () {
     return Inertia::render('management/Register');
 });

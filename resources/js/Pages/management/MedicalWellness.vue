@@ -3,7 +3,8 @@ import { usePage } from "@inertiajs/vue3";
 
 // Import dashboards (adjust paths to your actual structure)
 // import AdminDashboard from "@/Pages/management/Admin/Index.vue";
-import HRRegister from "@/Pages/management/HR/MedicalWellness.vue";
+import MedicalWellnessHR from "@/Pages/management/HR/MedicalWellness.vue";
+import MedicalWellnessEmployee from "@/Pages/management/Employee/MedicalWellness.vue";
 
 // Get user data from Inertia
 const page = usePage();
@@ -13,7 +14,8 @@ const user = page.props.auth.user;
 const dashboards = {
     // Admin: AdminDashboard,
     // Manager: ManagerDashboard,
-    HR: HRRegister,
+    Employee: MedicalWellnessEmployee,
+    HR: MedicalWellnessHR,
 };
 
 // Determine which dashboard to render
