@@ -3,15 +3,9 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', function () {
-    return Inertia::render('Home');
-});
-
-
-
-Route::get('/login', function () {
-    return Inertia::render('Auth/Login');
-});
+// Route::get('/', function () {
+//     return Inertia::render('Home');
+// });
 
 Route::get('/register', function () {
     return Inertia::render('Auth/Register');
@@ -19,18 +13,6 @@ Route::get('/register', function () {
 
 Route::get('/forgot-password', function () {
     return Inertia::render('Auth/Forgot_Password');
-});
-
-Route::get('/management', function () {
-    return Inertia::render('management/Dashboard');
-});
-
-Route::get('/management/AnnouncementAndPolicy', function () {
-    return Inertia::render('management/AnnouncementAndPolicy');
-});
-
-Route::get('/management/Employees', function () {
-    return Inertia::render('management/Employees');
 });
 
 Route::get('/management/Recruitment', function () {
@@ -68,3 +50,9 @@ Route::get('/management/Profile', function () {
 Route::get('/management/register', function () {
     return Inertia::render('management/Register');
 });
+
+require __DIR__ . '/auth.php';
+require __DIR__ . '/hr.php';
+require __DIR__ . '/employee.php';
+
+

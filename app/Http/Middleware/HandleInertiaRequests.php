@@ -17,15 +17,16 @@ class HandleInertiaRequests extends Middleware
      * Define the props that are shared by default.
      */
     public function share(Request $request): array
-    {
-        return array_merge(parent::share($request), [
-            'auth' => [
-                'user' => [
-                    'id' => 1,
-                    'name' => 'Full Name',
-                    'type' => 'HR',  // --- Admin, Manager, HR, Supervisor, Employee, Client ---
-                ],
-            ],
-        ]);
-    }
+{
+    return array_merge(parent::share($request), [
+        'auth' => [
+            'user' => $request->user() ? [
+                'id' => $request->user()->id,
+                'name' => $request->user()->name,
+                'type' => $request->user()->userType?->name,
+            ] : null,
+        ],
+        // STOP! Do not put 'errors' here. Let Inertia do it automatically.
+    ]);
+}
 }
