@@ -6,6 +6,24 @@ import { ref } from "vue";
 const { openDropdown, toggleDropdown } = useDropdown();
 const user = usePage().props.auth.user;
 
+// Import shadcn components
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+// Tracking dialog state
+const isLogoutOpen = ref(false);
+
+const handleLogout = () => {
+    router.post("/logout");
+};
+
 /**
  * ROLE-BASED NAVBAR DROPDOWNS
  * (Aligned with HRIS modules + Aside)
@@ -343,11 +361,48 @@ const notifications = ref([
                                 >Account Settings</Link
                             >
                         </div>
-                        <div
-                            class="p-2 hover:bg-gray-100 cursor-pointer rounded-md"
-                        >
-                            <Link href="/logout">Logout</Link>
-                        </div>
+
+                        <Dialog v-model:open="isLogoutOpen">
+                            <DialogTrigger as-child>
+                                <button
+                                    class="p-2 hover:bg-gray-100 w-full text-start cursor-pointer rounded-md"
+                                >
+                                    Log Out
+                                </button>
+                            </DialogTrigger>
+
+                            <DialogContent class="sm:max-w-[425px]">
+                                <DialogHeader>
+                                    <DialogTitle class="text-xl"
+                                        >Confirm Logout</DialogTitle
+                                    >
+                                    <DialogDescription>
+                                        Are you sure you want to log out? You
+                                        will need to sign back in to access your
+                                        dashboard.
+                                    </DialogDescription>
+                                </DialogHeader>
+
+                                <DialogFooter
+                                    class="flex flex-col sm:flex-row gap-2 mt-4"
+                                >
+                                    <Button
+                                        variant="outline"
+                                        @click="isLogoutOpen = false"
+                                        class="w-full sm:w-auto"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        @click="handleLogout"
+                                        class="w-full sm:w-auto bg-red-600 hover:bg-red-700"
+                                    >
+                                        Yes, Log Out
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
                     </div>
                 </div>
             </div>
