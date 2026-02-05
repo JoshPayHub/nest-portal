@@ -21,6 +21,8 @@ class DatabaseSeeder extends Seeder
             StatusSeeder::class,
             DepartmentSeeder::class,
             PositionSeeder::class,
+            AnnouncementSeeder::class,
+            PoliciesSeeder::class,
         ]);
 
         // 2. Get default IDs to prevent foreign key errors

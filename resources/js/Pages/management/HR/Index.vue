@@ -10,28 +10,20 @@ import {
 import { Button } from "@/Components/ui/button";
 import { Table, TableBody, TableCell, TableRow } from "@/Components/ui/table";
 import { Alert, AlertTitle, AlertDescription } from "@/Components/ui/alert";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/Components/ui/dialog";
+
+// Props passed from DashboardController
+defineProps({
+    employeeStats: Object,
+    departmentStats: Object,
+    positionStats: Object,
+    announcementCount: Number,
+    policyCount: Number,
+});
 </script>
 
 <template>
     <div class="p-6 space-y-7">
-        <Alert variant="destructive" class="border-red-200 bg-red-50/50">
-            <AlertTitle class="font-bold"
-                >Pending Compliance Actions</AlertTitle
-            >
-            <AlertDescription>
-                You have 2 pending notices that require review before the Jan
-                15, 2026 deadline.
-            </AlertDescription>
-        </Alert>
-
+        <!-- HR Center Card -->
         <Card
             class="w-full flex flex-col items-center justify-center h-[300px] text-center border-blue-100 shadow-sm"
         >
@@ -45,6 +37,7 @@ import {
         </Card>
 
         <div class="grid grid-cols-12 gap-7">
+            <!-- Employee Records Card -->
             <Card class="col-span-12 md:col-span-6 border-blue-100">
                 <CardHeader>
                     <CardTitle class="text-xl text-brand-blue"
@@ -55,7 +48,7 @@ import {
                     <div class="grid grid-cols-3 gap-3 text-center">
                         <div>
                             <p class="text-3xl font-bold text-brand-blue">
-                                256
+                                {{ employeeStats.active }}
                             </p>
                             <p
                                 class="text-gray-500 text-xs uppercase tracking-wide"
@@ -64,148 +57,151 @@ import {
                             </p>
                         </div>
                         <div>
-                            <p class="text-3xl font-bold text-green-500">14</p>
+                            <p class="text-3xl font-bold text-green-500">
+                                {{ employeeStats.total - employeeStats.active }}
+                            </p>
                             <p
                                 class="text-gray-500 text-xs uppercase tracking-wide"
                             >
-                                New Hires
+                                Inactive
                             </p>
                         </div>
                         <div>
-                            <p class="text-3xl font-bold text-red-500">3</p>
+                            <p class="text-3xl font-bold text-blue-500">
+                                {{ employeeStats.total }}
+                            </p>
                             <p
                                 class="text-gray-500 text-xs uppercase tracking-wide"
                             >
-                                On Leave
+                                Total
                             </p>
                         </div>
                     </div>
                 </CardContent>
             </Card>
 
+            <!-- Departments Card -->
             <Card class="col-span-12 md:col-span-6 border-blue-100">
                 <CardHeader>
                     <CardTitle class="text-xl text-brand-blue"
-                        >Attendance & Leave</CardTitle
+                        >Departments</CardTitle
                     >
                 </CardHeader>
                 <CardContent>
-                    <div class="flex justify-around text-center">
+                    <div class="grid grid-cols-3 gap-3 text-center">
                         <div>
                             <p class="text-3xl font-bold text-brand-blue">
-                                234
+                                {{ departmentStats.active }}
                             </p>
                             <p
                                 class="text-gray-500 text-xs uppercase tracking-wide"
                             >
-                                Present
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-3xl font-bold text-yellow-500">18</p>
-                            <p
-                                class="text-gray-500 text-xs uppercase tracking-wide"
-                            >
-                                Late
+                                Active
                             </p>
                         </div>
                         <div>
-                            <p class="text-3xl font-bold text-red-500">4</p>
+                            <p class="text-3xl font-bold text-red-500">
+                                {{ departmentStats.inactive }}
+                            </p>
                             <p
                                 class="text-gray-500 text-xs uppercase tracking-wide"
                             >
-                                Absent
+                                Inactive
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-3xl font-bold text-blue-500">
+                                {{ departmentStats.total }}
+                            </p>
+                            <p
+                                class="text-gray-500 text-xs uppercase tracking-wide"
+                            >
+                                Total
                             </p>
                         </div>
                     </div>
                 </CardContent>
             </Card>
 
+            <!-- Positions Card -->
             <Card class="col-span-12 md:col-span-6 border-blue-100">
                 <CardHeader>
                     <CardTitle class="text-xl text-brand-blue"
-                        >Recruitment & Onboarding</CardTitle
+                        >Positions</CardTitle
                     >
                 </CardHeader>
                 <CardContent>
-                    <ul class="text-gray-600 text-sm space-y-3">
-                        <li class="flex items-center gap-2">
-                            📄 12 new applications
-                        </li>
-                        <li class="flex items-center gap-2">
-                            🧪 5 candidates for interview
-                        </li>
-                        <li class="flex items-center gap-2">
-                            ✔️ 3 for final screening
-                        </li>
-                    </ul>
+                    <div class="grid grid-cols-3 gap-3 text-center">
+                        <div>
+                            <p class="text-3xl font-bold text-brand-blue">
+                                {{ positionStats.active }}
+                            </p>
+                            <p
+                                class="text-gray-500 text-xs uppercase tracking-wide"
+                            >
+                                Active
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-3xl font-bold text-red-500">
+                                {{ positionStats.inactive }}
+                            </p>
+                            <p
+                                class="text-gray-500 text-xs uppercase tracking-wide"
+                            >
+                                Inactive
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-3xl font-bold text-blue-500">
+                                {{ positionStats.total }}
+                            </p>
+                            <p
+                                class="text-gray-500 text-xs uppercase tracking-wide"
+                            >
+                                Total
+                            </p>
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
 
+            <!-- Announcements & Policies Card -->
             <Card class="col-span-12 md:col-span-6 border-blue-100">
                 <CardHeader>
                     <CardTitle class="text-xl text-brand-blue"
-                        >Policies & Compliance</CardTitle
+                        >Announcements & Policies</CardTitle
                     >
                 </CardHeader>
                 <CardContent>
-                    <ul class="text-gray-600 text-sm space-y-3">
-                        <li class="flex items-center gap-2">
-                            📘 Handbook: Updated
-                        </li>
-                        <li class="flex items-center gap-2">
-                            🛡️ Labor Compliance: Good
-                        </li>
-                        <li class="flex items-center gap-2">
-                            📅 Review: Jan 15, 2026
-                        </li>
-                    </ul>
+                    <div class="grid grid-cols-2 gap-3 text-center">
+                        <div>
+                            <p class="text-3xl font-bold text-brand-blue">
+                                {{ announcementCount }}
+                            </p>
+                            <p
+                                class="text-gray-500 text-xs uppercase tracking-wide"
+                            >
+                                Announcements
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-3xl font-bold text-blue-500">
+                                {{ policyCount }}
+                            </p>
+                            <p
+                                class="text-gray-500 text-xs uppercase tracking-wide"
+                            >
+                                Policies
+                            </p>
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
         </div>
 
+        <!-- HR Quick Actions -->
         <div class="grid grid-cols-12 gap-7">
-            <Card class="col-span-12 lg:col-span-8 border-blue-100">
-                <CardHeader>
-                    <CardTitle class="text-xl text-brand-blue"
-                        >HR Activity Logs</CardTitle
-                    >
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableBody>
-                            <TableRow>
-                                <TableCell class="font-medium"
-                                    >Leave Approved</TableCell
-                                >
-                                <TableCell
-                                    class="text-right text-green-600 font-semibold"
-                                    >Completed</TableCell
-                                >
-                            </TableRow>
-                            <TableRow>
-                                <TableCell class="font-medium"
-                                    >Employee Record Updated</TableCell
-                                >
-                                <TableCell
-                                    class="text-right text-green-600 font-semibold"
-                                    >Completed</TableCell
-                                >
-                            </TableRow>
-                            <TableRow>
-                                <TableCell class="font-medium"
-                                    >Attendance Sync</TableCell
-                                >
-                                <TableCell
-                                    class="text-right text-blue-600 font-semibold"
-                                    >Automated</TableCell
-                                >
-                            </TableRow>
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-
             <Card class="col-span-12 lg:col-span-4 border-blue-100">
                 <CardHeader>
                     <CardTitle class="text-xl text-brand-blue"
@@ -225,9 +221,7 @@ import {
                         as-child
                         class="border-brand-blue text-brand-blue w-full"
                     >
-                        <Link href="/hr/recruitment/create"
-                            >Post Job Opening</Link
-                        >
+                        <Link href="/hr/department">Manage Departments</Link>
                     </Button>
 
                     <Button
@@ -235,8 +229,16 @@ import {
                         as-child
                         class="border-brand-blue text-brand-blue w-full"
                     >
-                        <Link href="/hr/attendance/approvals"
-                            >Review Leave Requests</Link
+                        <Link href="/hr/position">Manage Positions</Link>
+                    </Button>
+
+                    <Button
+                        variant="outline"
+                        as-child
+                        class="border-brand-blue text-brand-blue w-full"
+                    >
+                        <Link href="/hr/announcement-policy"
+                            >Manage Announcements & Policies</Link
                         >
                     </Button>
                 </CardContent>

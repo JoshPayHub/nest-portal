@@ -53,6 +53,7 @@ const props = defineProps({
 
 const search = ref(props.filters?.search || "");
 const selectedDept = ref(props.filters?.department || "");
+const selectedStatus = ref(props.filters?.status || ""); // New status filter
 const isDialogOpen = ref(false);
 
 const alertStatus = ref({
@@ -67,7 +68,7 @@ const form = useForm({
     name: "",
     status_id: "",
     department_id: "",
-    position_id: "", // Added Position
+    position_id: "",
 });
 
 // Watch status_id: If system status is Inactive (2), clear selections
@@ -81,18 +82,20 @@ watch(
     },
 );
 
+// Update filters and reload table
 const updateFilters = () => {
     router.get(
         window.location.pathname,
         {
             search: search.value,
             department: selectedDept.value,
+            status: selectedStatus.value,
         },
         { preserveState: true, replace: true },
     );
 };
 
-watch([search, selectedDept], () => updateFilters());
+watch([search, selectedDept, selectedStatus], () => updateFilters());
 
 const openEditModal = (emp) => {
     form.id = emp.id;
@@ -179,6 +182,39 @@ const submitUpdate = () => {
                     </Alert>
                 </transition>
 
+                <!-- Filters -->
+                <div class="flex flex-col md:flex-row gap-3 mb-4 items-center">
+                    <Input
+                        v-model="search"
+                        placeholder="Search employee..."
+                        class="h-12 w-full md:w-1/3"
+                    />
+
+                    <select
+                        v-model="selectedDept"
+                        class="h-12 rounded-md border border-slate-200 bg-white px-3 text-sm outline-none"
+                    >
+                        <option value="">All Departments</option>
+                        <option
+                            v-for="d in departments"
+                            :key="d.id"
+                            :value="d.id"
+                        >
+                            {{ d.name }}
+                        </option>
+                    </select>
+
+                    <select
+                        v-model="selectedStatus"
+                        class="h-12 rounded-md border border-slate-200 bg-white px-3 text-sm outline-none"
+                    >
+                        <option value="">All Statuses</option>
+                        <option v-for="s in statuses" :key="s.id" :value="s.id">
+                            {{ s.name }}
+                        </option>
+                    </select>
+                </div>
+
                 <div class="rounded-md border border-slate-200 overflow-hidden">
                     <Table>
                         <TableHeader class="bg-slate-50/50">
@@ -200,77 +236,90 @@ const submitUpdate = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            <TableRow
-                                v-for="emp in employees.data"
-                                :key="emp.id"
-                                class="hover:bg-blue-50/30 transition-colors group"
-                            >
-                                <TableCell>
-                                    <div class="flex items-center gap-3">
-                                        <div
-                                            class="p-2 bg-blue-50 rounded text-brand-blue"
-                                        >
-                                            <UserCircle class="w-5 h-5" />
-                                        </div>
-                                        <div>
+                            <template v-if="employees.length > 0">
+                                <TableRow
+                                    v-for="emp in employees"
+                                    :key="emp.id"
+                                    class="hover:bg-blue-50/30 transition-colors group"
+                                >
+                                    <TableCell>
+                                        <div class="flex items-center gap-3">
                                             <div
-                                                class="font-bold text-slate-800"
+                                                class="p-2 bg-blue-50 rounded text-brand-blue"
                                             >
-                                                {{ emp.name }}
+                                                <UserCircle class="w-5 h-5" />
                                             </div>
-                                            <div class="text-xs text-slate-500">
-                                                {{ emp.email }}
+                                            <div>
+                                                <div
+                                                    class="font-bold text-slate-800"
+                                                >
+                                                    {{ emp.name }}
+                                                </div>
+                                                <div
+                                                    class="text-xs text-slate-500"
+                                                >
+                                                    {{ emp.email }}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <div class="flex flex-col gap-1">
+                                    </TableCell>
+                                    <TableCell>
+                                        <div class="flex flex-col gap-1">
+                                            <span
+                                                class="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700"
+                                            >
+                                                <Users
+                                                    class="w-4 h-4 text-slate-400"
+                                                />
+                                                {{
+                                                    emp.department?.name ||
+                                                    "Unassigned"
+                                                }}
+                                            </span>
+                                            <span
+                                                class="inline-flex items-center gap-1.5 text-xs text-slate-500"
+                                            >
+                                                <Briefcase
+                                                    class="w-3.5 h-3.5 text-slate-400"
+                                                />
+                                                {{
+                                                    emp.position?.name ||
+                                                    "No Position"
+                                                }}
+                                            </span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell class="text-center">
                                         <span
-                                            class="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700"
+                                            :class="[
+                                                'inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase',
+                                                emp.status_id === 1
+                                                    ? 'bg-green-100 text-green-700'
+                                                    : 'bg-red-100 text-red-700',
+                                            ]"
                                         >
-                                            <Users
-                                                class="w-4 h-4 text-slate-400"
-                                            />
-                                            {{
-                                                emp.department?.name ||
-                                                "Unassigned"
-                                            }}
+                                            {{ emp.status?.name }}
                                         </span>
-                                        <span
-                                            class="inline-flex items-center gap-1.5 text-xs text-slate-500"
+                                    </TableCell>
+                                    <TableCell class="text-right px-6">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            @click="openEditModal(emp)"
+                                            class="text-brand-blue hover:bg-blue-100"
                                         >
-                                            <Briefcase
-                                                class="w-3.5 h-3.5 text-slate-400"
-                                            />
-                                            {{
-                                                emp.position?.name ||
-                                                "No Position"
-                                            }}
-                                        </span>
-                                    </div>
-                                </TableCell>
-                                <TableCell class="text-center">
-                                    <span
-                                        :class="[
-                                            'inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase',
-                                            emp.status_id === 1
-                                                ? 'bg-green-100 text-green-700'
-                                                : 'bg-red-100 text-red-700',
-                                        ]"
-                                    >
-                                        {{ emp.status?.name }}
-                                    </span>
-                                </TableCell>
-                                <TableCell class="text-right px-6">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        @click="openEditModal(emp)"
-                                        class="text-brand-blue hover:bg-blue-100"
-                                    >
-                                        <Pencil class="w-4 h-4 mr-2" /> Edit
-                                    </Button>
+                                            <Pencil class="w-4 h-4 mr-2" /> Edit
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            </template>
+
+                            <TableRow v-else>
+                                <TableCell
+                                    colspan="4"
+                                    class="text-center text-slate-500 py-4"
+                                >
+                                    No results found.
                                 </TableCell>
                             </TableRow>
                         </TableBody>

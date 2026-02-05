@@ -29,43 +29,43 @@ const dropdownsByRole = {
         },
     ],
 
-    HR: [
-        {
-            label: "HR Operations",
-            options: [
-                { name: "Employee Records", href: "/management/Employees" },
-                {
-                    name: "Recruitment & Onboarding",
-                    href: "/management/Recruitment",
-                },
-                {
-                    name: "Attendance & Leave",
-                    href: "/management/AttendanceLeave",
-                },
-            ],
-        },
-        {
-            label: "Employee Welfare",
-            options: [
-                {
-                    name: "Training & Development",
-                    href: "/management/TrainingDevelopment",
-                },
-                {
-                    name: "Medical & Wellness",
-                    href: "/management/MedicalWellness",
-                },
-                {
-                    name: "Discipline & Cases",
-                    href: "/management/DisciplineCases",
-                },
-            ],
-        },
-        {
-            label: "Reports",
-            options: [{ name: "HR Reports", href: "/management/Reports" }],
-        },
-    ],
+    // HR: [
+    //     {
+    //         label: "HR Operations",
+    //         options: [
+    //             { name: "Employee Records", href: "/management/Employees" },
+    //             {
+    //                 name: "Recruitment & Onboarding",
+    //                 href: "/management/Recruitment",
+    //             },
+    //             {
+    //                 name: "Attendance & Leave",
+    //                 href: "/management/AttendanceLeave",
+    //             },
+    //         ],
+    //     },
+    //     {
+    //         label: "Employee Welfare",
+    //         options: [
+    //             {
+    //                 name: "Training & Development",
+    //                 href: "/management/TrainingDevelopment",
+    //             },
+    //             {
+    //                 name: "Medical & Wellness",
+    //                 href: "/management/MedicalWellness",
+    //             },
+    //             {
+    //                 name: "Discipline & Cases",
+    //                 href: "/management/DisciplineCases",
+    //             },
+    //         ],
+    //     },
+    //     {
+    //         label: "Reports",
+    //         options: [{ name: "HR Reports", href: "/management/Reports" }],
+    //     },
+    // ],
 
     Manager: [
         {
