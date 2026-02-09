@@ -17,16 +17,22 @@ class HandleInertiaRequests extends Middleware
      * Define the props that are shared by default.
      */
     public function share(Request $request): array
-{
-    return array_merge(parent::share($request), [
-        'auth' => [
-            'user' => $request->user() ? [
-                'id' => $request->user()->id,
-                'name' => $request->user()->name,
-                'type' => $request->user()->userType?->name,
-            ] : null,
-        ],
-        // STOP! Do not put 'errors' here. Let Inertia do it automatically.
-    ]);
-}
+    {
+        return array_merge(parent::share($request), [
+            'auth' => [
+                'user' => $request->user() ? [
+                    'id' => $request->user()->id,
+                    'name' => $request->user()->name,
+                    'type' => $request->user()->userType?->name,
+                ] : null,
+            ],
+
+            // flash section to share session messages with Vue
+            'flash' => [
+                'message' => fn () => $request->session()->get('message'),
+                'error'   => fn () => $request->session()->get('error'),
+            ],
+
+        ]);
+    }
 }

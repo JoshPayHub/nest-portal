@@ -125,22 +125,22 @@ const dropdownsByRole = {
         },
     ],
 
-    Employee: [
-        {
-            label: "My Account",
-            options: [
-                { name: "My Profile", href: "/employee/profile" },
-                { name: "My Performance", href: "/employee/performance" },
-            ],
-        },
-        {
-            label: "Requests",
-            options: [
-                { name: "Leave & Requests", href: "/employee/leave" },
-                { name: "My Training", href: "/employee/training" },
-            ],
-        },
-    ],
+    // Employee: [
+    //     {
+    //         label: "My Account",
+    //         options: [
+    //             { name: "My Profile", href: "/employee/profile" },
+    //             { name: "My Performance", href: "/employee/performance" },
+    //         ],
+    //     },
+    //     {
+    //         label: "Requests",
+    //         options: [
+    //             { name: "Leave & Requests", href: "/employee/leave" },
+    //             { name: "My Training", href: "/employee/training" },
+    //         ],
+    //     },
+    // ],
 
     Client: [
         {

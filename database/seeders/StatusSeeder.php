@@ -17,6 +17,11 @@ class StatusSeeder extends Seeder
             ['id' => 1, 'name' => 'active'],
             ['id' => 2, 'name' => 'inactive'],
             ['id' => 3, 'name' => 'suspended'],
+            ['id' => 4, 'name' => 'pending'],
+            ['id' => 5, 'name' => 'completed'],
+            ['id' => 6, 'name' => 'submitted'],
+            ['id' => 7, 'name' => 'approved'],
+            ['id' => 8, 'name' => 'rejected'],
         ]);
     }
 }

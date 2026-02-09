@@ -1,4 +1,5 @@
 <script setup>
+import CustomToast from "@/Components/CustomToast.vue";
 import Navbar from "@/components/Navbar/Navbar.vue";
 import Aside from "@/components/Navbar/Aside.vue";
 </script>
@@ -13,4 +14,5 @@ import Aside from "@/components/Navbar/Aside.vue";
             </main>
         </div>
     </div>
+    <CustomToast />
 </template>

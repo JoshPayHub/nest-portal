@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Route;
 // hr.php
 Route::middleware(['auth', 'user_type:HR'])->prefix('hr')->name('hr.')->group(function () {
 
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/announcement-and-policy', [AnnouncementPolicyController::class, 'index'])->name('announcementpolicy.index');
     Route::post('/announcement-and-policy/store', [AnnouncementPolicyController::class, 'store'])->name('announcementpolicy.store');

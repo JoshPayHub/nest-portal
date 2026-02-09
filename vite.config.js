@@ -7,7 +7,11 @@ import path from "path"; // 1. Import the path module
 export default defineConfig({
     plugins: [
         laravel({
-            input: ["resources/css/app.css", "resources/js/app.js"],
+            input: [
+                "resources/css/app.css",
+                "resources/js/assets/dashboard/logo.png",
+                "resources/js/app.js",
+            ],
             refresh: true,
         }),
         tailwindcss(),

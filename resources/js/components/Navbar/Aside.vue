@@ -136,7 +136,7 @@ const menuItems = {
     Employee: [
         {
             label: "Dashboard",
-            href: "/employee/Dashboard", // Pointed directly to Employee route
+            href: "/employee/dashboard",
             icon: "fa-solid fa-gauge",
         },
         {
@@ -144,7 +144,52 @@ const menuItems = {
             href: "/management/AnnouncementAndPolicy",
             icon: "fa-solid fa-scroll",
         },
-        // ... Add other employee-specific items here
+        {
+            category: "Employee Forms",
+            icon: "fa-solid fa-file-lines",
+            children: [
+                {
+                    label: "Accomplishment Report",
+                    href: "/employee/accomplishment-report",
+                    icon: "fa-solid fa-file-lines",
+                },
+                {
+                    label: "Change Off",
+                    href: "/forms/change-off",
+                    icon: "fa-solid fa-right-left",
+                },
+                {
+                    label: "Leave Form",
+                    href: "/forms/leave-form",
+                    icon: "fa-solid fa-calendar-plus",
+                },
+                {
+                    label: "Leave of Absence Report",
+                    href: "/forms/leave-of-absence",
+                    icon: "fa-solid fa-calendar-xmark",
+                },
+                {
+                    label: "Manpower Requisition Form",
+                    href: "/forms/manpower-requisition",
+                    icon: "fa-solid fa-user-group",
+                },
+                {
+                    label: "Official Business Notification",
+                    href: "/forms/official-business",
+                    icon: "fa-solid fa-briefcase",
+                },
+                {
+                    label: "Overtime Request Form",
+                    href: "/forms/overtime-request",
+                    icon: "fa-solid fa-clock-rotate-left",
+                },
+                {
+                    label: "Undertime Form",
+                    href: "/forms/undertime",
+                    icon: "fa-solid fa-clock",
+                },
+            ],
+        },
     ],
 };
 
