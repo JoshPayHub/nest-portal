@@ -1,7 +1,17 @@
 <script setup>
 import { ref, computed } from "vue";
 import { Link, router } from "@inertiajs/vue3";
-import { Plus, Search, FileText, Calendar, Eye } from "lucide-vue-next";
+import {
+    Plus,
+    Search,
+    FileText,
+    Calendar,
+    Eye,
+    Pencil,
+    Clock,
+    CheckCircle2,
+    XCircle,
+} from "lucide-vue-next";
 
 // UI Components
 import { Button } from "@/Components/ui/button";
@@ -21,28 +31,74 @@ import {
     TableHeader,
     TableRow,
 } from "@/Components/ui/table";
+import { Badge } from "@/Components/ui/badge";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "@/Components/ui/dialog";
 
 const props = defineProps({
-    reports: Array, // The list of submitted reports
+    reports: Array,
 });
 
 const search = ref("");
+const isViewOpen = ref(false);
+const selectedReport = ref(null);
 
-// Filter reports based on search (Date or Name)
 const filteredReports = computed(() => {
     if (!search.value) return props.reports;
-
     const searchTerm = search.value.toLowerCase();
-
     return props.reports.filter((report) => {
         const reportDate = String(report.report_date || "").toLowerCase();
         const periodFrom = String(report.period_from || "").toLowerCase();
-
         return (
             reportDate.includes(searchTerm) || periodFrom.includes(searchTerm)
         );
     });
 });
+
+const openView = (report) => {
+    selectedReport.value = report;
+    isViewOpen.value = true;
+};
+
+/**
+ * UPDATED LOGIC:
+ * An employee can edit if:
+ * 1. Any status is 'rejected' (even if the other is 'approved')
+ * 2. OR if both are still 'pending'
+ * * We ONLY hide the edit button if BOTH have approved (Finalized).
+ */
+const canEdit = (report) => {
+    const leaderStatus = report.leader_status_name.toLowerCase();
+    const hrStatus = report.hr_status_name.toLowerCase();
+
+    // If anyone rejected, we MUST allow editing to fix the report.
+    if (leaderStatus === "rejected" || hrStatus === "rejected") {
+        return true;
+    }
+
+    // If both are approved, hide the edit button.
+    if (leaderStatus === "approved" && hrStatus === "approved") {
+        return false;
+    }
+
+    // Otherwise (Pending states), allow editing.
+    return true;
+};
+
+// Helper for status styling
+const getStatusClass = (status) => {
+    const s = status.toLowerCase();
+    if (s === "approved")
+        return "bg-green-100 text-green-800 hover:bg-green-100";
+    if (s === "rejected") return "bg-red-100 text-red-800 hover:bg-red-100";
+    return "bg-amber-100 text-amber-800 hover:bg-amber-100"; // Default Pending
+};
 </script>
 
 <template>
@@ -72,7 +128,7 @@ const filteredReports = computed(() => {
                 </div>
             </CardHeader>
 
-            <CardContent>
+            <CardContent class="mt-6">
                 <div class="flex flex-col md:flex-row gap-3 mb-6 items-center">
                     <div class="relative w-full md:w-1/3">
                         <Search
@@ -80,7 +136,7 @@ const filteredReports = computed(() => {
                         />
                         <Input
                             v-model="search"
-                            placeholder="Search by date (YYYY-MM-DD)..."
+                            placeholder="Search by date..."
                             class="h-12 pl-10 w-full"
                         />
                     </div>
@@ -100,16 +156,14 @@ const filteredReports = computed(() => {
                                     class="font-bold text-slate-700 text-center"
                                     >ACTIVITIES</TableHead
                                 >
-
                                 <TableHead
                                     class="font-bold text-center text-slate-700"
-                                    >LEADER APPROVAL</TableHead
+                                    >LEADER</TableHead
                                 >
                                 <TableHead
                                     class="font-bold text-center text-slate-700"
-                                    >HR APPROVAL</TableHead
+                                    >HR</TableHead
                                 >
-
                                 <TableHead
                                     class="text-right font-bold text-slate-700 px-6"
                                     >ACTIONS</TableHead
@@ -137,85 +191,80 @@ const filteredReports = computed(() => {
                                             </div>
                                         </div>
                                     </TableCell>
-
                                     <TableCell>
-                                        <div class="flex flex-col">
-                                            <span
-                                                class="text-sm font-medium text-slate-600"
-                                            >
-                                                {{ report.period_from }} to
-                                                {{ report.period_to }}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-
-                                    <TableCell class="text-center">
                                         <span
-                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800"
+                                            class="text-sm font-medium text-slate-600"
                                         >
-                                            {{ report.activities_count || 0 }}
-                                            Items
+                                            {{ report.period_from }} -
+                                            {{ report.period_to }}
                                         </span>
                                     </TableCell>
-
                                     <TableCell class="text-center">
-                                        <span
-                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize"
+                                        <Badge variant="outline"
+                                            >{{
+                                                report.activities_count
+                                            }}
+                                            Items</Badge
+                                        >
+                                    </TableCell>
+                                    <TableCell class="text-center">
+                                        <Badge
                                             :class="
-                                                report.leader_status_name.toLowerCase() ===
-                                                'pending'
-                                                    ? 'bg-red-100 text-red-800'
-                                                    : 'bg-green-100 text-brand-blue'
+                                                getStatusClass(
+                                                    report.leader_status_name,
+                                                )
                                             "
                                         >
                                             {{ report.leader_status_name }}
-                                        </span>
+                                        </Badge>
                                     </TableCell>
-
                                     <TableCell class="text-center">
-                                        <span
-                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize"
+                                        <Badge
                                             :class="
-                                                report.hr_status_name.toLowerCase() ===
-                                                'pending'
-                                                    ? 'bg-red-100 text-red-800'
-                                                    : 'bg-green-100 text-brand-blue'
+                                                getStatusClass(
+                                                    report.hr_status_name,
+                                                )
                                             "
                                         >
                                             {{ report.hr_status_name }}
-                                        </span>
+                                        </Badge>
                                     </TableCell>
-
-                                    <TableCell class="text-right px-6">
+                                    <TableCell
+                                        class="text-right px-6 space-x-2"
+                                    >
                                         <Button
-                                            variant="ghost"
+                                            v-if="canEdit(report)"
+                                            variant="outline"
                                             size="sm"
                                             @click="
                                                 router.get(
-                                                    `/accomplishment-report/view/${report.id}`,
+                                                    `/employee/accomplishment-report/edit/${report.id}`,
                                                 )
                                             "
+                                            class="text-amber-600 border-amber-200 hover:bg-amber-50"
+                                        >
+                                            <Pencil class="w-4 h-4 mr-1" /> Edit
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            @click="openView(report)"
                                             class="text-brand-blue hover:bg-blue-100 font-bold"
                                         >
-                                            <Eye class="w-4 h-4 mr-2" /> View
-                                            Details
+                                            <Eye class="w-4 h-4 mr-1" /> View
                                         </Button>
                                     </TableCell>
                                 </TableRow>
                             </template>
-
                             <TableRow v-else>
                                 <TableCell
-                                    colspan="4"
+                                    colspan="6"
                                     class="text-center text-slate-500 py-10"
                                 >
                                     <FileText
                                         class="w-10 h-10 mx-auto mb-2 opacity-20"
                                     />
-                                    <p>
-                                        No reports found. Start by creating a
-                                        new one!
-                                    </p>
+                                    <p>No reports found.</p>
                                 </TableCell>
                             </TableRow>
                         </TableBody>
@@ -223,5 +272,153 @@ const filteredReports = computed(() => {
                 </div>
             </CardContent>
         </Card>
+
+        <Dialog v-model:open="isViewOpen">
+            <DialogContent class="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <div class="pr-6">
+                        <DialogTitle class="text-2xl font-bold text-brand-blue"
+                            >Report Details</DialogTitle
+                        >
+                        <DialogDescription>
+                            Submitted on {{ selectedReport?.report_date }}
+                        </DialogDescription>
+                    </div>
+                </DialogHeader>
+
+                <div
+                    class="grid grid-cols-2 gap-4 py-4 border-y border-slate-100 mt-4"
+                >
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase">
+                            Period Covered
+                        </p>
+                        <p class="text-sm font-semibold">
+                            {{ selectedReport?.period_from }} to
+                            {{ selectedReport?.period_to }}
+                        </p>
+                    </div>
+                    <div class="flex justify-end gap-4">
+                        <div class="text-right">
+                            <p
+                                class="text-xs font-bold text-slate-400 uppercase"
+                            >
+                                Leader Status
+                            </p>
+                            <p
+                                class="text-sm font-bold uppercase"
+                                :class="
+                                    selectedReport?.leader_status_name.toLowerCase() ===
+                                    'rejected'
+                                        ? 'text-red-600'
+                                        : 'text-brand-blue'
+                                "
+                            >
+                                {{ selectedReport?.leader_status_name }}
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <p
+                                class="text-xs font-bold text-slate-400 uppercase"
+                            >
+                                HR Status
+                            </p>
+                            <p
+                                class="text-sm font-bold uppercase"
+                                :class="
+                                    selectedReport?.hr_status_name.toLowerCase() ===
+                                    'rejected'
+                                        ? 'text-red-600'
+                                        : 'text-brand-blue'
+                                "
+                            >
+                                {{ selectedReport?.hr_status_name }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="mt-4 overflow-hidden rounded-md border border-slate-100"
+                >
+                    <Table>
+                        <TableHeader class="bg-slate-50">
+                            <TableRow>
+                                <TableHead class="w-[150px]">Date</TableHead>
+                                <TableHead>Activity</TableHead>
+                                <TableHead class="w-[120px] text-right"
+                                    >Status</TableHead
+                                >
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <TableRow
+                                v-for="(
+                                    act, index
+                                ) in selectedReport?.activities"
+                                :key="index"
+                            >
+                                <TableCell class="text-xs font-medium">{{
+                                    act.date
+                                }}</TableCell>
+                                <TableCell
+                                    class="text-sm whitespace-pre-wrap"
+                                    >{{ act.activity }}</TableCell
+                                >
+                                <TableCell class="text-right">
+                                    <div
+                                        class="flex justify-end items-center gap-1 text-[10px] font-bold"
+                                        :class="
+                                            act.status_name.toLowerCase() ===
+                                            'completed'
+                                                ? 'text-green-600'
+                                                : 'text-amber-600'
+                                        "
+                                    >
+                                        <component
+                                            :is="
+                                                act.status_name.toLowerCase() ===
+                                                'completed'
+                                                    ? CheckCircle2
+                                                    : Clock
+                                            "
+                                            class="w-3 h-3"
+                                        />
+                                        {{ act.status_name.toUpperCase() }}
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        </TableBody>
+                    </Table>
+                </div>
+
+                <DialogFooter class="print:hidden">
+                    <Button variant="secondary" @click="isViewOpen = false"
+                        >Close</Button
+                    >
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
 </template>
+
+<style>
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .fixed.inset-0.z-50,
+    .fixed.inset-0.z-50 * {
+        visibility: visible;
+    }
+    .fixed.inset-0.z-50 {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+    }
+    .print\:hidden {
+        display: none !important;
+    }
+}
+</style>

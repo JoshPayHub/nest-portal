@@ -17,8 +17,6 @@ class AccomplishReport extends Model
         'position_id',
         'from_date',
         'to_date',
-        'leader_status_id',
-        'hr_status_id',
     ];
 
     /* ==========================
@@ -43,21 +41,33 @@ class AccomplishReport extends Model
         return $this->belongsTo(Position::class);
     }
 
-    // leader approval status
-    public function leaderStatus(): BelongsTo
-    {
-        return $this->belongsTo(Status::class, 'leader_status_id');
-    }
-
-    // HR approval status
-    public function hrStatus(): BelongsTo
-    {
-        return $this->belongsTo(Status::class, 'hr_status_id');
-    }
-
     // activities under this report
     public function activities(): HasMany
     {
         return $this->hasMany(AccomplishActivity::class);
+    }
+
+    // All approval logs
+    public function approvalStatuses(): HasMany
+    {
+        return $this->hasMany(AccomplishReportStatus::class);
+    }
+
+    // Logic to get Leader status (Assumes User Type 2 is Leader/Head)
+    public function leaderStatus()
+    {
+        return $this->approvalStatuses()
+            ->whereHas('user', fn($q) => $q->where('user_type_id', 3))
+            ->with('status')
+            ->latest();
+    }
+
+    // Logic to get HR status (Assumes User Type 3 is HR)
+    public function hrStatus()
+    {
+        return $this->approvalStatuses()
+            ->whereHas('user', fn($q) => $q->where('user_type_id', 1))
+            ->with('status')
+            ->latest();
     }
 }

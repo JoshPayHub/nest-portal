@@ -40,7 +40,10 @@ class User extends Authenticatable
         ];
     }
 
-    public function userType(): BelongsTo { return $this->belongsTo(UserType::class); }
+    public function userType(): BelongsTo {
+        return $this->belongsTo(UserType::class);
+    }
+
     public function department(): BelongsTo { return $this->belongsTo(Department::class); }
     public function position(): BelongsTo { return $this->belongsTo(Position::class); }
     public function status(): BelongsTo { return $this->belongsTo(Status::class); }

@@ -1,5 +1,5 @@
 <script setup>
-import { useForm, usePage } from "@inertiajs/vue3";
+import { useForm, usePage, router } from "@inertiajs/vue3";
 import { onMounted, watch } from "vue";
 import {
     Card,
@@ -21,7 +21,7 @@ import {
 } from "@/Components/ui/table";
 import { Textarea } from "@/Components/ui/textarea";
 
-// ✅ Shadcn Select Imports
+// Shadcn Select Imports
 import {
     Select,
     SelectContent,
@@ -35,45 +35,58 @@ import { toastStore } from "@/stores/toast";
 
 const page = usePage();
 const authUser = page.props.authUser;
-const statuses = page.props.statuses; // Passed from Controller
+const statuses = page.props.statuses;
+const report = page.props.report; // Existing report if editing
+const isEditing = page.props.isEditing ?? false;
+
 const today = new Date().toISOString().split("T")[0];
 const STORAGE_KEY = "accomplishment_report_draft";
 
-// ✅ Helper to find the ID for "pending" dynamically
+// Helper to find the ID for "pending" dynamically
 const getPendingId = () => {
     const status = statuses?.find((s) => s.name.toLowerCase() === "pending");
     return status ? status.id.toString() : "";
 };
 
-// ✅ Load Initial Data from LocalStorage or Defaults
-const savedDraft = JSON.parse(localStorage.getItem(STORAGE_KEY));
+// Initialization Logic
+const savedDraft = !isEditing
+    ? JSON.parse(localStorage.getItem(STORAGE_KEY))
+    : null;
 
 const form = useForm({
     name: authUser?.name ?? "",
     department_position: authUser
         ? `${authUser.department} / ${authUser.position}`
         : "",
-    report_date: today,
-    period_from: savedDraft?.period_from ?? "",
-    period_to: savedDraft?.period_to ?? "",
-    // ✅ Uses status_id instead of remarks
-    activities: savedDraft?.activities ?? [
-        { date: today, activity: "", status_id: getPendingId() },
-    ],
+    report_date: report
+        ? new Date(report.created_at).toISOString().split("T")[0]
+        : today,
+    period_from: report?.from_date ?? savedDraft?.period_from ?? "",
+    period_to: report?.to_date ?? savedDraft?.period_to ?? "",
+    activities: report?.activities?.map((a) => ({
+        date: a.activity_date,
+        activity: a.activity,
+        status_id: a.status_id.toString(),
+    })) ??
+        savedDraft?.activities ?? [
+            { date: today, activity: "", status_id: getPendingId() },
+        ],
 });
 
-// ✅ Auto-Save: Watch for changes and save to LocalStorage
+// Auto-Save: Only for New Reports
 watch(
     () => [form.period_from, form.period_to, form.activities],
     () => {
-        localStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify({
-                period_from: form.period_from,
-                period_to: form.period_to,
-                activities: form.activities,
-            }),
-        );
+        if (!isEditing) {
+            localStorage.setItem(
+                STORAGE_KEY,
+                JSON.stringify({
+                    period_from: form.period_from,
+                    period_to: form.period_to,
+                    activities: form.activities,
+                }),
+            );
+        }
     },
     { deep: true },
 );
@@ -93,49 +106,93 @@ const removeRow = (index) => {
 };
 
 const submit = () => {
-    form.post("/employee/accomplishment-report/store", {
-        preserveScroll: true,
-        onSuccess: () => {
-            localStorage.removeItem(STORAGE_KEY);
-            toastStore.show(
-                "Accomplishment report submitted successfully!",
-                "success",
-            );
-
-            form.reset();
-            form.period_from = "";
-            form.period_to = "";
-            form.activities = [
-                { date: today, activity: "", status_id: getPendingId() },
-            ];
-        },
-        onError: () => {
-            toastStore.show("Please fix the errors and try again.", "error");
-        },
-    });
+    if (isEditing) {
+        // Constructing URL manually since Ziggy is not used
+        form.put(`/employee/accomplishment-report/update/${report.id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toastStore.show("Report updated successfully!", "success");
+            },
+            onError: () => {
+                toastStore.show(
+                    "Please fix the errors and try again.",
+                    "error",
+                );
+            },
+        });
+    } else {
+        // Constructing URL manually for store
+        form.post("/employee/accomplishment-report/store", {
+            preserveScroll: true,
+            onSuccess: () => {
+                localStorage.removeItem(STORAGE_KEY);
+                form.reset();
+                form.period_from = "";
+                form.period_to = "";
+                form.activities = [
+                    { date: today, activity: "", status_id: getPendingId() },
+                ];
+                toastStore.show("Report submitted successfully!", "success");
+            },
+            onError: () => {
+                toastStore.show(
+                    "Please fix the errors and try again.",
+                    "error",
+                );
+            },
+        });
+    }
 };
 </script>
 
 <template>
     <div class="p-6 space-y-7">
         <Card class="border-blue-100">
-            <CardHeader>
-                <CardTitle class="text-3xl font-bold text-brand-blue"
-                    >Accomplishment Report</CardTitle
+            <CardHeader
+                class="space-y-4 bg-slate-50/50 border-b border-blue-50/50 pb-6"
+            >
+                <nav
+                    class="flex items-center gap-2 text-xs uppercase tracking-wider text-slate-400"
                 >
-                <CardDescription
-                    >Please complete all required fields and list your
-                    accomplished activities.</CardDescription
-                >
+                    <span
+                        class="hover:text-brand-blue cursor-pointer transition-colors"
+                        @click="router.get('/employee/accomplishment-report')"
+                    >
+                        Reports
+                    </span>
+                    <span class="text-slate-300">/</span>
+                    <span class="font-bold text-brand-blue">
+                        {{ isEditing ? "Edit" : "New Entry" }}
+                    </span>
+                </nav>
+
+                <div class="space-y-1">
+                    <CardTitle
+                        class="text-3xl font-extrabold tracking-tight text-brand-blue"
+                    >
+                        {{
+                            isEditing
+                                ? "Update Report"
+                                : "Accomplishment Report"
+                        }}
+                    </CardTitle>
+                    <CardDescription class="text-slate-500">
+                        {{
+                            isEditing
+                                ? "Modify your activities and progress for this period."
+                                : "Fill out the details below to document your completed activities."
+                        }}
+                    </CardDescription>
+                </div>
             </CardHeader>
 
-            <CardContent class="grid grid-cols-12 gap-4">
+            <CardContent class="grid grid-cols-12 gap-4 mt-6">
                 <div class="col-span-12 md:col-span-6">
                     <Label class="p-1">Name</Label>
                     <Input
                         v-model="form.name"
                         disabled
-                        class="border-2 border-gray-500"
+                        class="border-2 border-gray-300 bg-slate-50"
                     />
                 </div>
 
@@ -145,7 +202,7 @@ const submit = () => {
                         type="date"
                         v-model="form.report_date"
                         disabled
-                        class="border-2 border-gray-500"
+                        class="border-2 border-gray-300 bg-slate-50"
                     />
                 </div>
 
@@ -154,7 +211,7 @@ const submit = () => {
                     <Input
                         v-model="form.department_position"
                         disabled
-                        class="border-2 border-gray-500"
+                        class="border-2 border-gray-300 bg-slate-50"
                     />
                 </div>
 
@@ -162,7 +219,14 @@ const submit = () => {
                     <Label class="p-1">Period Covered</Label>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <Input type="date" v-model="form.period_from" />
+                            <Input
+                                type="date"
+                                v-model="form.period_from"
+                                :disabled="isEditing"
+                                :class="{
+                                    'border-red-500': form.errors.period_from,
+                                }"
+                            />
                             <p
                                 v-if="form.errors.period_from"
                                 class="text-red-500 text-xs mt-1"
@@ -171,7 +235,14 @@ const submit = () => {
                             </p>
                         </div>
                         <div>
-                            <Input type="date" v-model="form.period_to" />
+                            <Input
+                                type="date"
+                                v-model="form.period_to"
+                                :disabled="isEditing"
+                                :class="{
+                                    'border-red-500': form.errors.period_to,
+                                }"
+                            />
                             <p
                                 v-if="form.errors.period_to"
                                 class="text-red-500 text-xs mt-1"
@@ -190,7 +261,7 @@ const submit = () => {
                             <TableRow>
                                 <TableHead class="w-[150px]">Date</TableHead>
                                 <TableHead>Actual Activity</TableHead>
-                                <TableHead class="w-[200px]">Remarks</TableHead>
+                                <TableHead class="w-[200px]">Status</TableHead>
                                 <TableHead class="w-[80px] text-center"
                                     >Action</TableHead
                                 >
@@ -202,14 +273,23 @@ const submit = () => {
                                 :key="index"
                             >
                                 <TableCell>
-                                    <Input type="date" v-model="row.date" />
+                                    <Input
+                                        type="date"
+                                        v-model="row.date"
+                                        :class="{
+                                            'border-red-500':
+                                                form.errors[
+                                                    `activities.${index}.date`
+                                                ],
+                                        }"
+                                    />
                                     <p
                                         v-if="
                                             form.errors[
                                                 `activities.${index}.date`
                                             ]
                                         "
-                                        class="text-red-500 text-xs mt-1"
+                                        class="text-red-500 text-[10px] mt-1"
                                     >
                                         {{
                                             form.errors[
@@ -223,6 +303,12 @@ const submit = () => {
                                         v-model="row.activity"
                                         rows="2"
                                         placeholder="Describe the activity"
+                                        :class="{
+                                            'border-red-500':
+                                                form.errors[
+                                                    `activities.${index}.activity`
+                                                ],
+                                        }"
                                     />
                                     <p
                                         v-if="
@@ -230,7 +316,7 @@ const submit = () => {
                                                 `activities.${index}.activity`
                                             ]
                                         "
-                                        class="text-red-500 text-xs mt-1"
+                                        class="text-red-500 text-[10px] mt-1"
                                     >
                                         {{
                                             form.errors[
@@ -241,7 +327,14 @@ const submit = () => {
                                 </TableCell>
                                 <TableCell>
                                     <Select v-model="row.status_id">
-                                        <SelectTrigger>
+                                        <SelectTrigger
+                                            :class="{
+                                                'border-red-500':
+                                                    form.errors[
+                                                        `activities.${index}.status_id`
+                                                    ],
+                                            }"
+                                        >
                                             <SelectValue
                                                 placeholder="Select Status"
                                             />
@@ -261,22 +354,13 @@ const submit = () => {
                                             </SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    <p
-                                        v-if="
-                                            form.errors[
-                                                `activities.${index}.status_id`
-                                            ]
-                                        "
-                                        class="text-red-500 text-xs mt-1"
-                                    >
-                                        Required
-                                    </p>
                                 </TableCell>
                                 <TableCell class="text-center">
                                     <Button
                                         variant="destructive"
                                         size="sm"
                                         @click="removeRow(index)"
+                                        :disabled="form.activities.length <= 1"
                                         >✕</Button
                                     >
                                 </TableCell>
@@ -287,20 +371,36 @@ const submit = () => {
                 <div class="mt-4">
                     <Button
                         variant="outline"
-                        class="border-brand-blue text-brand-blue"
+                        type="button"
+                        class="border-brand-blue text-brand-blue hover:bg-blue-50"
                         @click="addRow"
                         >+ Add Row</Button
                     >
                 </div>
             </CardContent>
 
-            <CardContent class="flex justify-end">
+            <CardContent
+                class="flex justify-end gap-2 border-t bg-slate-50/30 py-4"
+            >
                 <Button
-                    class="bg-brand-blue hover:bg-brand-blue/90 text-white"
+                    variant="ghost"
+                    type="button"
+                    @click="router.get('/employee/accomplishment-report')"
+                    >Cancel</Button
+                >
+
+                <Button
+                    class="bg-brand-blue hover:bg-brand-blue/90 text-white min-w-[120px]"
                     :disabled="form.processing"
                     @click="submit"
                 >
-                    {{ form.processing ? "Submitting..." : "Submit Report" }}
+                    {{
+                        form.processing
+                            ? "Saving..."
+                            : isEditing
+                              ? "Update Report"
+                              : "Submit Report"
+                    }}
                 </Button>
             </CardContent>
         </Card>

@@ -6,35 +6,33 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
-        Schema::create('accomplish_reports', function (Blueprint $table) {
+        Schema::create('change_off_statuses', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('change_off_id')
+                ->constrained('change_offs')
+                ->onDelete('restrict');
 
-            // employee
             $table->foreignId('user_id')
                 ->constrained('users')
                 ->onDelete('restrict');
 
-            // snapshot
-            $table->foreignId('department_id')
-                ->constrained('departments')
+            $table->foreignId('status_id')
+                ->constrained('statuses')
                 ->onDelete('restrict');
-
-            $table->foreignId('position_id')
-                ->constrained('positions')
-                ->onDelete('restrict');
-
-            // period
-            $table->date('from_date');
-            $table->date('to_date');
-
             $table->timestamps();
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
-        Schema::dropIfExists('accomplish_reports');
+        Schema::dropIfExists('change_off_statuses');
     }
 };
