@@ -66,13 +66,6 @@ const openView = (report) => {
     isViewOpen.value = true;
 };
 
-/**
- * UPDATED LOGIC:
- * An employee can edit if:
- * 1. Any status is 'rejected' (even if the other is 'approved')
- * 2. OR if both are still 'pending'
- * * We ONLY hide the edit button if BOTH have approved (Finalized).
- */
 const canEdit = (report) => {
     const leaderStatus = report.leader_status_name.toLowerCase();
     const hrStatus = report.hr_status_name.toLowerCase();
@@ -158,11 +151,11 @@ const getStatusClass = (status) => {
                                 >
                                 <TableHead
                                     class="font-bold text-center text-slate-700"
-                                    >LEADER</TableHead
+                                    >DEPT. HEAD</TableHead
                                 >
                                 <TableHead
                                     class="font-bold text-center text-slate-700"
-                                    >HR</TableHead
+                                    >HR STATUS</TableHead
                                 >
                                 <TableHead
                                     class="text-right font-bold text-slate-700 px-6"

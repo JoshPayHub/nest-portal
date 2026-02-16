@@ -19,4 +19,9 @@ Route::middleware(['auth', 'user_type:Employee'])->prefix('employee')->name('emp
 
     // Accomplishment Report Form
     Route::get('/change-off', [ChangeOffController::class, 'index'])->name('changeoff.index');
+    Route::get('/change-off/create', [ChangeOffController::class, 'create'])->name('changeoff.create');
+    Route::post('/change-off/store', [ChangeOffController::class, 'store'])->name('changeoff.store');
+    Route::get('/change-off/edit/{id}', [ChangeOffController::class, 'edit'])->name('changeoff.edit');
+    Route::put('/change-off/update/{id}', [ChangeOffController::class, 'update'])->name('changeoff.update');
+
 });
