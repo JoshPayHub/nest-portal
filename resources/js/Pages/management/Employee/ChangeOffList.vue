@@ -8,7 +8,6 @@ import {
     Pencil,
     Clock,
     FileText,
-    ArrowRightLeft,
 } from "lucide-vue-next";
 
 // UI Components
@@ -31,7 +30,6 @@ import {
 } from "@/Components/ui/table";
 import { Badge } from "@/Components/ui/badge";
 
-// 1. Define Props to receive data from ChangeOffController
 const props = defineProps({
     requests: {
         type: Array,
@@ -41,7 +39,6 @@ const props = defineProps({
 
 const search = ref("");
 
-// 2. Filter using the data passed from the controller
 const filteredRequests = computed(() => {
     if (!search.value) return props.requests;
     const term = search.value.toLowerCase();
@@ -49,26 +46,37 @@ const filteredRequests = computed(() => {
         (req) =>
             req.date_filed.toLowerCase().includes(term) ||
             req.original_date.toLowerCase().includes(term) ||
-            req.new_date.toLowerCase().includes(term) ||
             req.leader_status.toLowerCase().includes(term),
     );
 });
 
 const getStatusClass = (status) => {
     if (!status) return "bg-amber-100 text-amber-800 hover:bg-amber-100";
-
     const s = status.toLowerCase();
     if (s === "approved")
         return "bg-green-100 text-green-800 hover:bg-green-100";
     if (s === "rejected" || s === "denied" || s === "destructive")
         return "bg-red-100 text-red-800 hover:bg-red-100";
-
-    return "bg-amber-100 text-amber-800 hover:bg-amber-100"; // Pending / Others
+    return "bg-amber-100 text-amber-800 hover:bg-amber-100";
 };
 
 const canEdit = (req) => {
-    // Locks editing if HR has already approved the request
-    return req.hr_status.toLowerCase() !== "approved";
+    // Only allow editing if both Head and HR have not approved it yet
+    return (
+        req.hr_status.toLowerCase() !== "approved" &&
+        req.leader_status.toLowerCase() !== "approved"
+    );
+};
+
+/**
+ * Helper to join schedule parts (Day | Time)
+ * Only shows the separator if both exist
+ */
+const formatScheduleSub = (day, time) => {
+    const parts = [];
+    if (day && day !== "N/A") parts.push(day);
+    if (time && time !== "N/A") parts.push(time);
+    return parts.join(" | ");
 };
 </script>
 
@@ -169,9 +177,21 @@ const canEdit = (req) => {
                                             >
                                                 {{ req.original_date }}
                                             </div>
-                                            <div class="text-slate-500 text-xs">
-                                                {{ req.original_day }} |
-                                                {{ req.original_time }}
+                                            <div
+                                                v-if="
+                                                    formatScheduleSub(
+                                                        req.original_day,
+                                                        req.original_time,
+                                                    )
+                                                "
+                                                class="text-slate-500 text-xs"
+                                            >
+                                                {{
+                                                    formatScheduleSub(
+                                                        req.original_day,
+                                                        req.original_time,
+                                                    )
+                                                }}
                                             </div>
                                         </div>
                                     </TableCell>
@@ -183,9 +203,21 @@ const canEdit = (req) => {
                                             >
                                                 {{ req.new_date }}
                                             </div>
-                                            <div class="text-slate-500 text-xs">
-                                                {{ req.new_day }} |
-                                                {{ req.new_time }}
+                                            <div
+                                                v-if="
+                                                    formatScheduleSub(
+                                                        req.new_day,
+                                                        req.new_time,
+                                                    )
+                                                "
+                                                class="text-slate-500 text-xs"
+                                            >
+                                                {{
+                                                    formatScheduleSub(
+                                                        req.new_day,
+                                                        req.new_time,
+                                                    )
+                                                }}
                                             </div>
                                         </div>
                                     </TableCell>
@@ -229,9 +261,8 @@ const canEdit = (req) => {
                                         <span
                                             v-else
                                             class="text-xs font-medium text-slate-400 italic"
+                                            >Locked</span
                                         >
-                                            Locked
-                                        </span>
                                     </TableCell>
                                 </TableRow>
                             </template>

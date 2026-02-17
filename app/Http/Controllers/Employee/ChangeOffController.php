@@ -13,12 +13,15 @@ class ChangeOffController extends Controller
 {
     public function index(Request $request)
     {
-        $rawRequests = ChangeOff::with(['label.originalDay', 'label.newDay', 'status.status'])
+        $rawRequests = ChangeOff::with(['label.originalDay', 'label.newDay', 'statuses.status'])
             ->where('user_id', $request->user()->id)
             ->latest()
             ->get();
 
         $requests = $rawRequests->map(function ($req) {
+            $headEntry = $req->statuses->first(fn($s) => $s->user?->userType?->name === 'Head');
+            $hrEntry = $req->statuses->first(fn($s) => $s->user?->userType?->name === 'HR');
+
             return [
                 'id' => $req->id,
                 'date_filed' => $req->created_at->format('M d, Y'),
@@ -28,8 +31,8 @@ class ChangeOffController extends Controller
                 'new_date'      => Carbon::parse($req->label->new_date)->format('M d, Y'),
                 'new_day'       => $req->label->newDay->name ?? 'N/A',
                 'new_time'      => $req->label->new_time ?? 'N/A',
-                'leader_status' => $req->status->status->name ?? 'Pending',
-                'hr_status'     => $req->status->status->name ?? 'Pending',
+                'leader_status' => $headEntry ? $headEntry->status->name : 'Pending',
+                'hr_status'     => $hrEntry ? $hrEntry->status->name : 'Pending',
             ];
         });
 
@@ -57,7 +60,6 @@ class ChangeOffController extends Controller
 
     public function store(Request $request)
     {
-        // Improved validation: checking for '1' (Time) or '2' (Day) explicitly
         $validated = $request->validate([
             'request_type' => 'required|exists:offs,id',
             'original_date' => 'required|date',
@@ -86,14 +88,6 @@ class ChangeOffController extends Controller
                 'original_time'   => $validated['original_time'],
                 'new_time'        => $validated['new_time'],
             ]);
-
-            DB::table('change_off_statuses')->insert([
-                'change_off_id' => $changeOff->id,
-                'user_id'       => $user->id,
-                'status_id'     => 4, // Pending
-                'created_at'    => now(),
-                'updated_at'    => now(),
-            ]);
         });
 
         return redirect()->route('employee.changeoff.index')->with('message', 'Change Off request submitted!');
@@ -103,11 +97,30 @@ class ChangeOffController extends Controller
     {
         $user = $request->user()->load(['department', 'position']);
         $days = DB::table('offs')->get();
-        $report = ChangeOff::with('label')->findOrFail($id);
 
-        $status = DB::table('change_off_statuses')->where('change_off_id', $id)->first();
-        if ($status && $status->status_id == 1) {
-            return redirect()->back()->with('error', 'Approved requests cannot be edited.');
+        // 1. Fetch record or handle missing
+        $report = ChangeOff::with(['label', 'statuses.status'])->find($id);
+
+        if (!$report) {
+            return redirect()->route('employee.changeoff.index')->with('error', 'Request record not found.');
+        }
+
+        // 2. Ownership Check
+        if ($report->user_id !== $user->id) {
+            return redirect()->route('employee.changeoff.index')->with('error', 'Unauthorized access.');
+        }
+
+        // 3. Status Check Logic
+        $hasRejected = $report->statuses->contains(fn($s) => $s->status_id === 5 || strtolower($s->status?->name) === 'rejected');
+        $hasApproved = $report->statuses->contains(fn($s) => $s->status_id === 2 || strtolower($s->status?->name) === 'approved');
+
+        /**
+         * Rule:
+         * If Rejected exists -> Allow edit regardless of Approval.
+         * If Approved exists AND NO Rejected exists -> Lock.
+         */
+        if ($hasApproved && !$hasRejected) {
+            return redirect()->route('employee.changeoff.index')->with('error', 'This request is approved and cannot be modified.');
         }
 
         return Inertia::render('management/Employee/ChangeOff', [
@@ -125,7 +138,18 @@ class ChangeOffController extends Controller
 
     public function update(Request $request, $id)
     {
-        $changeOff = ChangeOff::findOrFail($id);
+        $changeOff = ChangeOff::with('statuses.status')->find($id);
+
+        if (!$changeOff || $changeOff->user_id !== $request->user()->id) {
+            return redirect()->route('employee.changeoff.index')->with('error', 'Unable to update request.');
+        }
+
+        $hasRejected = $changeOff->statuses->contains(fn($s) => $s->status_id === 5 || strtolower($s->status?->name) === 'rejected');
+        $hasApproved = $changeOff->statuses->contains(fn($s) => $s->status_id === 2 || strtolower($s->status?->name) === 'approved');
+
+        if ($hasApproved && !$hasRejected) {
+            return redirect()->route('employee.changeoff.index')->with('error', 'Cannot update an approved request.');
+        }
 
         $validated = $request->validate([
             'request_type' => 'required|exists:offs,id',
@@ -148,14 +172,15 @@ class ChangeOffController extends Controller
                 'new_time'        => $validated['new_time'],
             ]);
 
+            // Reset statuses to Pending (4)
             DB::table('change_off_statuses')
                 ->where('change_off_id', $changeOff->id)
                 ->update([
-                    'status_id'  => 4,
+                    'status_id' => 4,
                     'updated_at' => now()
                 ]);
         });
 
-        return redirect()->route('employee.changeoff.index')->with('message', 'Request updated.');
+        return redirect()->route('employee.changeoff.index')->with('message', 'Request updated and resubmitted.');
     }
 }

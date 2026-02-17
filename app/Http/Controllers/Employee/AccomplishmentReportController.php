@@ -116,21 +116,26 @@ class AccomplishmentReportController extends Controller
 
     public function edit(Request $request, $id)
     {
-        $report = AccomplishReport::with(['activities', 'approvalStatuses'])->findOrFail($id);
+        $report = AccomplishReport::with(['activities', 'approvalStatuses.status', 'approvalStatuses.user'])->findOrFail($id);
         $user = $request->user();
 
         if ($report->user_id !== $user->id) {
             return redirect()->back()->with('error', 'Unauthorized.');
         }
 
-        // Logic: Check if it's already fully approved (status 7)
-        // If HR or Head rejected, approvalStatuses will contain a status 8 (Rejected)
-        $isApprovedByAll = $report->approvalStatuses->every(function ($item) {
-            return $item->status_id == 7;
-        }) && $report->approvalStatuses->count() >= 2; // Assuming Head + HR = 2 approvals
+        $approvals = $report->approvalStatuses;
 
-        if ($isApprovedByAll) {
-            return redirect()->back()->with('error', 'Fully approved reports cannot be edited.');
+        // Status IDs: 7 = Approved, 8 = Rejected
+        $isLeaderApproved = $approvals->contains(fn($a) => $a->user->user_type_id == 3 && $a->status_id == 7);
+        $isHRApproved = $approvals->contains(fn($a) => $a->user->user_type_id == 1 && $a->status_id == 7);
+        $hasAnyRejection = $approvals->contains(fn($a) => $a->status_id == 8);
+
+        /**
+         * LOCK LOGIC UPDATED:
+         * If AT LEAST ONE person has approved AND no one has rejected, lock it.
+         */
+        if (($isLeaderApproved || $isHRApproved) && !$hasAnyRejection) {
+            return redirect()->back()->with('error', 'Reports cannot be edited once approval has started. It must be rejected first.');
         }
 
         $user->load(['department', 'position']);
@@ -152,6 +157,10 @@ class AccomplishmentReportController extends Controller
     {
         $report = AccomplishReport::with('approvalStatuses')->findOrFail($id);
 
+        if ($report->user_id !== $request->user()->id) {
+            return redirect()->back()->with('error', 'Unauthorized.');
+        }
+
         $validated = $request->validate([
             'period_from' => ['required', 'date'],
             'period_to' => ['required', 'date', 'after_or_equal:period_from'],
@@ -162,13 +171,12 @@ class AccomplishmentReportController extends Controller
         ]);
 
         DB::transaction(function () use ($report, $validated) {
-            // Update basic report info
             $report->update([
                 'from_date' => $validated['period_from'],
                 'to_date' => $validated['period_to'],
             ]);
 
-
+            // Reset all approval statuses to Pending (Status 4) because the report was edited
             DB::table('accomplish_report_statuses')
                 ->where('accomplish_report_id', $report->id)
                 ->update([
@@ -176,7 +184,6 @@ class AccomplishmentReportController extends Controller
                     'updated_at' => now()
                 ]);
 
-            // 2. Sync Activities (Delete old, Insert new)
             $report->activities()->delete();
 
             foreach ($validated['activities'] as $activity) {

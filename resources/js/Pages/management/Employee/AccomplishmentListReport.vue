@@ -67,30 +67,29 @@ const openView = (report) => {
 };
 
 const canEdit = (report) => {
-    const leaderStatus = report.leader_status_name.toLowerCase();
-    const hrStatus = report.hr_status_name.toLowerCase();
+    const leaderStatus = report.leader_status_name?.toLowerCase().trim();
+    const hrStatus = report.hr_status_name?.toLowerCase().trim();
 
-    // If anyone rejected, we MUST allow editing to fix the report.
+    // Rejection always allows editing
     if (leaderStatus === "rejected" || hrStatus === "rejected") {
         return true;
     }
 
-    // If both are approved, hide the edit button.
-    if (leaderStatus === "approved" && hrStatus === "approved") {
+    // LOCK if either one has approved
+    if (leaderStatus === "approved" || hrStatus === "approved") {
         return false;
     }
 
-    // Otherwise (Pending states), allow editing.
+    // Allow if both are pending
     return true;
 };
 
-// Helper for status styling
 const getStatusClass = (status) => {
-    const s = status.toLowerCase();
+    const s = status?.toLowerCase().trim();
     if (s === "approved")
         return "bg-green-100 text-green-800 hover:bg-green-100";
     if (s === "rejected") return "bg-red-100 text-red-800 hover:bg-red-100";
-    return "bg-amber-100 text-amber-800 hover:bg-amber-100"; // Default Pending
+    return "bg-amber-100 text-amber-800 hover:bg-amber-100";
 };
 </script>
 
@@ -238,6 +237,7 @@ const getStatusClass = (status) => {
                                         >
                                             <Pencil class="w-4 h-4 mr-1" /> Edit
                                         </Button>
+
                                         <Button
                                             variant="ghost"
                                             size="sm"
@@ -273,9 +273,10 @@ const getStatusClass = (status) => {
                         <DialogTitle class="text-2xl font-bold text-brand-blue"
                             >Report Details</DialogTitle
                         >
-                        <DialogDescription>
-                            Submitted on {{ selectedReport?.report_date }}
-                        </DialogDescription>
+                        <DialogDescription
+                            >Submitted on
+                            {{ selectedReport?.report_date }}</DialogDescription
+                        >
                     </div>
                 </DialogHeader>
 
@@ -301,7 +302,7 @@ const getStatusClass = (status) => {
                             <p
                                 class="text-sm font-bold uppercase"
                                 :class="
-                                    selectedReport?.leader_status_name.toLowerCase() ===
+                                    selectedReport?.leader_status_name?.toLowerCase() ===
                                     'rejected'
                                         ? 'text-red-600'
                                         : 'text-brand-blue'
@@ -319,7 +320,7 @@ const getStatusClass = (status) => {
                             <p
                                 class="text-sm font-bold uppercase"
                                 :class="
-                                    selectedReport?.hr_status_name.toLowerCase() ===
+                                    selectedReport?.hr_status_name?.toLowerCase() ===
                                     'rejected'
                                         ? 'text-red-600'
                                         : 'text-brand-blue'
@@ -362,7 +363,7 @@ const getStatusClass = (status) => {
                                     <div
                                         class="flex justify-end items-center gap-1 text-[10px] font-bold"
                                         :class="
-                                            act.status_name.toLowerCase() ===
+                                            act.status_name?.toLowerCase() ===
                                             'completed'
                                                 ? 'text-green-600'
                                                 : 'text-amber-600'
@@ -370,14 +371,14 @@ const getStatusClass = (status) => {
                                     >
                                         <component
                                             :is="
-                                                act.status_name.toLowerCase() ===
+                                                act.status_name?.toLowerCase() ===
                                                 'completed'
                                                     ? CheckCircle2
                                                     : Clock
                                             "
                                             class="w-3 h-3"
                                         />
-                                        {{ act.status_name.toUpperCase() }}
+                                        {{ act.status_name?.toUpperCase() }}
                                     </div>
                                 </TableCell>
                             </TableRow>

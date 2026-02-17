@@ -1,6 +1,6 @@
 <script setup>
 import { useForm, usePage, router } from "@inertiajs/vue3";
-import { ref, computed, watch, onMounted } from "vue";
+import { computed, watch, onMounted } from "vue";
 import {
     Card,
     CardHeader,
@@ -18,109 +18,99 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/Components/ui/select";
+
+// custom store
 import { toastStore } from "@/stores/toast";
 
 const page = usePage();
-const STORAGE_KEY = "change_off_form_draft";
-
-const authUser = computed(
-    () =>
-        page.props.authUser || {
-            name: "Loading...",
-            department: "N/A",
-            position: "N/A",
-        },
-);
-
-const days = computed(() => page.props.days || []);
-const report = computed(() => page.props.report);
-const isEditing = computed(() => page.props.isEditing ?? false);
+const authUser = page.props.authUser;
+const days = page.props.days || [];
+const report = page.props.report; // Existing report if editing
+const isEditing = page.props.isEditing ?? false;
 const today = page.props.todayDate || new Date().toISOString().split("T")[0];
 
-const form = useForm({
-    name: "",
-    department_position: "",
-    report_date: today,
-    request_type: "1",
-    original_date: "",
-    original_off_id: "",
-    original_time: "08:00",
-    new_date: "",
-    new_off_id: "",
-    new_time: "08:00",
+const STORAGE_KEY = "change_off_form_draft";
+
+/**
+ * Enhanced Security Logic
+ */
+const hasRejected = computed(() => {
+    return (report?.statuses || []).some(
+        (s) =>
+            s.status_id === 5 || s.status?.name?.toLowerCase() === "rejected",
+    );
 });
 
-// --- LOCAL STORAGE & INITIAL LOAD ---
+const hasApproved = computed(() => {
+    return (report?.statuses || []).some(
+        (s) =>
+            s.status_id === 2 || s.status?.name?.toLowerCase() === "approved",
+    );
+});
+
+// It is locked ONLY if it is approved AND NOT rejected
+const isLocked = computed(
+    () => isEditing && hasApproved.value && !hasRejected.value,
+);
+
 onMounted(() => {
-    // Load User Data
-    if (authUser.value) {
-        form.name = authUser.value.name;
-        form.department_position = `${authUser.value.department} / ${authUser.value.position}`;
+    // 1. If we are supposed to be editing but no report exists (invalid ID)
+    if (isEditing && !report) {
+        toastStore.show("Request record not found.", "error");
+        router.replace("/employee/change-off");
+        return;
     }
 
-    // Load Draft if not editing
-    if (!isEditing.value) {
-        const savedData = localStorage.getItem(STORAGE_KEY);
-        if (savedData) {
-            const parsed = JSON.parse(savedData);
-            Object.keys(parsed).forEach((key) => {
-                // Restore values except for fixed user info
-                if (
-                    key in form &&
-                    !["name", "department_position", "report_date"].includes(
-                        key,
-                    )
-                ) {
-                    form[key] = parsed[key];
-                }
-            });
-        }
+    // 2. If record is approved and NOT rejected, kick back to index
+    if (isLocked.value) {
+        toastStore.show("This request is approved and locked.", "error");
+        router.replace("/employee/change-off");
     }
+
+    // 3. If it is rejected, we do nothing and let them edit (per your requirement)
 });
 
-// Save to LocalStorage whenever data changes
+// Initialization Logic
+const savedDraft = !isEditing
+    ? JSON.parse(localStorage.getItem(STORAGE_KEY))
+    : null;
+
+const form = useForm({
+    name: authUser?.name ?? "",
+    department_position: authUser
+        ? `${authUser.department} / ${authUser.position}`
+        : "",
+    report_date: report
+        ? new Date(report.created_at).toISOString().split("T")[0]
+        : today,
+    request_type:
+        report?.label?.off_id?.toString() ?? savedDraft?.request_type ?? "1",
+    original_date:
+        report?.label?.original_date ?? savedDraft?.original_date ?? "",
+    original_off_id:
+        report?.label?.original_day_id?.toString() ??
+        savedDraft?.original_off_id ??
+        "",
+    original_time:
+        report?.label?.original_time ?? savedDraft?.original_time ?? "08:00",
+    new_date: report?.label?.new_date ?? savedDraft?.new_date ?? "",
+    new_off_id:
+        report?.label?.new_day_id?.toString() ?? savedDraft?.new_off_id ?? "",
+    new_time: report?.label?.new_time ?? savedDraft?.new_time ?? "08:00",
+});
+
+// Auto-Save: Only for New Reports
 watch(
     () => form.data(),
     (newData) => {
-        if (!isEditing.value) {
+        if (!isEditing) {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
         }
     },
     { deep: true },
 );
 
-// --- AUTOMATIC ERROR REMOVAL ---
-// When the user inputs data, the red error text will disappear immediately
-watch(
-    () => form.original_date,
-    () => form.clearErrors("original_date"),
-);
-watch(
-    () => form.new_date,
-    () => form.clearErrors("new_date"),
-);
-watch(
-    () => form.original_off_id,
-    () => form.clearErrors("original_off_id"),
-);
-watch(
-    () => form.new_off_id,
-    () => form.clearErrors("new_off_id"),
-);
-watch(
-    () => form.original_time,
-    () => form.clearErrors("original_time"),
-);
-watch(
-    () => form.new_time,
-    () => form.clearErrors("new_time"),
-);
-watch(
-    () => form.request_type,
-    () => form.clearErrors("request_type"),
-);
-
-// --- LOGIC HELPERS ---
+// Toggle logic based on Request Type
 watch(
     () => form.request_type,
     (newType) => {
@@ -136,91 +126,87 @@ watch(
     },
 );
 
-watch(
-    () => report.value,
-    (data) => {
-        if (data && isEditing.value) {
-            form.report_date = new Date(data.created_at)
-                .toISOString()
-                .split("T")[0];
-            if (data.label) {
-                form.request_type = data.label.off_id?.toString();
-                form.original_date = data.label.original_date;
-                form.original_off_id =
-                    data.label.original_day_id?.toString() || "";
-                form.original_time = data.label.original_time;
-                form.new_date = data.label.new_date;
-                form.new_off_id = data.label.new_day_id?.toString() || "";
-                form.new_time = data.label.new_time;
-            }
-        }
-    },
-    { immediate: true },
-);
-
 const isTimeDisabled = computed(() => form.request_type === "2");
 const isDayDisabled = computed(() => form.request_type === "1");
 
 const submit = () => {
-    const url = isEditing.value
-        ? `/employee/change-off/update/${report.value.id}`
+    if (isLocked.value) return;
+
+    const url = isEditing
+        ? `/employee/change-off/update/${report.id}`
         : "/employee/change-off/store";
 
-    const method = isEditing.value ? "put" : "post";
+    const method = isEditing ? "put" : "post";
 
     form[method](url, {
         preserveScroll: true,
         onSuccess: () => {
-            if (!isEditing.value) localStorage.removeItem(STORAGE_KEY);
+            if (!isEditing) {
+                localStorage.removeItem(STORAGE_KEY);
+                form.reset();
+            }
             toastStore.show(
-                `Request ${isEditing.value ? "updated" : "submitted"} successfully!`,
+                `Request ${isEditing ? "updated" : "submitted"} successfully!`,
                 "success",
             );
         },
-        onError: () =>
-            toastStore.show("Please check the form for errors.", "error"),
+        onError: () => {
+            toastStore.show("Please fix the errors and try again.", "error");
+        },
     });
 };
 
 const dayOfWeekOptions = computed(() =>
-    days.value.filter((d) => !["time", "day"].includes(d.name.toLowerCase())),
+    days.filter((d) => !["time", "day"].includes(d.name.toLowerCase())),
 );
 const typeOptions = computed(() =>
-    days.value.filter((d) => ["time", "day"].includes(d.name.toLowerCase())),
+    days.filter((d) => ["time", "day"].includes(d.name.toLowerCase())),
 );
 </script>
 
 <template>
     <div class="p-6 space-y-7">
+        <div
+            v-if="isEditing && hasRejected"
+            class="bg-red-50 border border-red-200 p-4 rounded-lg text-red-800 text-sm"
+        >
+            <strong>Notice:</strong> This request was rejected. You can edit and
+            resubmit it now.
+        </div>
+
         <Card class="border-blue-100 shadow-sm">
-            <CardHeader class="bg-slate-50/50 border-b border-blue-50/50 pb-6">
-                <nav class="flex justify-between items-start mb-4">
-                    <div
-                        class="flex items-center gap-2 text-xs uppercase tracking-wider text-slate-400"
-                    >
-                        <span
-                            class="hover:text-brand-blue cursor-pointer"
-                            @click="router.get('/employee/change-off')"
-                            >Change Off</span
-                        >
-                        <span>/</span>
-                        <span class="font-bold text-brand-blue">{{
-                            isEditing ? "Edit Request" : "New Request"
-                        }}</span>
-                    </div>
-                    <span
-                        v-if="!isEditing"
-                        class="text-[10px] text-green-500 font-medium bg-green-50 px-2 py-1 rounded"
-                        >DRAFT AUTO-SAVED</span
-                    >
-                </nav>
-                <CardTitle class="text-3xl font-extrabold text-brand-blue">
-                    {{ isEditing ? "Update Change Off" : "Change Off Request" }}
-                </CardTitle>
-                <CardDescription
-                    >Request to swap your scheduled time or day
-                    off.</CardDescription
+            <CardHeader
+                class="space-y-4 bg-slate-50/50 border-b border-blue-50/50 pb-6"
+            >
+                <nav
+                    class="flex items-center gap-2 text-xs uppercase tracking-wider text-slate-400"
                 >
+                    <span
+                        class="hover:text-brand-blue cursor-pointer transition-colors"
+                        @click="router.get('/employee/change-off')"
+                    >
+                        Change Off
+                    </span>
+                    <span class="text-slate-300">/</span>
+                    <span class="font-bold text-brand-blue">
+                        {{ isEditing ? "Edit Request" : "New Entry" }}
+                    </span>
+                </nav>
+
+                <div class="space-y-1">
+                    <CardTitle
+                        class="text-3xl font-extrabold tracking-tight text-brand-blue"
+                    >
+                        {{
+                            isEditing
+                                ? "Update Change Off"
+                                : "Change Off Request"
+                        }}
+                    </CardTitle>
+                    <CardDescription class="text-slate-500">
+                        Request to swap your scheduled time or day off.
+                    </CardDescription>
+                </div>
             </CardHeader>
 
             <CardContent class="grid grid-cols-12 gap-4 mt-6">
@@ -232,7 +218,6 @@ const typeOptions = computed(() =>
                         class="border-2 border-gray-300 bg-slate-100 font-semibold"
                     />
                 </div>
-
                 <div class="col-span-12 md:col-span-6">
                     <Label class="p-1">Department / Position</Label>
                     <Input
@@ -241,9 +226,8 @@ const typeOptions = computed(() =>
                         class="border-2 border-gray-300 bg-slate-50"
                     />
                 </div>
-
                 <div class="col-span-12 md:col-span-6">
-                    <Label class="p-1">Date filed</Label>
+                    <Label class="p-1">Date Filed</Label>
                     <Input
                         type="date"
                         v-model="form.report_date"
@@ -251,7 +235,6 @@ const typeOptions = computed(() =>
                         class="border-2 border-gray-300 bg-slate-50"
                     />
                 </div>
-
                 <div class="col-span-12 md:col-span-6">
                     <Label class="p-1">Change Category</Label>
                     <Select v-model="form.request_type">
@@ -273,21 +256,17 @@ const typeOptions = computed(() =>
                             </SelectItem>
                         </SelectContent>
                     </Select>
-                    <p
-                        v-if="form.errors.request_type"
-                        class="text-xs text-red-500 mt-1"
-                    >
-                        {{ form.errors.request_type }}
-                    </p>
                 </div>
             </CardContent>
 
-            <CardContent class="space-y-6 mt-6">
+            <CardContent class="space-y-6 mt-2">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div
-                        class="space-y-4 p-4 border rounded-lg bg-orange-50/30"
+                        class="space-y-4 p-4 border rounded-lg bg-orange-50/30 border-orange-100"
                     >
-                        <h3 class="font-bold text-orange-700 uppercase text-sm">
+                        <h3
+                            class="font-bold text-orange-700 uppercase text-sm tracking-wide"
+                        >
                             Original Schedule
                         </h3>
                         <div>
@@ -298,16 +277,13 @@ const typeOptions = computed(() =>
                                 :class="{
                                     'border-red-500': form.errors.original_date,
                                 }"
-                                class="border-orange-200"
                             />
-                            <p
-                                v-if="form.errors.original_date"
-                                class="text-xs text-red-500 mt-1"
-                            >
-                                {{ form.errors.original_date }}
-                            </p>
                         </div>
-                        <div :class="{ 'opacity-50': isDayDisabled }">
+                        <div
+                            :class="{
+                                'opacity-50 pointer-events-none': isDayDisabled,
+                            }"
+                        >
                             <Label>Day of Week</Label>
                             <Select
                                 v-model="form.original_off_id"
@@ -318,8 +294,9 @@ const typeOptions = computed(() =>
                                         'border-red-500':
                                             form.errors.original_off_id,
                                     }"
-                                    ><SelectValue placeholder="Select Day"
-                                /></SelectTrigger>
+                                >
+                                    <SelectValue placeholder="Select Day" />
+                                </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem
                                         v-for="day in dayOfWeekOptions"
@@ -331,14 +308,13 @@ const typeOptions = computed(() =>
                                     >
                                 </SelectContent>
                             </Select>
-                            <p
-                                v-if="form.errors.original_off_id"
-                                class="text-xs text-red-500 mt-1"
-                            >
-                                {{ form.errors.original_off_id }}
-                            </p>
                         </div>
-                        <div :class="{ 'opacity-50': isTimeDisabled }">
+                        <div
+                            :class="{
+                                'opacity-50 pointer-events-none':
+                                    isTimeDisabled,
+                            }"
+                        >
                             <Label>Time</Label>
                             <Input
                                 type="time"
@@ -348,17 +324,15 @@ const typeOptions = computed(() =>
                                     'border-red-500': form.errors.original_time,
                                 }"
                             />
-                            <p
-                                v-if="form.errors.original_time"
-                                class="text-xs text-red-500 mt-1"
-                            >
-                                {{ form.errors.original_time }}
-                            </p>
                         </div>
                     </div>
 
-                    <div class="space-y-4 p-4 border rounded-lg bg-green-50/30">
-                        <h3 class="font-bold text-green-700 uppercase text-sm">
+                    <div
+                        class="space-y-4 p-4 border rounded-lg bg-green-50/30 border-green-100"
+                    >
+                        <h3
+                            class="font-bold text-green-700 uppercase text-sm tracking-wide"
+                        >
                             New Schedule
                         </h3>
                         <div>
@@ -369,16 +343,13 @@ const typeOptions = computed(() =>
                                 :class="{
                                     'border-red-500': form.errors.new_date,
                                 }"
-                                class="border-green-200"
                             />
-                            <p
-                                v-if="form.errors.new_date"
-                                class="text-xs text-red-500 mt-1"
-                            >
-                                {{ form.errors.new_date }}
-                            </p>
                         </div>
-                        <div :class="{ 'opacity-50': isDayDisabled }">
+                        <div
+                            :class="{
+                                'opacity-50 pointer-events-none': isDayDisabled,
+                            }"
+                        >
                             <Label>Day of Week</Label>
                             <Select
                                 v-model="form.new_off_id"
@@ -389,8 +360,9 @@ const typeOptions = computed(() =>
                                         'border-red-500':
                                             form.errors.new_off_id,
                                     }"
-                                    ><SelectValue placeholder="Select Day"
-                                /></SelectTrigger>
+                                >
+                                    <SelectValue placeholder="Select Day" />
+                                </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem
                                         v-for="day in dayOfWeekOptions"
@@ -402,14 +374,13 @@ const typeOptions = computed(() =>
                                     >
                                 </SelectContent>
                             </Select>
-                            <p
-                                v-if="form.errors.new_off_id"
-                                class="text-xs text-red-500 mt-1"
-                            >
-                                {{ form.errors.new_off_id }}
-                            </p>
                         </div>
-                        <div :class="{ 'opacity-50': isTimeDisabled }">
+                        <div
+                            :class="{
+                                'opacity-50 pointer-events-none':
+                                    isTimeDisabled,
+                            }"
+                        >
                             <Label>Time</Label>
                             <Input
                                 type="time"
@@ -419,28 +390,23 @@ const typeOptions = computed(() =>
                                     'border-red-500': form.errors.new_time,
                                 }"
                             />
-                            <p
-                                v-if="form.errors.new_time"
-                                class="text-xs text-red-500 mt-1"
-                            >
-                                {{ form.errors.new_time }}
-                            </p>
                         </div>
                     </div>
                 </div>
             </CardContent>
 
             <CardContent
-                class="flex justify-end gap-2 border-t bg-slate-50/30 py-4"
+                class="flex justify-end gap-2 border-t bg-slate-50/30 py-4 mt-6"
             >
                 <Button
                     variant="ghost"
+                    type="button"
                     @click="router.get('/employee/change-off')"
                     >Cancel</Button
                 >
                 <Button
-                    class="bg-brand-blue text-white"
-                    :disabled="form.processing"
+                    class="bg-brand-blue hover:bg-brand-blue/90 text-white min-w-[140px]"
+                    :disabled="form.processing || isLocked"
                     @click="submit"
                 >
                     {{
