@@ -3,6 +3,7 @@
 use App\Http\Controllers\Employee\AccomplishmentReportController;
 use App\Http\Controllers\Employee\ChangeOffController;
 use App\Http\Controllers\Employee\DashboardController;
+use App\Http\Controllers\Employee\LeaveController;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
 
@@ -23,5 +24,12 @@ Route::middleware(['auth', 'user_type:Employee'])->prefix('employee')->name('emp
     Route::post('/change-off/store', [ChangeOffController::class, 'store'])->name('changeoff.store');
     Route::get('/change-off/edit/{id}', [ChangeOffController::class, 'edit'])->name('changeoff.edit');
     Route::put('/change-off/update/{id}', [ChangeOffController::class, 'update'])->name('changeoff.update');
+
+    // Accomplishment Report Form
+    Route::get('/leave', [LeaveController::class, 'index'])->name('leave.index');
+    Route::get('/leave/create', [LeaveController::class, 'create'])->name('leave.create');
+    Route::post('/leave/store', [LeaveController::class, 'store'])->name('leave.store');
+    Route::get('/leave/edit/{id}', [LeaveController::class, 'edit'])->name('leave.edit');
+    Route::put('/leave/update/{id}', [LeaveController::class, 'update'])->name('leave.update');
 
 });

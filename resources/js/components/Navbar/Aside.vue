@@ -160,7 +160,7 @@ const menuItems = {
                 },
                 {
                     label: "Leave Form",
-                    href: "/forms/leave-form",
+                    href: "/employee/leave",
                     icon: "fa-solid fa-calendar-plus",
                 },
                 {
