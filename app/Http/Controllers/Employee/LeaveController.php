@@ -8,21 +8,19 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class LeaveController extends Controller
 {
     public function index(Request $request)
     {
-        // Load leaves with relationships, specifically checking the user types in statuses
         $rawLeaves = Leave::with(['statuses.user.userType', 'statuses.status'])
-            ->where('user_id', $request->user()->id)
+            ->where('user_id', Auth::id())
             ->latest()
             ->get();
 
         $leaves = $rawLeaves->map(function ($leave) {
-            // Find Head entry by checking the UserType name of the person who created the status
             $headEntry = $leave->statuses->first(fn($s) => $s->user?->userType?->name === 'Head');
-            // Find HR entry
             $hrEntry = $leave->statuses->first(fn($s) => $s->user?->userType?->name === 'HR');
 
             return [
@@ -32,7 +30,7 @@ class LeaveController extends Controller
                 'start_date' => Carbon::parse($leave->start_date)->format('M d, Y'),
                 'end_date'   => Carbon::parse($leave->end_date)->format('M d, Y'),
                 'total_days' => $leave->total_days,
-                'pay_type'   => $leave->with_pay ? 'With Pay' : 'Without Pay',
+                'pay_type'   => ($leave->type_leave === 'Leave with Pay') ? 'With Pay' : 'Without Pay',
                 'leader_status' => $headEntry ? $headEntry->status->name : 'Pending',
                 'hr_status'     => $hrEntry ? $hrEntry->status->name : 'Pending',
             ];
@@ -45,8 +43,7 @@ class LeaveController extends Controller
 
     public function create(Request $request)
     {
-        $user = $request->user()->load(['department', 'position']);
-
+        $user = Auth::user()->load(['department', 'position']);
         return Inertia::render('management/Employee/Leave', [
             'authUser' => [
                 'name' => $user->name,
@@ -55,38 +52,70 @@ class LeaveController extends Controller
             ],
             'isEditing' => false,
             'todayDate' => now()->toDateString(),
+            'availableLeave' => 7,
         ]);
     }
 
     public function store(Request $request)
     {
+        $user = Auth::user();
+
         $validated = $request->validate([
             'type_leave' => 'required|string',
             'start_date' => 'required|date',
             'end_date'   => 'required|date|after_or_equal:start_date',
-            'reason'     => 'required|string',
-            'with_pay'   => 'required|boolean',
+            'reason'     => 'required|string|min:10',
+        ], [
+            'type_leave.required' => 'Please select the type of leave.',
+            'start_date.required' => 'Start date is required.',
+            'end_date.required'   => 'End date is required.',
+            'end_date.after_or_equal' => 'The end date must be after or equal to the start date.',
+            'reason.required'     => 'Please provide a reason for your leave.',
+            'reason.min'          => 'The reason must be at least 10 characters long.',
         ]);
 
         $start = Carbon::parse($request->start_date);
         $end = Carbon::parse($request->end_date);
         $totalDays = $start->diffInDays($end) + 1;
 
+        if ($request->type_leave === 'Leave with Pay' && $totalDays > 7) {
+            return back()->withErrors(['end_date' => 'Requested days exceed available balance (7 days max).']);
+        }
+
         Leave::create(array_merge($validated, [
-            'user_id' => Auth::id(),
+            'user_id' => $user->id,
+            'department_id' => $user->department_id,
+            'position_id' => $user->position_id,
             'total_days' => $totalDays,
+            'with_pay' => $request->type_leave === 'Leave with Pay'
         ]));
 
-        return redirect()->route('employee.leave.index');
+        return redirect()->route('employee.leave.index')->with('message', 'Leave request submitted!');
     }
 
-    public function edit(Request $request, Leave $leave)
+    public function edit(Request $request, $id)
     {
-        // Use the same user loading logic as create for the sidebar/form info
-        $user = $request->user()->load(['department', 'position']);
+        $user = Auth::user()->load(['department', 'position']);
 
-        // Load statuses to check if it's locked (Approved) or editable (Rejected)
-        $leave->load('statuses.status');
+        // 1. Fetch record or handle missing
+        $leave = Leave::with(['statuses.status'])->find($id);
+
+        if (!$leave) {
+            return redirect()->route('employee.leave.index')->with('error', 'Leave record not found.');
+        }
+
+        // 2. Ownership Check
+        if ($leave->user_id !== $user->id) {
+            return redirect()->route('employee.leave.index')->with('error', 'Unauthorized access.');
+        }
+
+        // 3. Status Check Logic (Mirroring ChangeOff)
+        $hasRejected = $leave->statuses->contains(fn($s) => $s->status_id === 5 || strtolower($s->status?->name) === 'rejected');
+        $hasApproved = $leave->statuses->contains(fn($s) => $s->status_id === 2 || strtolower($s->status?->name) === 'approved');
+
+        if ($hasApproved && !$hasRejected) {
+            return redirect()->route('employee.leave.index')->with('error', 'This request is approved and cannot be modified.');
+        }
 
         return Inertia::render('management/Employee/Leave', [
             'report' => $leave,
@@ -96,35 +125,60 @@ class LeaveController extends Controller
                 'department' => $user->department?->name ?? 'N/A',
                 'position' => $user->position?->name ?? 'N/A',
             ],
+            'availableLeave' => 7,
+            'todayDate' => now()->toDateString(),
         ]);
     }
 
-    public function update(Request $request, Leave $leave)
+    public function update(Request $request, $id)
     {
-        // Security check: Don't allow updates if already approved and not rejected
-        $hasApproved = $leave->statuses()->where('status_id', 2)->exists();
-        $hasRejected = $leave->statuses()->where('status_id', 5)->exists();
+        $leave = Leave::with('statuses.status')->find($id);
+
+        if (!$leave || $leave->user_id !== Auth::id()) {
+            return redirect()->route('employee.leave.index')->with('error', 'Unable to update request.');
+        }
+
+        // Lock check
+        $hasRejected = $leave->statuses->contains(fn($s) => $s->status_id === 5 || strtolower($s->status?->name) === 'rejected');
+        $hasApproved = $leave->statuses->contains(fn($s) => $s->status_id === 2 || strtolower($s->status?->name) === 'approved');
 
         if ($hasApproved && !$hasRejected) {
-            return back()->withErrors(['message' => 'Approved requests cannot be modified.']);
+            return redirect()->route('employee.leave.index')->with('error', 'Cannot update an approved request.');
         }
 
         $validated = $request->validate([
             'type_leave' => 'required|string',
             'start_date' => 'required|date',
             'end_date'   => 'required|date|after_or_equal:start_date',
-            'reason'     => 'required|string',
-            'with_pay'   => 'required|boolean',
+            'reason'     => 'required|string|min:10',
+        ], [
+            'type_leave.required' => 'Please select the type of leave.',
+            'start_date.required' => 'Start date is required.',
+            'end_date.required'   => 'End date is required.',
+            'end_date.after_or_equal' => 'The end date must be after or equal to the start date.',
+            'reason.required'     => 'Please provide a reason for your leave.',
+            'reason.min'          => 'The reason must be at least 10 characters long.',
         ]);
 
         $start = Carbon::parse($request->start_date);
         $end = Carbon::parse($request->end_date);
         $totalDays = $start->diffInDays($end) + 1;
 
-        $leave->update(array_merge($validated, [
-            'total_days' => $totalDays,
-        ]));
+        DB::transaction(function () use ($leave, $validated, $totalDays) {
+            $leave->update(array_merge($validated, [
+                'total_days' => $totalDays,
+                'with_pay' => $validated['type_leave'] === 'Leave with Pay'
+            ]));
 
-        return redirect()->route('employee.leave.index');
+            // Reset statuses to Pending (4)
+            DB::table('leave_statuses')
+                ->where('leave_id', $leave->id)
+                ->update([
+                    'status_id' => 4,
+                    'updated_at' => now()
+                ]);
+        });
+
+        return redirect()->route('employee.leave.index')->with('message', 'Leave request updated and resubmitted.');
     }
 }

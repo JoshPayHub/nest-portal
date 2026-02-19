@@ -47,7 +47,9 @@ const filteredLeaves = computed(() => {
         (l) =>
             l.type_leave.toLowerCase().includes(term) ||
             l.date_filed.toLowerCase().includes(term) ||
-            l.leader_status.toLowerCase().includes(term),
+            l.leader_status.toLowerCase().includes(term) ||
+            l.hr_status.toLowerCase().includes(term) || // Add HR status
+            l.pay_type.toLowerCase().includes(term), // Add "With Pay" / "Without Pay"
     );
 });
 
@@ -62,7 +64,6 @@ const getStatusClass = (status) => {
 };
 
 const canEdit = (leave) => {
-    // Locked if HR or Head already approved
     return (
         leave.hr_status.toLowerCase() !== "approved" &&
         leave.leader_status.toLowerCase() !== "approved"

@@ -1,12 +1,12 @@
 <script setup>
 import { useForm, usePage, router } from "@inertiajs/vue3";
-import { computed, watch, onMounted } from "vue";
+import { computed, onMounted } from "vue";
 import {
     Card,
     CardHeader,
     CardTitle,
-    CardDescription,
     CardContent,
+    CardDescription,
 } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
@@ -26,74 +26,67 @@ const authUser = page.props.authUser;
 const report = page.props.report;
 const isEditing = page.props.isEditing ?? false;
 const today = page.props.todayDate || new Date().toISOString().split("T")[0];
-
+const availableLeave = computed(() => Number(page.props.availableLeave) || 0);
 const STORAGE_KEY = "leave_form_draft";
 
-/** Security Logic */
-const hasRejected = computed(() => {
-    return (report?.statuses || []).some(
-        (s) =>
-            s.status_id === 5 || s.status?.name?.toLowerCase() === "rejected",
-    );
-});
-
-const hasApproved = computed(() => {
-    return (report?.statuses || []).some(
-        (s) =>
-            s.status_id === 2 || s.status?.name?.toLowerCase() === "approved",
-    );
-});
-
-const isLocked = computed(
-    () => isEditing && hasApproved.value && !hasRejected.value,
-);
-
-onMounted(() => {
-    if (isEditing && !report) {
-        toastStore.show("Leave record not found.", "error");
-        router.replace("/employee/leave");
-        return;
-    }
-    if (isLocked.value) {
-        toastStore.show("This request is approved and locked.", "error");
-        router.replace("/employee/leave");
-    }
-});
-
-const savedDraft = !isEditing
-    ? JSON.parse(localStorage.getItem(STORAGE_KEY))
-    : null;
+const formatDateForInput = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toISOString().split("T")[0];
+};
 
 const form = useForm({
     name: authUser?.name ?? "",
     department_position: authUser
         ? `${authUser.department} / ${authUser.position}`
         : "",
-    report_date: report
-        ? new Date(report.created_at).toISOString().split("T")[0]
-        : today,
-
-    // Form Fields
-    type_leave: report?.type_leave ?? savedDraft?.type_leave ?? "Sick Leave",
-    start_date: report?.start_date ?? savedDraft?.start_date ?? "",
-    end_date: report?.end_date ?? savedDraft?.end_date ?? "",
-    reason: report?.reason ?? savedDraft?.reason ?? "",
-    with_pay: report?.with_pay ?? savedDraft?.with_pay ?? true,
+    report_date: report ? formatDateForInput(report.created_at) : today,
+    type_leave: report?.type_leave ?? "Birthday Leave",
+    start_date: "",
+    end_date: "",
+    reason: report?.reason ?? "",
 });
 
-// Auto-Save Draft
-watch(
-    () => form.data(),
-    (newData) => {
-        if (!isEditing)
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
-    },
-    { deep: true },
+const totalDaysRequested = computed(() => {
+    if (!form.start_date || !form.end_date) return 0;
+    const start = new Date(form.start_date);
+    const end = new Date(form.end_date);
+    const diffTime = end - start;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays > 0 ? diffDays : 0;
+});
+
+const balanceResult = computed(
+    () => availableLeave.value - totalDaysRequested.value,
+);
+const isBalanceInvalid = computed(
+    () => form.type_leave === "Leave with Pay" && balanceResult.value < 0,
 );
 
-const submit = () => {
-    if (isLocked.value) return;
+const hasRejected = computed(() =>
+    (report?.statuses || []).some((s) => s.status_id === 5),
+);
 
+onMounted(() => {
+    if (isEditing && report) {
+        form.start_date = formatDateForInput(report.start_date);
+        form.end_date = formatDateForInput(report.end_date);
+    } else if (!isEditing) {
+        const savedDraft = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (savedDraft) {
+            form.start_date = savedDraft.start_date;
+            form.end_date = savedDraft.end_date;
+            form.type_leave = savedDraft.type_leave;
+            form.reason = savedDraft.reason;
+        }
+    }
+});
+
+const submit = () => {
+    if (isBalanceInvalid.value) {
+        toastStore.show("Error: Requested days exceed balance.", "error");
+        return;
+    }
     const url = isEditing
         ? `/employee/leave/update/${report.id}`
         : "/employee/leave/store";
@@ -102,17 +95,12 @@ const submit = () => {
     form[method](url, {
         preserveScroll: true,
         onSuccess: () => {
-            if (!isEditing) {
-                localStorage.removeItem(STORAGE_KEY);
-                form.reset();
-            }
+            if (!isEditing) localStorage.removeItem(STORAGE_KEY);
             toastStore.show(
                 `Leave request ${isEditing ? "updated" : "submitted"}!`,
                 "success",
             );
         },
-        onError: () =>
-            toastStore.show("Please check the form for errors.", "error"),
     });
 };
 </script>
@@ -144,7 +132,6 @@ const submit = () => {
                         isEditing ? "Edit Leave" : "New Application"
                     }}</span>
                 </nav>
-
                 <div class="space-y-1">
                     <CardTitle
                         class="text-3xl font-extrabold tracking-tight text-brand-blue"
@@ -155,9 +142,11 @@ const submit = () => {
                                 : "Application for Leave"
                         }}
                     </CardTitle>
+                    <CardDescription class="text-slate-500"
+                        >Manage your time off requests.</CardDescription
+                    >
                 </div>
             </CardHeader>
-
             <CardContent class="grid grid-cols-12 gap-4 mt-6">
                 <div class="col-span-12 md:col-span-6">
                     <Label class="p-1">Employee Name</Label>
@@ -167,7 +156,6 @@ const submit = () => {
                         class="bg-slate-100 font-semibold border-2"
                     />
                 </div>
-
                 <div class="col-span-12 md:col-span-6">
                     <Label class="p-1">Department / Position</Label>
                     <Input
@@ -176,7 +164,6 @@ const submit = () => {
                         class="border-2 border-gray-300 bg-slate-50"
                     />
                 </div>
-
                 <div class="col-span-12 md:col-span-6">
                     <Label class="p-1">Date Filed</Label>
                     <Input
@@ -188,9 +175,16 @@ const submit = () => {
                 </div>
 
                 <div class="col-span-12 md:col-span-6">
-                    <Label class="p-1">TYPE OF LEAVE</Label>
+                    <Label class="p-1 uppercase text-xs font-bold"
+                        >Type of Leave</Label
+                    >
                     <Select v-model="form.type_leave">
-                        <SelectTrigger class="border-2 border-brand-blue">
+                        <SelectTrigger
+                            :class="{
+                                'border-red-500': form.errors.type_leave,
+                            }"
+                            class="border-2 border-brand-blue"
+                        >
                             <SelectValue placeholder="Select Leave Type" />
                         </SelectTrigger>
                         <SelectContent>
@@ -203,82 +197,124 @@ const submit = () => {
                             <SelectItem value="Leave with Pay"
                                 >Leave with Pay</SelectItem
                             >
-                            <SelectItem value="Maternity/Paternity"
+                            <SelectItem value="Leave without Pay"
                                 >Leave without Pay</SelectItem
                             >
                         </SelectContent>
                     </Select>
+                    <div
+                        v-if="form.errors.type_leave"
+                        class="text-red-500 text-xs mt-1"
+                    >
+                        {{ form.errors.type_leave }}
+                    </div>
                 </div>
 
-                <div class="col-span-4">
-                    <Label class="p-1">Available Leave</Label>
-                    <Input type="text" readonly />
-                </div>
-
-                <div class="col-span-4">
-                    <Label class="p-1">Less Request</Label>
-                    <Input type="text" readonly />
-                </div>
-
-                <div class="col-span-4">
-                    <Label class="p-1">Balance</Label>
-                    <Input type="text" readonly />
-                </div>
+                <template v-if="form.type_leave === 'Leave with Pay'">
+                    <div class="col-span-4">
+                        <Label class="p-1">Available</Label>
+                        <Input
+                            :model-value="availableLeave"
+                            readonly
+                            class="bg-green-50 font-bold"
+                        />
+                    </div>
+                    <div class="col-span-4">
+                        <Label class="p-1">Less</Label>
+                        <Input
+                            :model-value="totalDaysRequested"
+                            readonly
+                            :class="{
+                                'text-red-600 font-bold': isBalanceInvalid,
+                            }"
+                        />
+                    </div>
+                    <div class="col-span-4">
+                        <Label class="p-1">Balance</Label>
+                        <Input
+                            :model-value="balanceResult"
+                            readonly
+                            :class="{
+                                'bg-red-100 text-red-700 font-bold':
+                                    isBalanceInvalid,
+                            }"
+                        />
+                    </div>
+                </template>
 
                 <div class="col-span-12 md:col-span-4">
-                    <Label class="p-1">Leave Start Date</Label>
+                    <Label class="p-1 text-xs font-bold uppercase"
+                        >Leave Start Date</Label
+                    >
                     <Input
                         type="date"
                         v-model="form.start_date"
                         :class="{ 'border-red-500': form.errors.start_date }"
                     />
+                    <div
+                        v-if="form.errors.start_date"
+                        class="text-red-500 text-xs mt-1"
+                    >
+                        {{ form.errors.start_date }}
+                    </div>
                 </div>
+
                 <div class="col-span-12 md:col-span-4">
-                    <Label class="p-1">Leave End Date</Label>
+                    <Label class="p-1 text-xs font-bold uppercase"
+                        >Leave End Date</Label
+                    >
                     <Input
                         type="date"
                         v-model="form.end_date"
                         :class="{ 'border-red-500': form.errors.end_date }"
                     />
+                    <div
+                        v-if="form.errors.end_date"
+                        class="text-red-500 text-xs mt-1"
+                    >
+                        {{ form.errors.end_date }}
+                    </div>
                 </div>
 
-                <div class="col-span-4">
-                    <Label class="p-1">Total Number of Days</Label>
-                    <Input type="number" readonly />
+                <div class="col-span-12 md:col-span-4">
+                    <Label class="p-1 text-xs font-bold uppercase"
+                        >Total Days</Label
+                    >
+                    <Input
+                        :value="totalDaysRequested"
+                        readonly
+                        class="bg-slate-50 font-extrabold text-center"
+                    />
                 </div>
 
                 <div class="col-span-12">
                     <Label class="p-1">Reason for Leave</Label>
                     <Textarea
                         v-model="form.reason"
-                        placeholder="Please provide details..."
-                        class="min-h-[100px]"
                         :class="{ 'border-red-500': form.errors.reason }"
+                        class="min-h-[100px]"
                     />
+                    <div
+                        v-if="form.errors.reason"
+                        class="text-red-500 text-xs mt-1"
+                    >
+                        {{ form.errors.reason }}
+                    </div>
                 </div>
             </CardContent>
 
             <CardContent
                 class="flex justify-end gap-2 border-t bg-slate-50/30 py-4 mt-6"
             >
-                <Button
-                    variant="ghost"
-                    type="button"
-                    @click="router.get('/employee/leave')"
+                <Button variant="ghost" @click="router.get('/employee/leave')"
                     >Cancel</Button
                 >
                 <Button
-                    class="bg-brand-blue hover:bg-brand-blue/90 text-white min-w-[140px]"
-                    :disabled="form.processing || isLocked"
+                    class="bg-brand-blue text-white"
+                    :disabled="form.processing || isBalanceInvalid"
                     @click="submit"
                 >
-                    {{
-                        form.processing
-                            ? "Saving..."
-                            : isEditing
-                              ? "Update Request"
-                              : "Submit Leave"
-                    }}
+                    {{ isEditing ? "Update Request" : "Submit Leave" }}
                 </Button>
             </CardContent>
         </Card>

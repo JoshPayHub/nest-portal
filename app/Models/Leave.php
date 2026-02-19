@@ -14,12 +14,11 @@ class Leave extends Model
         'department_id',
         'position_id',
         'type_leave',
-        'with_pay',
-        'without_pay',
         'start_date',
         'end_date',
-        'total_days',
         'reason',
+        'total_days',
+        'with_pay',
     ];
 
     /* ==========================
