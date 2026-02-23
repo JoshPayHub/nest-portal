@@ -3,8 +3,8 @@
 use App\Http\Controllers\Employee\AccomplishmentReportController;
 use App\Http\Controllers\Employee\ChangeOffController;
 use App\Http\Controllers\Employee\DashboardController;
+use App\Http\Controllers\Employee\LeaveAbsenceController;
 use App\Http\Controllers\Employee\LeaveController;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
 
 // hr.php
@@ -32,4 +32,9 @@ Route::middleware(['auth', 'user_type:Employee'])->prefix('employee')->name('emp
     Route::get('/leave/edit/{id}', [LeaveController::class, 'edit'])->name('leave.edit');
     Route::put('/leave/update/{id}', [LeaveController::class, 'update'])->name('leave.update');
 
+    Route::get('/leave-of-absence', [LeaveAbsenceController::class, 'index'])->name('leaveabsence.index');
+    Route::get('/leave-of-absence/create', [LeaveAbsenceController::class, 'create'])->name('leaveabsence.create');
+    Route::post('/leave-of-absence/store', [LeaveAbsenceController::class, 'store'])->name('leaveabsence.store');
+    Route::get('/leave-of-absence/edit/{id}', [LeaveAbsenceController::class, 'edit'])->name('leaveabsence.edit');
+    Route::put('/leave-of-absence/update/{id}', [LeaveAbsenceController::class, 'update'])->name('leaveabsence.update');
 });

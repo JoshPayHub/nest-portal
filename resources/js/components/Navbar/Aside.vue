@@ -165,7 +165,7 @@ const menuItems = {
                 },
                 {
                     label: "Leave of Absence Report",
-                    href: "/forms/leave-of-absence",
+                    href: "/employee/leave-of-absence",
                     icon: "fa-solid fa-calendar-xmark",
                 },
                 {
