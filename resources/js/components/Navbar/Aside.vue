@@ -170,12 +170,12 @@ const menuItems = {
                 },
                 {
                     label: "Manpower Requisition Form",
-                    href: "/forms/manpower-requisition",
+                    href: "/employee/manpower",
                     icon: "fa-solid fa-user-group",
                 },
                 {
                     label: "Official Business Notification",
-                    href: "/forms/official-business",
+                    href: "/employee/business-notification",
                     icon: "fa-solid fa-briefcase",
                 },
                 {
@@ -185,7 +185,7 @@ const menuItems = {
                 },
                 {
                     label: "Undertime Form",
-                    href: "/forms/undertime",
+                    href: "/employee/undertime-form",
                     icon: "fa-solid fa-clock",
                 },
             ],

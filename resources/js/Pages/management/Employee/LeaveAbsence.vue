@@ -1,6 +1,6 @@
 <script setup>
 import { useForm, router, usePage } from "@inertiajs/vue3";
-import { computed, onMounted } from "vue";
+import { onMounted, watch } from "vue";
 import {
     Card,
     CardHeader,
@@ -11,13 +11,6 @@ import {
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
 import { Label } from "@/Components/ui/label";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/Components/ui/select";
 import { Textarea } from "@/Components/ui/textarea";
 import { toastStore } from "@/stores/toast";
 import { Save, Send, AlertCircle } from "lucide-vue-next";
@@ -29,42 +22,79 @@ const props = defineProps({
 });
 
 const page = usePage();
-// Fallback for dates
 const today = page.props.todayDate || new Date().toISOString().split("T")[0];
+const STORAGE_KEY = "pending_absence_filing";
+
+// Initialize form
+const savedData = !props.isEditing
+    ? JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}")
+    : {};
 
 const form = useForm({
     name: props.authUser?.name ?? "",
     department_position: props.authUser
         ? `${props.authUser.department} / ${props.authUser.position ?? ""}`
         : "",
-    // If editing, use existing filed date, otherwise today
     report_date: props.report?.created_at
         ? new Date(props.report.created_at).toISOString().split("T")[0]
         : today,
-    type_absence: props.report?.type_absence ?? "Sick Leave (Emergency)",
-    date_absence: props.report?.date_absence ?? "",
-    reason: props.report?.reason ?? "",
+    type_absence: props.report?.type_absence || savedData.type_absence || "",
+    date_absence: props.report?.date_absence || savedData.date_absence || "",
+    reason: props.report?.reason || savedData.reason || "",
 });
 
-const absenceTypes = [
-    "Sick Leave (Emergency)",
-    "Personal Business",
-    "Family Emergency",
-    "Bereavement",
-    "Other",
-];
+/**
+ * 1. Watchers to Clear Errors + Save to LocalStorage
+ */
+watch(
+    () => form.type_absence,
+    (newVal) => {
+        form.clearErrors("type_absence"); // Remove red border/text as they type
+        if (!props.isEditing) saveToLocal();
+    },
+);
+
+watch(
+    () => form.date_absence,
+    (newVal) => {
+        form.clearErrors("date_absence");
+        if (!props.isEditing) saveToLocal();
+    },
+);
+
+watch(
+    () => form.reason,
+    (newVal) => {
+        form.clearErrors("reason");
+        if (!props.isEditing) saveToLocal();
+    },
+);
+
+// Helper to save data
+const saveToLocal = () => {
+    localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+            type_absence: form.type_absence,
+            date_absence: form.date_absence,
+            reason: form.reason,
+        }),
+    );
+};
 
 const submit = () => {
     const url = props.isEditing
         ? `/employee/leave-of-absence/update/${props.report.id}`
         : "/employee/leave-of-absence/store";
 
-    // Using the dynamic method approach from your Leave form
     const method = props.isEditing ? "put" : "post";
 
     form[method](url, {
         preserveScroll: true,
         onSuccess: () => {
+            if (!props.isEditing) {
+                localStorage.removeItem(STORAGE_KEY);
+            }
             toastStore.show(
                 `Absence filing ${props.isEditing ? "updated" : "submitted"}!`,
                 "success",
@@ -153,25 +183,13 @@ const submit = () => {
                     <Label class="p-1 uppercase text-xs font-bold"
                         >Absence Type</Label
                     >
-                    <Select v-model="form.type_absence">
-                        <SelectTrigger
-                            :class="{
-                                'border-red-500': form.errors.type_absence,
-                            }"
-                            class="border-2 border-brand-blue"
-                        >
-                            <SelectValue placeholder="Select Type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem
-                                v-for="type in absenceTypes"
-                                :key="type"
-                                :value="type"
-                            >
-                                {{ type }}
-                            </SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <Input
+                        type="text"
+                        v-model="form.type_absence"
+                        placeholder="e.g. Family Emergency, Sick, etc."
+                        :class="{ 'border-red-500': form.errors.type_absence }"
+                        class="border-2 border-brand-blue"
+                    />
                     <div
                         v-if="form.errors.type_absence"
                         class="text-red-500 text-xs mt-1"
