@@ -1,19 +1,8 @@
 <script setup>
 import { ref, computed } from "vue";
 import { Link, router } from "@inertiajs/vue3";
-import {
-    Plus,
-    Search,
-    FileText,
-    Calendar,
-    Eye,
-    Pencil,
-    Clock,
-    CheckCircle2,
-    XCircle,
-} from "lucide-vue-next";
+import { Plus, Search, Calendar, Eye, Pencil, Timer } from "lucide-vue-next";
 
-// UI Components
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
 import {
@@ -43,7 +32,7 @@ import {
 } from "@/Components/ui/dialog";
 
 const props = defineProps({
-    reports: {
+    overtimes: {
         type: Object,
         required: true,
     },
@@ -51,17 +40,19 @@ const props = defineProps({
 
 const search = ref("");
 const isViewOpen = ref(false);
-const selectedReport = ref(null);
+const selectedOvertime = ref(null);
 
-const filteredReports = computed(() => {
-    const reportsArray = props.reports.data || [];
-    if (!search.value) return reportsArray;
-    const searchTerm = search.value.toLowerCase();
-    return reportsArray.filter((report) => {
-        const reportDate = String(report.report_date || "").toLowerCase();
-        const periodFrom = String(report.period_from || "").toLowerCase();
+/* =========================
+   FILTER (CURRENT PAGE ONLY)
+========================= */
+const filteredOvertimes = computed(() => {
+    if (!search.value) return props.overtimes.data;
+
+    const term = search.value.toLowerCase();
+    return props.overtimes.data.filter((ot) => {
         return (
-            reportDate.includes(searchTerm) || periodFrom.includes(searchTerm)
+            ot.overtime_date?.toLowerCase().includes(term) ||
+            ot.reason?.toLowerCase().includes(term)
         );
     });
 });
@@ -69,14 +60,14 @@ const filteredReports = computed(() => {
 /* =========================
    LOGIC
 ========================= */
-const openView = (report) => {
-    selectedReport.value = report;
+const openView = (ot) => {
+    selectedOvertime.value = ot;
     isViewOpen.value = true;
 };
 
-const canEdit = (report) => {
-    const leader = report.leader_status_name?.toLowerCase();
-    const hr = report.hr_status_name?.toLowerCase();
+const canEdit = (ot) => {
+    const leader = ot.leader_status_name?.toLowerCase();
+    const hr = ot.hr_status_name?.toLowerCase();
 
     if (leader === "rejected" || hr === "rejected") return true;
     if (leader === "approved" || hr === "approved") return false;
@@ -95,8 +86,10 @@ const getStatusClass = (status) => {
 
 <template>
     <div class="p-6">
-        <Card class="shadow-sm border-blue-100 max-w-7xl mx-auto">
-            <CardHeader class="border-b border-slate-100">
+        <Card
+            class="shadow-sm border-blue-100 max-w-7xl mx-auto overflow-hidden"
+        >
+            <CardHeader class="border-b border-slate-100 bg-white/50">
                 <div
                     class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
                 >
@@ -104,17 +97,17 @@ const getStatusClass = (status) => {
                         <CardTitle
                             class="text-3xl font-extrabold text-brand-blue tracking-tight"
                         >
-                            My Accomplishment Reports
+                            My Overtime Requests
                         </CardTitle>
                         <CardDescription class="text-base mt-1 text-slate-500">
-                            Review and manage your submitted activity logs.
+                            Track and manage your submitted overtime hours.
                         </CardDescription>
                     </div>
-                    <Link href="/employee/accomplishment-report/create">
+                    <Link href="/employee/overtime-request/create">
                         <Button
-                            class="bg-brand-blue hover:bg-brand-blue/90 h-12 px-8 font-bold shadow-md transition-all active:scale-95"
+                            class="bg-brand-blue hover:bg-brand-blue/90 h-11 px-6 font-bold shadow-sm transition-all active:scale-95"
                         >
-                            <Plus class="w-5 h-5 mr-2" /> New Report
+                            <Plus class="w-5 h-5 mr-2" /> New Request
                         </Button>
                     </Link>
                 </div>
@@ -136,19 +129,15 @@ const getStatusClass = (status) => {
 
                 <div class="rounded-md border border-slate-200 overflow-hidden">
                     <Table>
-                        <TableHeader class="bg-slate-50/50">
+                        <TableHeader class="bg-slate-50/80">
                             <TableRow>
                                 <TableHead
                                     class="w-[180px] font-bold text-slate-600 uppercase text-xs tracking-wider"
-                                    >DATE</TableHead
+                                    >Date</TableHead
                                 >
                                 <TableHead
                                     class="w-[150px] font-bold text-slate-600 uppercase text-xs tracking-wider"
-                                    >PERIOD COVERED</TableHead
-                                >
-                                <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs tracking-wider"
-                                    >ACTIVITIES</TableHead
+                                    >Duration</TableHead
                                 >
                                 <TableHead
                                     class="text-center font-bold text-slate-600 uppercase text-xs tracking-wider"
@@ -160,16 +149,16 @@ const getStatusClass = (status) => {
                                 >
                                 <TableHead
                                     class="text-right font-bold text-slate-600 uppercase text-xs tracking-wider px-6"
-                                    >ACTIONS</TableHead
+                                    >Actions</TableHead
                                 >
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            <template v-if="filteredReports.length > 0">
+                            <template v-if="filteredOvertimes.length > 0">
                                 <TableRow
-                                    v-for="report in filteredReports"
-                                    :key="report.id"
-                                    class="hover:bg-blue-50/30 transition-colors group"
+                                    v-for="ot in filteredOvertimes"
+                                    :key="ot.id"
+                                    class="hover:bg-blue-50/40 transition-colors group"
                                 >
                                     <TableCell>
                                         <div class="flex items-center gap-3">
@@ -180,38 +169,36 @@ const getStatusClass = (status) => {
                                             </div>
                                             <span
                                                 class="font-semibold text-slate-700"
-                                                >{{ report.report_date }}</span
+                                                >{{ ot.overtime_date }}</span
                                             >
                                         </div>
                                     </TableCell>
-
                                     <TableCell>
-                                        <span
-                                            class="text-sm font-medium text-slate-700"
-                                            >{{ report.period_from }} -
-                                            {{ report.period_to }}</span
-                                        >
+                                        <div class="flex flex-col">
+                                            <span
+                                                class="text-sm font-medium text-slate-700"
+                                                >{{ ot.start_time }} -
+                                                {{ ot.end_time }}</span
+                                            >
+                                            <span
+                                                class="text-[11px] text-slate-400 font-medium tracking-wide uppercase"
+                                                >{{
+                                                    ot.total_hours
+                                                }}
+                                                hours</span
+                                            >
+                                        </div>
                                     </TableCell>
-
-                                    <TableCell class="text-center">
-                                        <Badge variant="outline"
-                                            >{{
-                                                report.activities_count
-                                            }}
-                                            Items</Badge
-                                        >
-                                    </TableCell>
-
                                     <TableCell class="text-center">
                                         <Badge
                                             variant="outline"
                                             :class="
                                                 getStatusClass(
-                                                    report.leader_status_name,
+                                                    ot.leader_status_name,
                                                 )
                                             "
                                         >
-                                            {{ report.leader_status_name }}
+                                            {{ ot.leader_status_name }}
                                         </Badge>
                                     </TableCell>
                                     <TableCell class="text-center">
@@ -219,24 +206,23 @@ const getStatusClass = (status) => {
                                             variant="outline"
                                             :class="
                                                 getStatusClass(
-                                                    report.hr_status_name,
+                                                    ot.hr_status_name,
                                                 )
                                             "
                                         >
-                                            {{ report.hr_status_name }}
+                                            {{ ot.hr_status_name }}
                                         </Badge>
                                     </TableCell>
-
                                     <TableCell
                                         class="text-right px-6 space-x-1"
                                     >
                                         <Button
-                                            v-if="canEdit(report)"
+                                            v-if="canEdit(ot)"
                                             variant="ghost"
                                             size="sm"
                                             @click="
                                                 router.get(
-                                                    `/employee/accomplishment-report/edit/${report.id}`,
+                                                    `/employee/overtime-request/edit/${ot.id}`,
                                                 )
                                             "
                                             class="h-8 w-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
@@ -247,7 +233,7 @@ const getStatusClass = (status) => {
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            @click="openView(report)"
+                                            @click="openView(ot)"
                                             class="h-8 w-8 p-0 text-brand-blue hover:bg-blue-50"
                                         >
                                             <Eye class="w-4 h-4" />
@@ -255,15 +241,34 @@ const getStatusClass = (status) => {
                                     </TableCell>
                                 </TableRow>
                             </template>
+
                             <TableRow v-else>
                                 <TableCell
                                     colspan="6"
-                                    class="text-center text-slate-500 py-10"
+                                    class="py-20 text-center"
                                 >
-                                    <FileText
-                                        class="w-10 h-10 mx-auto mb-2 opacity-20"
-                                    />
-                                    <p>No reports found.</p>
+                                    <div
+                                        class="flex flex-col items-center justify-center"
+                                    >
+                                        <div
+                                            class="bg-slate-50 p-4 rounded-full mb-4"
+                                        >
+                                            <Timer
+                                                class="w-10 h-10 text-slate-300"
+                                            />
+                                        </div>
+                                        <h3
+                                            class="text-lg font-medium text-slate-900"
+                                        >
+                                            No overtime records
+                                        </h3>
+                                        <p
+                                            class="text-slate-500 max-w-xs mx-auto"
+                                        >
+                                            You haven't submitted any overtime
+                                            requests yet.
+                                        </p>
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         </TableBody>
@@ -271,7 +276,7 @@ const getStatusClass = (status) => {
                 </div>
 
                 <!-- pagination import -->
-                <Pagination :links="reports" />
+                <Pagination :links="overtimes" />
             </CardContent>
         </Card>
 
@@ -280,11 +285,14 @@ const getStatusClass = (status) => {
                 <DialogHeader>
                     <div class="pr-6">
                         <DialogTitle class="text-2xl font-bold text-brand-blue"
-                            >Report Details</DialogTitle
+                            >Overtime Details</DialogTitle
                         >
                         <DialogDescription
-                            >Submitted on
-                            {{ selectedReport?.report_date }}</DialogDescription
+                            >Reference ID: #OT-{{ selectedOvertime?.id }}
+                            | Cut-off:
+                            {{
+                                selectedOvertime?.cut_off_date
+                            }}</DialogDescription
                         >
                     </div>
                 </DialogHeader>
@@ -294,11 +302,10 @@ const getStatusClass = (status) => {
                 >
                     <div>
                         <p class="text-xs font-bold text-slate-400 uppercase">
-                            Period Covered
+                            Total Hours
                         </p>
                         <p class="text-sm font-semibold">
-                            {{ selectedReport?.period_from }} to
-                            {{ selectedReport?.period_to }}
+                            {{ selectedOvertime?.total_hours }} hrs
                         </p>
                     </div>
                     <div class="flex justify-end gap-4">
@@ -311,13 +318,13 @@ const getStatusClass = (status) => {
                             <p
                                 class="text-sm font-bold uppercase"
                                 :class="
-                                    selectedReport?.leader_status_name?.toLowerCase() ===
+                                    selectedOvertime?.leader_status_name?.toLowerCase() ===
                                     'rejected'
                                         ? 'text-red-600'
                                         : 'text-brand-blue'
                                 "
                             >
-                                {{ selectedReport?.leader_status_name }}
+                                {{ selectedOvertime?.leader_status_name }}
                             </p>
                         </div>
                         <div class="text-right">
@@ -329,13 +336,13 @@ const getStatusClass = (status) => {
                             <p
                                 class="text-sm font-bold uppercase"
                                 :class="
-                                    selectedReport?.hr_status_name?.toLowerCase() ===
+                                    selectedOvertime?.hr_status_name?.toLowerCase() ===
                                     'rejected'
                                         ? 'text-red-600'
                                         : 'text-brand-blue'
                                 "
                             >
-                                {{ selectedReport?.hr_status_name }}
+                                {{ selectedOvertime?.hr_status_name }}
                             </p>
                         </div>
                     </div>
@@ -343,40 +350,36 @@ const getStatusClass = (status) => {
 
                 <div class="space-y-3">
                     <div
-                        v-for="(act, index) in selectedReport?.activities"
+                        v-for="(item, index) in selectedOvertime?.activities"
                         :key="index"
                         class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm"
                     >
                         <div
                             class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-50 pb-3 mb-3"
                         >
-                            <div
-                                class="flex items-center gap-1.5 text-sm font-bold text-slate-700"
-                            >
-                                <Calendar class="w-3.5 h-3.5 text-brand-blue" />
-                                {{ act.date }}
+                            <div class="flex items-center gap-4">
+                                <div
+                                    class="flex items-center gap-1.5 text-sm font-bold text-slate-700"
+                                >
+                                    <Calendar
+                                        class="w-3.5 h-3.5 text-brand-blue"
+                                    />
+                                    {{ item.date }}
+                                </div>
+                                <div
+                                    class="flex items-center gap-1.5 text-sm text-slate-500"
+                                >
+                                    <Timer class="w-3.5 h-3.5 text-slate-400" />
+                                    {{ item.time_start }} -
+                                    {{ item.time_end }}
+                                </div>
                             </div>
-
-                            <div
-                                class="flex justify-end items-center gap-1 text-[10px] font-bold"
-                                :class="
-                                    act.status_name?.toLowerCase() ===
-                                    'completed'
-                                        ? 'text-green-600'
-                                        : 'text-amber-600'
-                                "
+                            <Badge
+                                variant="secondary"
+                                class="bg-blue-50 text-brand-blue border-blue-100"
                             >
-                                <component
-                                    :is="
-                                        act.status_name?.toLowerCase() ===
-                                        'completed'
-                                            ? CheckCircle2
-                                            : Clock
-                                    "
-                                    class="w-3 h-3"
-                                />
-                                {{ act.status_name?.toUpperCase() }}
-                            </div>
+                                {{ item.hours }} hrs
+                            </Badge>
                         </div>
 
                         <div
@@ -385,40 +388,36 @@ const getStatusClass = (status) => {
                             <p
                                 class="text-[10px] font-bold uppercase text-slate-400 mb-1"
                             >
-                                Activity:
+                                Task Description:
                             </p>
-                            {{ act.activity }}
+                            {{ item.description }}
                         </div>
                     </div>
                 </div>
 
-                <DialogFooter class="print:hidden">
-                    <Button variant="secondary" @click="isViewOpen = false"
-                        >Close</Button
+                <DialogFooter class="p-4 border-t bg-white">
+                    <Button
+                        variant="outline"
+                        @click="isViewOpen = false"
+                        class="px-6 font-bold text-slate-600 border-slate-200"
                     >
+                        Close
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
     </div>
 </template>
 
-<style>
+<style scoped>
+/* Standard print styling */
 @media print {
-    body * {
-        visibility: hidden;
+    .p-6 {
+        padding: 0;
     }
-    .fixed.inset-0.z-50,
-    .fixed.inset-0.z-50 * {
-        visibility: visible;
-    }
-    .fixed.inset-0.z-50 {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-    }
-    .print\:hidden {
-        display: none !important;
+    .shadow-sm {
+        box-shadow: none !important;
+        border: 1px solid #e2e8f0;
     }
 }
 </style>

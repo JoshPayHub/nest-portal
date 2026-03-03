@@ -25,20 +25,17 @@ class AccomplishmentReportController extends Controller
                 'approvalStatuses.status'
             ])
             ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($report) {
-
-                $leaderEntry = $report->approvalStatuses->first(function($log) {
-                    return $log->user->user_type_id == 3;
-                });
-
-                $hrEntry = $report->approvalStatuses->first(function($log) {
-                    return $log->user->user_type_id == 1;
-                });
+            ->paginate(10)
+            ->through(function ($report) {
+                // Safely find the entries
+                $leaderEntry = $report->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 3);
+                $hrEntry     = $report->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 1);
+                $firstActivity = $report->activities->first();
 
                 return [
                     'id' => $report->id,
-                    'report_date' => $report->created_at?->format('M d, Y') ?? '',
+                    // Use the report's own dates or fall back to activity dates safely
+                    'report_date' => $report->created_at->format('M d, Y'),
                     'period_from' => $report->from_date ? Carbon::parse($report->from_date)->format('M d, Y') : '',
                     'period_to'   => $report->to_date ? Carbon::parse($report->to_date)->format('M d, Y') : '',
 
@@ -51,7 +48,7 @@ class AccomplishmentReportController extends Controller
                     'activities_count' => $report->activities->count(),
                     'activities' => $report->activities->map(function($act) {
                         return [
-                            'date' => Carbon::parse($act->activity_date)->format('M d, Y'),
+                            'date' => $act->activity_date ? Carbon::parse($act->activity_date)->format('M d, Y') : '',
                             'activity' => $act->activity,
                             'status_name' => $act->status?->name ?? 'N/A'
                         ];
