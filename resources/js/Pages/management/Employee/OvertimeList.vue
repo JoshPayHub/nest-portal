@@ -408,16 +408,3 @@ const getStatusClass = (status) => {
         </Dialog>
     </div>
 </template>
-
-<style scoped>
-/* Standard print styling */
-@media print {
-    .p-6 {
-        padding: 0;
-    }
-    .shadow-sm {
-        box-shadow: none !important;
-        border: 1px solid #e2e8f0;
-    }
-}
-</style>

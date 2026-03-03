@@ -131,7 +131,7 @@ class OvertimeRequestController extends Controller
             }
         });
 
-        return redirect()->route('employee.overtimerequest.index')->with('message', 'Overtime request submitted!');
+        return redirect()->back()->with('message', 'Overtime request submitted successfully!');
     }
 
     public function edit(Request $request, $id)

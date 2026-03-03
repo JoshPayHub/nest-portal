@@ -401,24 +401,3 @@ const getStatusClass = (status) => {
         </Dialog>
     </div>
 </template>
-
-<style>
-@media print {
-    body * {
-        visibility: hidden;
-    }
-    .fixed.inset-0.z-50,
-    .fixed.inset-0.z-50 * {
-        visibility: visible;
-    }
-    .fixed.inset-0.z-50 {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-    }
-    .print\:hidden {
-        display: none !important;
-    }
-}
-</style>

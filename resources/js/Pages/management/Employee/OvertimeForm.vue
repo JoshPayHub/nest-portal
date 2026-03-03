@@ -112,25 +112,47 @@ const removeRow = (index) => {
 };
 
 const submit = () => {
-    const url = isEditing
-        ? `/employee/overtime-request/update/${overtime.id}`
-        : "/employee/overtime-request/store";
-
-    const method = isEditing ? "put" : "post";
-
-    form[method](url, {
-        preserveScroll: true,
-        onSuccess: () => {
-            if (!isEditing) localStorage.removeItem(STORAGE_KEY);
-            toastStore.show(
-                `Overtime request ${isEditing ? "updated" : "submitted"} successfully!`,
-                "success",
-            );
-        },
-        onError: () => {
-            toastStore.show("Please fix the errors and try again.", "error");
-        },
-    });
+    if (isEditing) {
+        // Constructing URL manually since Ziggy is not used
+        form.put(`/employee/overtime-request/update/${overtime.id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toastStore.show("Overtime updated successfully!", "success");
+            },
+            onError: () => {
+                toastStore.show(
+                    "Please fix the errors and try again.",
+                    "error",
+                );
+            },
+        });
+    } else {
+        // Constructing URL manually for store
+        form.post("/employee/overtime-request/store", {
+            preserveScroll: true,
+            onSuccess: () => {
+                localStorage.removeItem(STORAGE_KEY);
+                form.reset();
+                form.cut_off_date = "";
+                form.items = [
+                    {
+                        overtime_date: today,
+                        description: "",
+                        time_start: "",
+                        time_end: "",
+                        hours: 0,
+                    },
+                ];
+                toastStore.show("Overtime submitted successfully!", "success");
+            },
+            onError: () => {
+                toastStore.show(
+                    "Please fix the errors and try again.",
+                    "error",
+                );
+            },
+        });
+    }
 };
 </script>
 
