@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
 use App\Models\AccomplishReport;
-use App\Models\AccomplishActivity;
 use App\Models\Status;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -30,7 +29,6 @@ class AccomplishmentReportController extends Controller
                 // Safely find the entries
                 $leaderEntry = $report->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 3);
                 $hrEntry     = $report->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 1);
-                $firstActivity = $report->activities->first();
 
                 return [
                     'id' => $report->id,

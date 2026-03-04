@@ -25,52 +25,43 @@ import { toastStore } from "@/stores/toast";
 const page = usePage();
 const authUser = page.props.authUser;
 const days = page.props.days || [];
-const report = page.props.report; // Existing report if editing
+const report = page.props.report;
 const isEditing = page.props.isEditing ?? false;
 const today = page.props.todayDate || new Date().toISOString().split("T")[0];
 
 const STORAGE_KEY = "change_off_form_draft";
 
-/**
- * Enhanced Security Logic
- */
+// Inside your Vue <script setup>
 const hasRejected = computed(() => {
-    return (report?.statuses || []).some(
+    return (report?.approval_statuses || []).some(
         (s) =>
             s.status_id === 5 || s.status?.name?.toLowerCase() === "rejected",
     );
 });
 
 const hasApproved = computed(() => {
-    return (report?.statuses || []).some(
+    return (report?.approval_statuses || []).some(
         (s) =>
             s.status_id === 2 || s.status?.name?.toLowerCase() === "approved",
     );
 });
 
-// It is locked ONLY if it is approved AND NOT rejected
 const isLocked = computed(
     () => isEditing && hasApproved.value && !hasRejected.value,
 );
 
 onMounted(() => {
-    // 1. If we are supposed to be editing but no report exists (invalid ID)
     if (isEditing && !report) {
         toastStore.show("Request record not found.", "error");
         router.replace("/employee/change-off");
         return;
     }
-
-    // 2. If record is approved and NOT rejected, kick back to index
     if (isLocked.value) {
         toastStore.show("This request is approved and locked.", "error");
         router.replace("/employee/change-off");
     }
-
-    // 3. If it is rejected, we do nothing and let them edit (per your requirement)
 });
 
-// Initialization Logic
 const savedDraft = !isEditing
     ? JSON.parse(localStorage.getItem(STORAGE_KEY))
     : null;
@@ -99,7 +90,20 @@ const form = useForm({
     new_time: report?.label?.new_time ?? savedDraft?.new_time ?? "08:00",
 });
 
-// Auto-Save: Only for New Reports
+/**
+ * Clear errors when user changes input
+ */
+Object.keys(form.data()).forEach((field) => {
+    watch(
+        () => form[field],
+        () => {
+            if (form.errors[field]) {
+                form.clearErrors(field);
+            }
+        },
+    );
+});
+
 watch(
     () => form.data(),
     (newData) => {
@@ -110,7 +114,6 @@ watch(
     { deep: true },
 );
 
-// Toggle logic based on Request Type
 watch(
     () => form.request_type,
     (newType) => {
@@ -130,30 +133,41 @@ const isTimeDisabled = computed(() => form.request_type === "2");
 const isDayDisabled = computed(() => form.request_type === "1");
 
 const submit = () => {
-    if (isLocked.value) return;
-
-    const url = isEditing
-        ? `/employee/change-off/update/${report.id}`
-        : "/employee/change-off/store";
-
-    const method = isEditing ? "put" : "post";
-
-    form[method](url, {
-        preserveScroll: true,
-        onSuccess: () => {
-            if (!isEditing) {
+    if (isEditing) {
+        // Constructing URL manually since Ziggy is not used
+        form.put(`/employee/change-off/update/${report.id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toastStore.show("Change Off updated successfully!", "success");
+            },
+            onError: () => {
+                toastStore.show(
+                    "Please fix the errors and try again.",
+                    "error",
+                );
+            },
+        });
+    } else {
+        // Constructing URL manually for store
+        form.post("/employee/change-off/store", {
+            preserveScroll: true,
+            onSuccess: () => {
                 localStorage.removeItem(STORAGE_KEY);
                 form.reset();
-            }
-            toastStore.show(
-                `Request ${isEditing ? "updated" : "submitted"} successfully!`,
-                "success",
-            );
-        },
-        onError: () => {
-            toastStore.show("Please fix the errors and try again.", "error");
-        },
-    });
+                form.report_date = today;
+                toastStore.show(
+                    "Change Off submitted successfully!",
+                    "success",
+                );
+            },
+            onError: () => {
+                toastStore.show(
+                    "Please fix the errors and try again.",
+                    "error",
+                );
+            },
+        });
+    }
 };
 
 const dayOfWeekOptions = computed(() =>
@@ -184,15 +198,13 @@ const typeOptions = computed(() =>
                     <span
                         class="hover:text-brand-blue cursor-pointer transition-colors"
                         @click="router.get('/employee/change-off')"
+                        >Change Off</span
                     >
-                        Change Off
-                    </span>
                     <span class="text-slate-300">/</span>
-                    <span class="font-bold text-brand-blue">
-                        {{ isEditing ? "Edit Request" : "New Entry" }}
-                    </span>
+                    <span class="font-bold text-brand-blue">{{
+                        isEditing ? "Edit Request" : "New Entry"
+                    }}</span>
                 </nav>
-
                 <div class="space-y-1">
                     <CardTitle
                         class="text-3xl font-extrabold tracking-tight text-brand-blue"
@@ -203,9 +215,10 @@ const typeOptions = computed(() =>
                                 : "Change Off Request"
                         }}
                     </CardTitle>
-                    <CardDescription class="text-slate-500">
-                        Request to swap your scheduled time or day off.
-                    </CardDescription>
+                    <CardDescription class="text-slate-500"
+                        >Request to swap your scheduled time or day
+                        off.</CardDescription
+                    >
                 </div>
             </CardHeader>
 
@@ -251,11 +264,16 @@ const typeOptions = computed(() =>
                                 v-for="type in typeOptions"
                                 :key="type.id"
                                 :value="type.id.toString()"
+                                >{{ type.name.toUpperCase() }}</SelectItem
                             >
-                                {{ type.name.toUpperCase() }}
-                            </SelectItem>
                         </SelectContent>
                     </Select>
+                    <p
+                        v-if="form.errors.request_type"
+                        class="text-red-500 text-xs mt-1"
+                    >
+                        {{ form.errors.request_type }}
+                    </p>
                 </div>
             </CardContent>
 
@@ -278,6 +296,12 @@ const typeOptions = computed(() =>
                                     'border-red-500': form.errors.original_date,
                                 }"
                             />
+                            <p
+                                v-if="form.errors.original_date"
+                                class="text-red-500 text-xs mt-1"
+                            >
+                                {{ form.errors.original_date }}
+                            </p>
                         </div>
                         <div
                             :class="{
@@ -308,6 +332,12 @@ const typeOptions = computed(() =>
                                     >
                                 </SelectContent>
                             </Select>
+                            <p
+                                v-if="form.errors.original_off_id"
+                                class="text-red-500 text-xs mt-1"
+                            >
+                                {{ form.errors.original_off_id }}
+                            </p>
                         </div>
                         <div
                             :class="{
@@ -324,6 +354,12 @@ const typeOptions = computed(() =>
                                     'border-red-500': form.errors.original_time,
                                 }"
                             />
+                            <p
+                                v-if="form.errors.original_time"
+                                class="text-red-500 text-xs mt-1"
+                            >
+                                {{ form.errors.original_time }}
+                            </p>
                         </div>
                     </div>
 
@@ -344,6 +380,12 @@ const typeOptions = computed(() =>
                                     'border-red-500': form.errors.new_date,
                                 }"
                             />
+                            <p
+                                v-if="form.errors.new_date"
+                                class="text-red-500 text-xs mt-1"
+                            >
+                                {{ form.errors.new_date }}
+                            </p>
                         </div>
                         <div
                             :class="{
@@ -374,6 +416,12 @@ const typeOptions = computed(() =>
                                     >
                                 </SelectContent>
                             </Select>
+                            <p
+                                v-if="form.errors.new_off_id"
+                                class="text-red-500 text-xs mt-1"
+                            >
+                                {{ form.errors.new_off_id }}
+                            </p>
                         </div>
                         <div
                             :class="{
@@ -390,6 +438,12 @@ const typeOptions = computed(() =>
                                     'border-red-500': form.errors.new_time,
                                 }"
                             />
+                            <p
+                                v-if="form.errors.new_time"
+                                class="text-red-500 text-xs mt-1"
+                            >
+                                {{ form.errors.new_time }}
+                            </p>
                         </div>
                     </div>
                 </div>

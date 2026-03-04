@@ -6,6 +6,7 @@ import {
     Search,
     Calendar,
     Pencil,
+    Lock,
     Clock,
     FileText,
 } from "lucide-vue-next";
@@ -29,20 +30,22 @@ import {
     TableRow,
 } from "@/Components/ui/table";
 import { Badge } from "@/Components/ui/badge";
+import Pagination from "@/Components/Pagination/Index.vue";
 
 const props = defineProps({
     requests: {
-        type: Array,
-        default: () => [],
+        type: Object,
+        required: true,
     },
 });
 
 const search = ref("");
 
 const filteredRequests = computed(() => {
-    if (!search.value) return props.requests;
+    const data = props.requests.data || [];
+    if (!search.value) return data;
     const term = search.value.toLowerCase();
-    return props.requests.filter(
+    return data.filter(
         (req) =>
             req.date_filed.toLowerCase().includes(term) ||
             req.original_date.toLowerCase().includes(term) ||
@@ -50,22 +53,22 @@ const filteredRequests = computed(() => {
     );
 });
 
-const getStatusClass = (status) => {
-    if (!status) return "bg-amber-100 text-amber-800 hover:bg-amber-100";
-    const s = status.toLowerCase();
-    if (s === "approved")
-        return "bg-green-100 text-green-800 hover:bg-green-100";
-    if (s === "rejected" || s === "denied" || s === "destructive")
-        return "bg-red-100 text-red-800 hover:bg-red-100";
-    return "bg-amber-100 text-amber-800 hover:bg-amber-100";
+const canEdit = (req) => {
+    const leader = req.leader_status?.toLowerCase();
+    const hr = req.hr_status?.toLowerCase();
+
+    if (leader === "rejected" || hr === "rejected") return true;
+    if (leader === "approved" || hr === "approved") return false;
+
+    return true; // Default to true for Pending
 };
 
-const canEdit = (req) => {
-    // Only allow editing if both Head and HR have not approved it yet
-    return (
-        req.hr_status.toLowerCase() !== "approved" &&
-        req.leader_status.toLowerCase() !== "approved"
-    );
+const getStatusClass = (status) => {
+    const s = status?.toLowerCase();
+    if (s === "approved") return "bg-emerald-100 text-emerald-700";
+    if (s === "rejected") return "bg-red-100 text-red-700";
+    if (s === "pending") return "bg-amber-100 text-amber-700";
+    return "bg-slate-100 text-slate-600";
 };
 
 /**
@@ -89,11 +92,11 @@ const formatScheduleSub = (day, time) => {
                 >
                     <div>
                         <CardTitle
-                            class="text-4xl font-extrabold text-brand-blue tracking-tight"
+                            class="text-3xl font-extrabold text-brand-blue tracking-tight"
                         >
                             Change Off Requests
                         </CardTitle>
-                        <CardDescription class="text-lg mt-2">
+                        <CardDescription class="text-base mt-1 text-slate-500">
                             Manage and track your schedule change applications.
                         </CardDescription>
                     </div>
@@ -107,7 +110,7 @@ const formatScheduleSub = (day, time) => {
                 </div>
             </CardHeader>
 
-            <CardContent class="mt-6">
+            <CardContent class="mt-3">
                 <div class="flex flex-col md:flex-row gap-3 mb-6 items-center">
                     <div class="relative w-full md:w-1/3">
                         <Search
@@ -115,7 +118,7 @@ const formatScheduleSub = (day, time) => {
                         />
                         <Input
                             v-model="search"
-                            placeholder="Search by date or status..."
+                            placeholder="Search by date..."
                             class="h-12 pl-10 w-full"
                         />
                     </div>
@@ -125,25 +128,34 @@ const formatScheduleSub = (day, time) => {
                     <Table>
                         <TableHeader class="bg-slate-50/50">
                             <TableRow>
-                                <TableHead class="font-bold text-slate-700"
-                                    >DATE FILED</TableHead
-                                >
-                                <TableHead class="font-bold text-slate-700"
-                                    >ORIGINAL SCHEDULE</TableHead
-                                >
-                                <TableHead class="font-bold text-slate-700"
-                                    >REQUESTED SCHEDULE</TableHead
+                                <TableHead
+                                    class="w-[180px] font-bold text-slate-600 uppercase text-xs tracking-wider"
+                                    >DATE</TableHead
                                 >
                                 <TableHead
-                                    class="font-bold text-center text-slate-700"
+                                    class="font-bold text-slate-600 uppercase text-xs tracking-wider"
+                                    >ORIGINAL SCHEDULE</TableHead
+                                >
+                                <TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs tracking-wider"
+                                    >REQUESTED SCHEDULE</TableHead
+                                >
+
+                                <TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs tracking-wider"
+                                    >Category</TableHead
+                                >
+
+                                <TableHead
+                                    class="text-center font-bold text-slate-600 uppercase text-xs tracking-wider"
                                     >DEPT. HEAD</TableHead
                                 >
                                 <TableHead
-                                    class="font-bold text-center text-slate-700"
+                                    class="text-center font-bold text-slate-600 uppercase text-xs tracking-wider"
                                     >HR STATUS</TableHead
                                 >
                                 <TableHead
-                                    class="text-right font-bold text-slate-700 px-6"
+                                    class="text-right font-bold text-slate-600 uppercase text-xs tracking-wider px-6"
                                     >ACTIONS</TableHead
                                 >
                             </TableRow>
@@ -222,8 +234,15 @@ const formatScheduleSub = (day, time) => {
                                         </div>
                                     </TableCell>
 
+                                    <TableCell
+                                        class="font-bold text-brand-blue capitalize"
+                                    >
+                                        {{ req.request_type }}
+                                    </TableCell>
+
                                     <TableCell class="text-center">
                                         <Badge
+                                            variant="outline"
                                             :class="
                                                 getStatusClass(
                                                     req.leader_status,
@@ -233,9 +252,9 @@ const formatScheduleSub = (day, time) => {
                                             {{ req.leader_status }}
                                         </Badge>
                                     </TableCell>
-
                                     <TableCell class="text-center">
                                         <Badge
+                                            variant="outline"
                                             :class="
                                                 getStatusClass(req.hr_status)
                                             "
@@ -247,22 +266,27 @@ const formatScheduleSub = (day, time) => {
                                     <TableCell class="text-right px-6">
                                         <Button
                                             v-if="canEdit(req)"
-                                            variant="outline"
+                                            variant="ghost"
                                             size="sm"
                                             @click="
                                                 router.get(
                                                     `/employee/change-off/edit/${req.id}`,
                                                 )
                                             "
-                                            class="text-amber-600 border-amber-200 hover:bg-amber-50"
+                                            class="h-8 w-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                                         >
-                                            <Pencil class="w-4 h-4 mr-1" /> Edit
+                                            <Pencil class="w-4 h-4 mr-1" />
                                         </Button>
-                                        <span
+
+                                        <Button
                                             v-else
-                                            class="text-xs font-medium text-slate-400 italic"
-                                            >Locked</span
+                                            variant="ghost"
+                                            size="sm"
+                                            class="h-8 w-8 p-0 text-brand-blue"
+                                            disabled
                                         >
+                                            <Lock class="w-4 h-4" />
+                                        </Button>
                                     </TableCell>
                                 </TableRow>
                             </template>
@@ -281,6 +305,9 @@ const formatScheduleSub = (day, time) => {
                         </TableBody>
                     </Table>
                 </div>
+
+                <!-- pagination import -->
+                <Pagination :links="requests" />
             </CardContent>
         </Card>
     </div>

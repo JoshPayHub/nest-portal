@@ -8,6 +8,7 @@ import {
     Calendar,
     Eye,
     Pencil,
+    Lock,
     Clock,
     CheckCircle2,
     XCircle,
@@ -242,6 +243,16 @@ const getStatusClass = (status) => {
                                             class="h-8 w-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                                         >
                                             <Pencil class="w-4 h-4" />
+                                        </Button>
+
+                                        <Button
+                                            v-else
+                                            variant="ghost"
+                                            size="sm"
+                                            class="h-8 w-8 p-0 text-brand-blue"
+                                            disabled
+                                        >
+                                            <Lock class="w-4 h-4" />
                                         </Button>
 
                                         <Button

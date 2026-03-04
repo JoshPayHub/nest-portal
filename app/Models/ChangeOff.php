@@ -29,13 +29,26 @@ class ChangeOff extends Model
     /**
      * Get the history of statuses/approvals for this request.
      */
-   public function status()
-    {
-        return $this->hasOne(ChangeOffStatus::class, 'change_off_id')->latestOfMany();
-    }
-
-    public function statuses(): HasMany
+   public function approvalStatuses(): HasMany
     {
         return $this->hasMany(ChangeOffStatus::class);
+    }
+
+    // Logic to get Leader status (Assumes User Type 2 is Leader/Head)
+    public function leaderStatus()
+    {
+        return $this->approvalStatuses()
+            ->whereHas('user', fn($q) => $q->where('user_type_id', 3))
+            ->with('status')
+            ->latest();
+    }
+
+    // Logic to get HR status (Assumes User Type 3 is HR)
+    public function hrStatus()
+    {
+        return $this->approvalStatuses()
+            ->whereHas('user', fn($q) => $q->where('user_type_id', 1))
+            ->with('status')
+            ->latest();
     }
 }

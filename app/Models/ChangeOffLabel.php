@@ -15,11 +15,11 @@ class ChangeOffLabel extends Model
 
     protected $fillable = [
         'change_off_id',
-        'off_id',         // Maps to the category (Time or Day)
+        'off_id',
         'original_date',
         'new_date',
-        'original_day_id', // Maps to the specific day (e.g., Monday)
-        'new_day_id',      // Maps to the specific day (e.g., Wednesday)
+        'original_day_id',
+        'new_day_id',
         'original_time',
         'new_time',
     ];
@@ -54,5 +54,11 @@ class ChangeOffLabel extends Model
     public function newDay(): BelongsTo
     {
         return $this->belongsTo(Off::class, 'new_day_id');
+    }
+
+    // In App\Models\ChangeOffLabel.php
+    public function off()
+    {
+        return $this->belongsTo(Off::class, 'off_id');
     }
 }

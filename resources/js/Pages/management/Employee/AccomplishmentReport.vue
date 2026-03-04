@@ -91,6 +91,32 @@ watch(
     { deep: true },
 );
 
+/**
+ * Validation Error Clearing Logic
+ * Clears red error messages as soon as the user interacts with the fields
+ */
+watch(
+    () => form.period_from,
+    () => form.clearErrors("period_from"),
+);
+watch(
+    () => form.period_to,
+    () => form.clearErrors("period_to"),
+);
+
+watch(
+    () => form.activities,
+    (newActivities) => {
+        newActivities.forEach((_, index) => {
+            // Clear errors for specific row fields when they change
+            form.clearErrors(`activities.${index}.date`);
+            form.clearErrors(`activities.${index}.activity`);
+            form.clearErrors(`activities.${index}.status_id`);
+        });
+    },
+    { deep: true },
+);
+
 const addRow = () => {
     form.activities.push({
         date: today,
