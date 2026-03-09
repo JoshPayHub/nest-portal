@@ -4,8 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class LeaveAbsence extends Model
 {
@@ -24,13 +22,26 @@ class LeaveAbsence extends Model
     public function department(): BelongsTo { return $this->belongsTo(Department::class); }
     public function position(): BelongsTo { return $this->belongsTo(Position::class); }
 
-    public function status(): HasOne
+    public function approvalStatuses()
     {
-        return $this->hasOne(LeaveAbsenceStatus::class, 'leave_absent_id')->latestOfMany();
+    return $this->hasMany(LeaveAbsenceStatus::class, 'leave_absent_id');
     }
 
-    public function statuses(): HasMany
+    // Logic to get Leader status (Assumes User Type 2 is Leader/Head)
+    public function leaderStatus()
     {
-        return $this->hasMany(LeaveAbsenceStatus::class, 'leave_absent_id');
+        return $this->approvalStatuses()
+            ->whereHas('user', fn($q) => $q->where('user_type_id', 3))
+            ->with('status')
+            ->latest();
+    }
+
+    // Logic to get HR status (Assumes User Type 3 is HR)
+    public function hrStatus()
+    {
+        return $this->approvalStatuses()
+            ->whereHas('user', fn($q) => $q->where('user_type_id', 1))
+            ->with('status')
+            ->latest();
     }
 }

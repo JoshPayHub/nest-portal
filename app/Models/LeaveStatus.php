@@ -18,17 +18,11 @@ class LeaveStatus extends Model
         return $this->belongsTo(Leave::class);
     }
 
-    /**
-     * The user who performed this status change (e.g., the HR or Manager).
-     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * The actual status (Approved, Pending, etc.).
-     */
     public function status(): BelongsTo
     {
         return $this->belongsTo(Status::class, 'status_id');

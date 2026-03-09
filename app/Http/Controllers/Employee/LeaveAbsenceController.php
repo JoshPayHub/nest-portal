@@ -14,14 +14,19 @@ class LeaveAbsenceController extends Controller
 {
     public function index(Request $request)
     {
-        $rawAbsences = LeaveAbsence::with(['statuses.user.userType', 'statuses.status'])
-            ->where('user_id', Auth::id())
-            ->latest()
-            ->get();
+        $user = $request->user();
 
-        $absences = $rawAbsences->map(function ($absence) {
-            $headEntry = $absence->statuses->first(fn($s) => $s->user?->userType?->name === 'Head');
-            $hrEntry = $absence->statuses->first(fn($s) => $s->user?->userType?->name === 'HR');
+        $absences = LeaveAbsence::where('user_id', $user->id)
+        ->with([
+            'approvalStatuses.user',
+            'approvalStatuses.status'
+        ])
+        ->orderBy('created_at', 'desc')
+        ->paginate(10)
+        ->through(function ($absence) { // Changed $req to $absence for clarity
+            // Match user_type_id logic
+            $leaderEntry = $absence->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 3);
+            $hrEntry     = $absence->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 1);
 
             return [
                 'id' => $absence->id,
@@ -29,7 +34,7 @@ class LeaveAbsenceController extends Controller
                 'type_absence' => $absence->type_absence,
                 'date_absence' => Carbon::parse($absence->date_absence)->format('M d, Y'),
                 'reason' => $absence->reason,
-                'leader_status' => $headEntry ? $headEntry->status->name : 'Pending',
+                'leader_status' => $leaderEntry ? $leaderEntry->status->name : 'Pending',
                 'hr_status'     => $hrEntry ? $hrEntry->status->name : 'Pending',
             ];
         });
@@ -75,14 +80,13 @@ class LeaveAbsenceController extends Controller
             'position_id' => $user->position_id,
         ]));
 
-        // Use the route name defined in your web.php
-        return redirect()->route('employee.leaveabsence.index')->with('message', 'Absence request submitted!');
+        return redirect()->back()->with('message', 'Absence request submitted successfully');
     }
 
     public function edit(Request $request, $id)
     {
         $user = Auth::user()->load(['department', 'position']);
-        $absence = LeaveAbsence::with(['statuses.status'])->find($id);
+        $absence = LeaveAbsence::with(['approvalStatuses.status'])->find($id);
 
         if (!$absence) {
             return redirect()->route('employee.leaveabsence.index')->with('error', 'Record not found.');
@@ -93,8 +97,8 @@ class LeaveAbsenceController extends Controller
         }
 
         // Logic check: Approved check (Mirroring your Leave logic)
-        $hasRejected = $absence->statuses->contains(fn($s) => $s->status_id === 5 || strtolower($s->status?->name) === 'rejected');
-        $hasApproved = $absence->statuses->contains(fn($s) => $s->status_id === 2 || strtolower($s->status?->name) === 'approved');
+        $hasRejected = $absence->approvalStatuses->contains(fn($s) => $s->status_id === 5 || strtolower($s->status?->name) === 'rejected');
+        $hasApproved = $absence->approvalStatuses->contains(fn($s) => $s->status_id === 2 || strtolower($s->status?->name) === 'approved');
 
         if ($hasApproved && !$hasRejected) {
             return redirect()->route('employee.leaveabsence.index')->with('error', 'This request is approved and cannot be modified.');
@@ -114,15 +118,15 @@ class LeaveAbsenceController extends Controller
 
     public function update(Request $request, $id)
     {
-        $absence = LeaveAbsence::with('statuses.status')->find($id);
+        $absence = LeaveAbsence::with('approvalStatuses.status')->find($id);
 
         if (!$absence || $absence->user_id !== Auth::id()) {
             return redirect()->route('employee.leaveabsence.index')->with('error', 'Unable to update.');
         }
 
         // Lock check
-        $hasRejected = $absence->statuses->contains(fn($s) => $s->status_id === 5 || strtolower($s->status?->name) === 'rejected');
-        $hasApproved = $absence->statuses->contains(fn($s) => $s->status_id === 2 || strtolower($s->status?->name) === 'approved');
+        $hasRejected = $absence->approvalStatuses->contains(fn($s) => $s->status_id === 5 || strtolower($s->status?->name) === 'rejected');
+        $hasApproved = $absence->approvalStatuses->contains(fn($s) => $s->status_id === 2 || strtolower($s->status?->name) === 'approved');
 
         if ($hasApproved && !$hasRejected) {
             return redirect()->route('employee.leaveabsence.index')->with('error', 'Cannot update approved request.');

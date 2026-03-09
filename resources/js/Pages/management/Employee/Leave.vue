@@ -83,25 +83,42 @@ onMounted(() => {
 });
 
 const submit = () => {
-    if (isBalanceInvalid.value) {
-        toastStore.show("Error: Requested days exceed balance.", "error");
-        return;
+    if (isEditing) {
+        form.put(`/employee/leave/update/${report.id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toastStore.show(
+                    "Leave request submitted successfully!",
+                    "success",
+                );
+            },
+            onError: () => {
+                toastStore.show(
+                    "Please fix the errors and try again.",
+                    "error",
+                );
+            },
+        });
+    } else {
+        form.post("/employee/leave/store", {
+            preserveScroll: true,
+            onSuccess: () => {
+                localStorage.removeItem(STORAGE_KEY);
+                form.reset();
+                form.report_date = today;
+                toastStore.show(
+                    "Leave request submitted successfully!",
+                    "success",
+                );
+            },
+            onError: () => {
+                toastStore.show(
+                    "Please fix the errors and try again.",
+                    "error",
+                );
+            },
+        });
     }
-    const url = isEditing
-        ? `/employee/leave/update/${report.id}`
-        : "/employee/leave/store";
-    const method = isEditing ? "put" : "post";
-
-    form[method](url, {
-        preserveScroll: true,
-        onSuccess: () => {
-            if (!isEditing) localStorage.removeItem(STORAGE_KEY);
-            toastStore.show(
-                `Leave request ${isEditing ? "updated" : "submitted"}!`,
-                "success",
-            );
-        },
-    });
 };
 </script>
 
@@ -123,7 +140,7 @@ const submit = () => {
                     class="flex items-center gap-2 text-xs uppercase tracking-wider text-slate-400"
                 >
                     <span
-                        class="hover:text-brand-blue cursor-pointer"
+                        class="hover:text-brand-blue cursor-pointer transition-colors"
                         @click="router.get('/employee/leave')"
                         >Leave List</span
                     >
@@ -132,6 +149,7 @@ const submit = () => {
                         isEditing ? "Edit Leave" : "New Application"
                     }}</span>
                 </nav>
+
                 <div class="space-y-1">
                     <CardTitle
                         class="text-3xl font-extrabold tracking-tight text-brand-blue"
@@ -156,14 +174,7 @@ const submit = () => {
                         class="bg-slate-100 font-semibold border-2"
                     />
                 </div>
-                <div class="col-span-12 md:col-span-6">
-                    <Label class="p-1">Department / Position</Label>
-                    <Input
-                        v-model="form.department_position"
-                        disabled
-                        class="border-2 border-gray-300 bg-slate-50"
-                    />
-                </div>
+
                 <div class="col-span-12 md:col-span-6">
                     <Label class="p-1">Date Filed</Label>
                     <Input
@@ -175,10 +186,20 @@ const submit = () => {
                 </div>
 
                 <div class="col-span-12 md:col-span-6">
-                    <Label class="p-1 uppercase text-xs font-bold"
-                        >Type of Leave</Label
+                    <Label class="p-1">Department / Position</Label>
+                    <Input
+                        v-model="form.department_position"
+                        disabled
+                        class="border-2 border-gray-300 bg-slate-50"
+                    />
+                </div>
+
+                <div class="col-span-12 md:col-span-6">
+                    <Label class="p-1">Type of Leave</Label>
+                    <Select
+                        v-model="form.type_leave"
+                        @update:modelValue="form.clearErrors('type_leave')"
                     >
-                    <Select v-model="form.type_leave">
                         <SelectTrigger
                             :class="{
                                 'border-red-500': form.errors.type_leave,
@@ -243,12 +264,11 @@ const submit = () => {
                 </template>
 
                 <div class="col-span-12 md:col-span-4">
-                    <Label class="p-1 text-xs font-bold uppercase"
-                        >Leave Start Date</Label
-                    >
+                    <Label class="p-1">Leave Start Date</Label>
                     <Input
                         type="date"
                         v-model="form.start_date"
+                        @input="form.clearErrors('start_date')"
                         :class="{ 'border-red-500': form.errors.start_date }"
                     />
                     <div
@@ -260,12 +280,11 @@ const submit = () => {
                 </div>
 
                 <div class="col-span-12 md:col-span-4">
-                    <Label class="p-1 text-xs font-bold uppercase"
-                        >Leave End Date</Label
-                    >
+                    <Label class="p-1">Leave End Date</Label>
                     <Input
                         type="date"
                         v-model="form.end_date"
+                        @input="form.clearErrors('end_date')"
                         :class="{ 'border-red-500': form.errors.end_date }"
                     />
                     <div
@@ -277,9 +296,7 @@ const submit = () => {
                 </div>
 
                 <div class="col-span-12 md:col-span-4">
-                    <Label class="p-1 text-xs font-bold uppercase"
-                        >Total Days</Label
-                    >
+                    <Label class="p-1">Total Days</Label>
                     <Input
                         :value="totalDaysRequested"
                         readonly
@@ -291,6 +308,7 @@ const submit = () => {
                     <Label class="p-1">Reason for Leave</Label>
                     <Textarea
                         v-model="form.reason"
+                        @input="form.clearErrors('reason')"
                         :class="{ 'border-red-500': form.errors.reason }"
                         class="min-h-[100px]"
                     />

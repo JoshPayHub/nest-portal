@@ -40,7 +40,6 @@ const props = defineProps({
 });
 
 const search = ref("");
-
 const filteredRequests = computed(() => {
     const data = props.requests.data || [];
     if (!search.value) return data;

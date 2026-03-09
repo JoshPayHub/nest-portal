@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Leave extends Model
 {
@@ -29,19 +28,26 @@ class Leave extends Model
     public function department(): BelongsTo { return $this->belongsTo(Department::class); }
     public function position(): BelongsTo { return $this->belongsTo(Position::class); }
 
-    /**
-     * Get the latest status/approval for this request.
-     */
-    public function status(): HasOne
+     public function approvalStatuses(): HasMany
     {
-        return $this->hasOne(LeaveStatus::class, 'leave_id')->latestOfMany();
+        return $this->hasMany(LeaveStatus::class);
     }
 
-    /**
-     * Get the history of all statuses/approvals (HR and Head).
-     */
-    public function statuses(): HasMany
+    // Logic to get Leader status (Assumes User Type 2 is Leader/Head)
+    public function leaderStatus()
     {
-        return $this->hasMany(LeaveStatus::class, 'leave_id');
+        return $this->approvalStatuses()
+            ->whereHas('user', fn($q) => $q->where('user_type_id', 3))
+            ->with('status')
+            ->latest();
+    }
+
+    // Logic to get HR status (Assumes User Type 3 is HR)
+    public function hrStatus()
+    {
+        return $this->approvalStatuses()
+            ->whereHas('user', fn($q) => $q->where('user_type_id', 1))
+            ->with('status')
+            ->latest();
     }
 }

@@ -14,14 +14,19 @@ class LeaveController extends Controller
 {
     public function index(Request $request)
     {
-        $rawLeaves = Leave::with(['statuses.user.userType', 'statuses.status'])
-            ->where('user_id', Auth::id())
-            ->latest()
-            ->get();
+    $user = $request->user();
 
-        $leaves = $rawLeaves->map(function ($leave) {
-            $headEntry = $leave->statuses->first(fn($s) => $s->user?->userType?->name === 'Head');
-            $hrEntry = $leave->statuses->first(fn($s) => $s->user?->userType?->name === 'HR');
+    $leaves = Leave::where('user_id', $user->id)
+        ->with([
+            'approvalStatuses.user',
+            'approvalStatuses.status'
+        ])
+        ->orderBy('created_at', 'desc')
+        ->paginate(10)
+        ->through(function ($leave) { // Changed $req to $leave for clarity
+            // Match user_type_id logic
+            $leaderEntry = $leave->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 3);
+            $hrEntry     = $leave->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 1);
 
             return [
                 'id' => $leave->id,
@@ -30,8 +35,9 @@ class LeaveController extends Controller
                 'start_date' => Carbon::parse($leave->start_date)->format('M d, Y'),
                 'end_date'   => Carbon::parse($leave->end_date)->format('M d, Y'),
                 'total_days' => $leave->total_days,
+                'reason' => $leave->reason,
                 'pay_type'   => ($leave->type_leave === 'Leave with Pay') ? 'With Pay' : 'Without Pay',
-                'leader_status' => $headEntry ? $headEntry->status->name : 'Pending',
+                'leader_status' => $leaderEntry ? $leaderEntry->status->name : 'Pending',
                 'hr_status'     => $hrEntry ? $hrEntry->status->name : 'Pending',
             ];
         });
@@ -90,7 +96,7 @@ class LeaveController extends Controller
             'with_pay' => $request->type_leave === 'Leave with Pay'
         ]));
 
-        return redirect()->route('employee.leave.index')->with('message', 'Leave request submitted!');
+        return redirect()->back()->with('message', 'Leave request submitted successfully!');
     }
 
     public function edit(Request $request, $id)
@@ -98,7 +104,7 @@ class LeaveController extends Controller
         $user = Auth::user()->load(['department', 'position']);
 
         // 1. Fetch record or handle missing
-        $leave = Leave::with(['statuses.status'])->find($id);
+        $leave = Leave::with(['approvalStatuses.status'])->find($id);
 
         if (!$leave) {
             return redirect()->route('employee.leave.index')->with('error', 'Leave record not found.');
@@ -110,8 +116,8 @@ class LeaveController extends Controller
         }
 
         // 3. Status Check Logic (Mirroring ChangeOff)
-        $hasRejected = $leave->statuses->contains(fn($s) => $s->status_id === 5 || strtolower($s->status?->name) === 'rejected');
-        $hasApproved = $leave->statuses->contains(fn($s) => $s->status_id === 2 || strtolower($s->status?->name) === 'approved');
+        $hasRejected = $leave->approvalStatuses->contains(fn($s) => $s->status_id === 5 || strtolower($s->status?->name) === 'rejected');
+        $hasApproved = $leave->approvalStatuses->contains(fn($s) => $s->status_id === 2 || strtolower($s->status?->name) === 'approved');
 
         if ($hasApproved && !$hasRejected) {
             return redirect()->route('employee.leave.index')->with('error', 'This request is approved and cannot be modified.');
@@ -132,15 +138,15 @@ class LeaveController extends Controller
 
     public function update(Request $request, $id)
     {
-        $leave = Leave::with('statuses.status')->find($id);
+        $leave = Leave::with('approvalStatuses.status')->find($id);
 
         if (!$leave || $leave->user_id !== Auth::id()) {
             return redirect()->route('employee.leave.index')->with('error', 'Unable to update request.');
         }
 
         // Lock check
-        $hasRejected = $leave->statuses->contains(fn($s) => $s->status_id === 5 || strtolower($s->status?->name) === 'rejected');
-        $hasApproved = $leave->statuses->contains(fn($s) => $s->status_id === 2 || strtolower($s->status?->name) === 'approved');
+        $hasRejected = $leave->approvalStatuses->contains(fn($s) => $s->status_id === 5 || strtolower($s->status?->name) === 'rejected');
+        $hasApproved = $leave->approvalStatuses->contains(fn($s) => $s->status_id === 2 || strtolower($s->status?->name) === 'approved');
 
         if ($hasApproved && !$hasRejected) {
             return redirect()->route('employee.leave.index')->with('error', 'Cannot update an approved request.');
