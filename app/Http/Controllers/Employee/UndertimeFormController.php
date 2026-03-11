@@ -12,33 +12,42 @@ use Illuminate\Support\Facades\DB;
 
 class UndertimeFormController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $raw = Undertime::with(['statuses.user.userType', 'statuses.status'])
-            ->where('user_id', Auth::id())
-            ->latest()
-            ->get();
+        $user = $request->user();
 
-        $undertimes = $raw->map(function ($item) {
-            $head = $item->statuses->first(fn($s) => $s->user?->userType?->name === 'Head');
-            $hr = $item->statuses->first(fn($s) => $s->user?->userType?->name === 'HR');
+        $undertimes = Undertime::where('user_id', $user->id)
+            ->with([
+                'approvalStatuses.user',
+                'approvalStatuses.status'
+            ])
+            ->orderBy('created_at', 'desc')
+            ->paginate(10)
+            ->through(function ($item) {
+                $leaderEntry = $item->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 3);
+                $hrEntry     = $item->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 1);
 
-            $totalMins = (int)$item->total_time;
-            $h = floor($totalMins / 60);
-            $m = $totalMins % 60;
-            $displayTime = ($h > 0 ? "{$h}h " : "") . ($m > 0 || $h == 0 ? "{$m}m" : "");
+                $totalMins = (int)$item->total_time;
+                $h = floor($totalMins / 60);
+                $m = $totalMins % 60;
+                $displayTime = ($h > 0 ? "{$h}h " : "") . ($m > 0 || $h == 0 ? "{$m}m" : "");
 
-            return [
-                'id' => $item->id,
-                'date_filed' => $item->created_at->format('M d, Y'),
-                'undertime_date' => Carbon::parse($item->undertime_date)->format('M d, Y'),
-                'total_time' => $displayTime,
-                'leader_status' => $head ? $head->status->name : 'Pending',
-                'hr_status'     => $hr ? $hr->status->name : 'Pending',
-            ];
-        });
+                return [
+                    'id' => $item->id,
+                    'date_filed' => $item->created_at->format('M d, Y'),
+                    'reason' => $item->reason,
+                    'undertime_date' => Carbon::parse($item->undertime_date)->format('M d, Y'),
+                    'from_date' => Carbon::parse($item->from_date)->format('h:i A'),
+                    'to_date' => Carbon::parse($item->to_date)->format('h:i A'),
+                    'total_time' => $displayTime,
+                    'leader_status' => $leaderEntry ? $leaderEntry->status->name : 'Pending',
+                    'hr_status'     => $hrEntry ? $hrEntry->status->name : 'Pending',
+                ];
+            });
 
-        return Inertia::render('management/Employee/UndertimeFormList', ['undertimes' => $undertimes]);
+        return Inertia::render('management/Employee/UndertimeFormList', [
+            'undertimes' => $undertimes
+        ]);
     }
 
     public function create()
@@ -77,18 +86,28 @@ class UndertimeFormController extends Controller
             'position_id'    => Auth::user()->position_id,
         ]);
 
-        return redirect()->route('employee.undertimeform.index')->with('message', 'Undertime filed.');
+        return redirect()->back()->with('message', 'Undertime submitted successfully!');
     }
 
     public function edit($id)
     {
-        $undertime = Undertime::with('statuses.status')->findOrFail($id);
-        if ($undertime->user_id !== Auth::id()) abort(403);
-
-        $isApproved = $undertime->statuses->contains(fn($s) => strtolower($s->status?->name) === 'approved');
-        if ($isApproved) return redirect()->back()->with('error', 'Approved requests are locked.');
-
         $user = Auth::user()->load(['department', 'position']);
+        $undertime = Undertime::with(['approvalStatuses.status'])->findOrFail($id);
+
+        if ($undertime->user_id !== $user->id) {
+            return redirect()->route('employee.undertimeform.index')->with('error', 'Unauthorized access.');
+        }
+
+        $hasRejected = $undertime->approvalStatuses->contains(fn($s) => $s->status_id === 5 || strtolower($s->status?->name) === 'rejected');
+        $hasApproved = $undertime->approvalStatuses->contains(fn($s) => $s->status_id === 2 || strtolower($s->status?->name) === 'approved');
+
+        if ($hasApproved && !$hasRejected) {
+            return redirect()->route('employee.undertimeform.index')->with('error', 'This request is approved and cannot be modified.');
+        }
+
+        // Fixed: Use undertime_date instead of date_required
+        $undertime->undertime_date = Carbon::parse($undertime->undertime_date)->format('Y-m-d');
+
         return Inertia::render('management/Employee/UndertimeForm', [
             'report' => $undertime,
             'isEditing' => true,
@@ -103,7 +122,10 @@ class UndertimeFormController extends Controller
     public function update(Request $request, $id)
     {
         $undertime = Undertime::findOrFail($id);
-        if ($undertime->user_id !== Auth::id()) abort(403);
+
+        if ($undertime->user_id !== Auth::id()) {
+            return redirect()->route('employee.undertimeform.index')->with('error', 'Unauthorized.');
+        }
 
         $validated = $request->validate([
             'undertime_date' => 'required|date',

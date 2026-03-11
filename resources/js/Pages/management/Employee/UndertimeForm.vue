@@ -1,5 +1,5 @@
 <script setup>
-import { useForm, router } from "@inertiajs/vue3";
+import { useForm, router, usePage } from "@inertiajs/vue3";
 import { watch, computed } from "vue";
 import {
     Card,
@@ -16,13 +16,34 @@ import { Textarea } from "@/Components/ui/textarea";
 import { toastStore } from "@/stores/toast";
 import { Save, Send, AlertCircle } from "lucide-vue-next";
 
+const page = usePage();
+
 const props = defineProps({
+    authUser: Object,
     report: Object,
     isEditing: Boolean,
-    authUser: Object,
 });
 
+const today = new Date().toISOString().split("T")[0];
 const STORAGE_KEY = "pending_undertime_request";
+
+const hasRejected = computed(() => {
+    return (props.report?.approval_statuses || []).some(
+        (s) =>
+            s.status_id === 5 || s.status?.name?.toLowerCase() === "rejected",
+    );
+});
+
+const hasApproved = computed(() => {
+    return (props.report?.approval_statuses || []).some(
+        (s) =>
+            s.status_id === 2 || s.status?.name?.toLowerCase() === "approved",
+    );
+});
+
+const isLocked = computed(
+    () => props.isEditing && hasApproved.value && !hasRejected.value,
+);
 
 const getMinutes = (timeStr) => {
     if (!timeStr) return 0;
@@ -30,8 +51,9 @@ const getMinutes = (timeStr) => {
     return parseInt(parts[0]) * 60 + parseInt(parts[1]);
 };
 
-const savedData = !props.isEditing
-    ? JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}")
+// Fixed variable name consistency and storage access
+const savedDraft = !props.isEditing
+    ? JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}
     : {};
 
 const form = useForm({
@@ -40,13 +62,14 @@ const form = useForm({
         ? `${props.authUser.department} / ${props.authUser.position ?? ""}`
         : "",
     undertime_date:
-        props.report?.undertime_date || savedData.undertime_date || "",
-    from_time: props.report?.from_time || savedData.from_time || "",
-    to_time: props.report?.to_time || savedData.to_time || "",
-    total_time: props.report?.total_time || savedData.total_time || 0,
-    reason: props.report?.reason || savedData.reason || "",
+        props.report?.undertime_date || savedDraft.undertime_date || "",
+    from_time: props.report?.from_time || savedDraft.from_time || "",
+    to_time: props.report?.to_time || savedDraft.to_time || "",
+    total_time: props.report?.total_time || savedDraft.total_time || 0,
+    reason: props.report?.reason || savedDraft.reason || "",
 });
 
+// Watcher to calculate total minutes based on time inputs
 watch(
     () => [form.from_time, form.to_time],
     ([from, to]) => {
@@ -59,21 +82,20 @@ watch(
             form.total_time = diff > 0 ? diff : 0;
         }
     },
-    { immediate: true },
+    { immediate: true }, // Crucial for refresh: runs immediately on load
 );
 
 watch(
-    () => [
-        form.from_time,
-        form.to_time,
-        form.undertime_date,
-        form.reason,
-        form.total_time,
-    ],
-    () => {
-        form.clearErrors();
+    () => form.data(),
+    (newData, oldData) => {
+        Object.keys(newData).forEach((key) => {
+            if (newData[key] !== oldData[key] && form.errors[key]) {
+                form.clearErrors(key);
+            }
+        });
+
         if (!props.isEditing) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(form.data()));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
         }
     },
     { deep: true },
@@ -88,27 +110,47 @@ const formattedDisplayTime = computed(() => {
 });
 
 const submit = () => {
-    const url = props.isEditing
-        ? `/employee/undertime-form/update/${props.report.id}`
-        : "/employee/undertime-form/store";
-
-    form[props.isEditing ? "put" : "post"](url, {
-        preserveScroll: true,
-        onSuccess: () => {
-            if (!props.isEditing) {
+    if (props.isEditing) {
+        form.put(`/employee/undertime-form/update/${props.report.id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toastStore.show("Undertime submitted successfully!", "success");
+            },
+            onError: () => {
+                toastStore.show(
+                    "Please fix the errors and try again.",
+                    "error",
+                );
+            },
+        });
+    } else {
+        form.post("/employee/undertime-form/store", {
+            preserveScroll: true,
+            onSuccess: () => {
                 localStorage.removeItem(STORAGE_KEY);
-            }
-            toastStore.show(
-                `Undertime ${props.isEditing ? "updated" : "submitted"}!`,
-                "success",
-            );
-        },
-    });
+                form.reset();
+                // Correctly reset individual fields
+                form.undertime_date = "";
+                form.total_time = 0; // Reset this instead of formattedDisplayTime
+                form.from_time = "";
+                form.to_time = "";
+                form.reason = "";
+
+                toastStore.show("Undertime submitted successfully!", "success");
+            },
+            onError: () => {
+                toastStore.show(
+                    "Please fix the errors and try again.",
+                    "error",
+                );
+            },
+        });
+    }
 };
 </script>
 
 <template>
-    <div class="p-6 space-y-7 max-w-5xl mx-auto">
+    <div class="p-6 space-y-7">
         <div
             v-if="isEditing"
             class="bg-amber-50 border border-amber-200 p-4 rounded-lg text-amber-800 text-sm flex items-center gap-2"
@@ -120,9 +162,7 @@ const submit = () => {
         </div>
 
         <Card class="border-blue-100 shadow-sm">
-            <CardHeader
-                class="space-y-4 bg-slate-50/50 border-b border-blue-50/50 pb-6"
-            >
+            <CardHeader class="space-y-4 border-b border-blue-50/50 pb-6">
                 <nav
                     class="flex items-center gap-2 text-xs uppercase tracking-wider text-slate-400"
                 >
@@ -132,9 +172,9 @@ const submit = () => {
                         >Undertime List</span
                     >
                     <span class="text-slate-300">/</span>
-                    <span class="font-bold text-brand-blue">
-                        {{ isEditing ? "Edit" : "New" }} Request
-                    </span>
+                    <span class="font-bold text-brand-blue"
+                        >{{ isEditing ? "Edit" : "New" }} Request</span
+                    >
                 </nav>
 
                 <div class="space-y-1">
@@ -157,7 +197,7 @@ const submit = () => {
 
             <CardContent class="grid grid-cols-12 gap-5 mt-6">
                 <div class="col-span-12 md:col-span-6">
-                    <Label>Employee Name</Label>
+                    <Label class="p-1">Employee Name</Label>
                     <Input
                         v-model="form.name"
                         disabled
@@ -166,7 +206,7 @@ const submit = () => {
                 </div>
 
                 <div class="col-span-12 md:col-span-6">
-                    <Label>Department / Position</Label>
+                    <Label class="p-1">Department / Position</Label>
                     <Input
                         v-model="form.dept_pos"
                         disabled
@@ -175,9 +215,7 @@ const submit = () => {
                 </div>
 
                 <div class="col-span-12 md:col-span-6">
-                    <Label class="text-xs font-bold uppercase text-brand-blue">
-                        Date of Undertime
-                    </Label>
+                    <Label class="p-1"> Date of Undertime </Label>
                     <Input
                         type="date"
                         v-model="form.undertime_date"
@@ -195,9 +233,7 @@ const submit = () => {
                 </div>
 
                 <div class="col-span-12 md:col-span-6">
-                    <Label class="text-xs font-bold uppercase text-brand-blue">
-                        Calculated Duration
-                    </Label>
+                    <Label class="p-1"> Calculated Duration </Label>
                     <Input
                         :value="formattedDisplayTime"
                         readonly
@@ -212,9 +248,7 @@ const submit = () => {
                 </div>
 
                 <div class="col-span-12 md:col-span-6">
-                    <Label class="text-xs font-bold uppercase text-brand-blue">
-                        From (Start Time)
-                    </Label>
+                    <Label class="p-1"> From (Start Time) </Label>
                     <Input
                         type="time"
                         v-model="form.from_time"
@@ -224,9 +258,7 @@ const submit = () => {
                 </div>
 
                 <div class="col-span-12 md:col-span-6">
-                    <Label class="text-xs font-bold uppercase text-brand-blue">
-                        To (End Time)
-                    </Label>
+                    <Label class="p-1"> To (End Time) </Label>
                     <Input
                         type="time"
                         v-model="form.to_time"
@@ -236,9 +268,7 @@ const submit = () => {
                 </div>
 
                 <div class="col-span-12">
-                    <Label class="text-xs font-bold uppercase text-brand-blue">
-                        Reason
-                    </Label>
+                    <Label class="p-1"> Reason </Label>
                     <Textarea
                         v-model="form.reason"
                         class="min-h-[100px] border-2"
@@ -259,13 +289,12 @@ const submit = () => {
             >
                 <Button
                     variant="ghost"
-                    @click="router.get('/employee/undertime-form')"
+                    @click="router.get(route('employee.undertimeform.index'))"
+                    >Cancel</Button
                 >
-                    Cancel
-                </Button>
                 <Button
                     class="bg-brand-blue text-white shadow-md"
-                    :disabled="form.processing"
+                    :disabled="form.processing || isLocked"
                     @click="submit"
                 >
                     <Save v-if="isEditing" class="mr-2 w-4 h-4" />

@@ -56,7 +56,12 @@ const filteredData = computed(() => {
     const data = props.notifications.data || [];
     if (!search.value) return data;
     const term = search.value.toLowerCase();
-    return data.filter((req) => req.date_filed.toLowerCase().includes(term));
+    return data.filter(
+        (req) =>
+            req.date_filed.toLowerCase().includes(term) ||
+            req.exact_date.toLowerCase().includes(term) ||
+            req.purposes.toLowerCase().includes(term),
+    );
 });
 
 const openView = (req) => {
@@ -90,29 +95,31 @@ const getStatusClass = (status) => {
                 <div class="flex justify-between items-center">
                     <div>
                         <CardTitle
-                            class="text-4xl font-extrabold text-brand-blue"
+                            class="text-3xl font-extrabold text-brand-blue tracking-tight"
                             >Business Notification</CardTitle
                         >
-                        <CardDescription class="text-lg"
+                        <CardDescription class="text-base mt-1 text-slate-500"
                             >Track and manage official business trips and
                             out-of-office notifications.</CardDescription
                         >
                     </div>
                     <Link href="/employee/business-notification/create">
-                        <Button class="bg-brand-blue h-12 px-8 font-bold">
+                        <Button
+                            class="bg-brand-blue hover:bg-brand-blue/90 h-12 px-8 font-bold shadow-md transition-all active:scale-95"
+                        >
                             <Plus class="mr-2" /> New Notification
                         </Button>
                     </Link>
                 </div>
             </CardHeader>
-            <CardContent class="mt-6">
+            <CardContent class="mt-3">
                 <div class="relative w-full md:w-1/3 mb-6">
                     <Search
                         class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
                     />
                     <Input
                         v-model="search"
-                        placeholder="Search purposes..."
+                        placeholder="Search by date..."
                         class="pl-10 h-12"
                     />
                 </div>

@@ -17,5 +17,24 @@ class Undertime extends Model
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
     public function department(): BelongsTo { return $this->belongsTo(Department::class); }
     public function position(): BelongsTo { return $this->belongsTo(Position::class); }
-    public function statuses(): HasMany { return $this->hasMany(UndertimeStatus::class); }
+    public function approvalStatuses(): HasMany
+    {
+        return $this->hasMany(UndertimeStatus::class);
+    }
+
+    public function leaderStatus()
+    {
+        return $this->approvalStatuses()
+            ->whereHas('user', fn($q) => $q->where('user_type_id', 3))
+            ->with('status')
+            ->latest();
+    }
+
+    public function hrStatus()
+    {
+        return $this->approvalStatuses()
+            ->whereHas('user', fn($q) => $q->where('user_type_id', 1))
+            ->with('status')
+            ->latest();
+    }
 }
