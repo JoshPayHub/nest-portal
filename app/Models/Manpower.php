@@ -27,13 +27,26 @@ class Manpower extends Model
     public function department(): BelongsTo { return $this->belongsTo(Department::class); }
     public function position(): BelongsTo { return $this->belongsTo(Position::class); }
 
-    public function status(): HasOne
+    public function approvalStatuses(): HasMany
     {
-        return $this->hasOne(ManpowerStatus::class, 'manpower_id')->latestOfMany();
+        return $this->hasMany(ManpowerStatus::class);
     }
 
-    public function statuses(): HasMany
+    // Logic to get Leader status (Assumes User Type 2 is Leader/Head)
+    public function leaderStatus()
     {
-        return $this->hasMany(ManpowerStatus::class, 'manpower_id');
+        return $this->approvalStatuses()
+            ->whereHas('user', fn($q) => $q->where('user_type_id', 3))
+            ->with('status')
+            ->latest();
+    }
+
+    // Logic to get HR status (Assumes User Type 3 is HR)
+    public function hrStatus()
+    {
+        return $this->approvalStatuses()
+            ->whereHas('user', fn($q) => $q->where('user_type_id', 1))
+            ->with('status')
+            ->latest();
     }
 }

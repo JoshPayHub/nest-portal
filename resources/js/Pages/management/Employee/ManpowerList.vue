@@ -6,8 +6,11 @@ import {
     Search,
     Calendar,
     Pencil,
+    Eye,
+    Lock,
     FileText,
     Users,
+    Clock,
 } from "lucide-vue-next";
 import {
     Card,
@@ -27,32 +30,61 @@ import {
     TableRow,
 } from "@/Components/ui/table";
 import { Badge } from "@/Components/ui/badge";
+import Pagination from "@/Components/Pagination/Index.vue";
 
-const props = defineProps({ manpowers: Array });
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "@/Components/ui/dialog";
+
+const props = defineProps({
+    manpowers: {
+        type: Object,
+        required: true,
+    },
+});
+
 const search = ref("");
+const isViewOpen = ref(false);
+const selectedManpower = ref(null);
 
 const filteredManpowers = computed(() => {
-    if (!search.value) return props.manpowers;
+    const data = props.manpowers.data || [];
+    if (!search.value) return data;
     const term = search.value.toLowerCase();
-    return props.manpowers.filter(
-        (m) =>
-            m.position_type.toLowerCase().includes(term) ||
-            m.date_required.toLowerCase().includes(term),
+    return data.filter(
+        (req) =>
+            req.date_filed.toLowerCase().includes(term) ||
+            req.position_type.toLowerCase().includes(term) ||
+            req.date_required.toLowerCase().includes(term),
     );
 });
 
-const getStatusClass = (status) => {
-    const s = (status ?? "pending").toLowerCase();
-    if (s === "approved") return "bg-green-100 text-green-800";
-    if (s === "rejected" || s === "denied") return "bg-red-100 text-red-800";
-    return "bg-amber-100 text-amber-800";
+const openView = (req) => {
+    selectedManpower.value = req;
+    isViewOpen.value = true;
 };
 
-const canEdit = (item) => {
-    return (
-        item.hr_status.toLowerCase() !== "approved" &&
-        item.leader_status.toLowerCase() !== "approved"
-    );
+const canEdit = (req) => {
+    const leader = req.leader_status?.toLowerCase();
+    const hr = req.hr_status?.toLowerCase();
+
+    if (leader === "rejected" || hr === "rejected") return true;
+    if (leader === "approved" || hr === "approved") return false;
+
+    return true;
+};
+
+const getStatusClass = (status) => {
+    const s = status?.toLowerCase();
+    if (s === "approved") return "bg-emerald-100 text-emerald-700";
+    if (s === "rejected") return "bg-red-100 text-red-700";
+    if (s === "pending") return "bg-amber-100 text-amber-700";
+    return "bg-slate-100 text-slate-600";
 };
 </script>
 
@@ -63,10 +95,10 @@ const canEdit = (item) => {
                 <div class="flex justify-between items-center">
                     <div>
                         <CardTitle
-                            class="text-4xl font-extrabold text-brand-blue"
+                            class="text-3xl font-extrabold text-brand-blue tracking-tight"
                             >Manpower Requisition</CardTitle
                         >
-                        <CardDescription class="text-lg"
+                        <CardDescription class="text-base mt-1 text-slate-500"
                             >Manage and track personnel
                             requests.</CardDescription
                         >
@@ -78,14 +110,14 @@ const canEdit = (item) => {
                     </Link>
                 </div>
             </CardHeader>
-            <CardContent class="mt-6">
+            <CardContent class="mt-3">
                 <div class="relative w-full md:w-1/3 mb-6">
                     <Search
                         class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
                     />
                     <Input
                         v-model="search"
-                        placeholder="Search position type..."
+                        placeholder="Search by date..."
                         class="pl-10 h-12"
                     />
                 </div>
@@ -93,16 +125,28 @@ const canEdit = (item) => {
                     <Table>
                         <TableHeader class="bg-slate-50">
                             <TableRow>
-                                <TableHead>DATE FILED</TableHead>
-                                <TableHead>POSITION TYPE</TableHead>
-                                <TableHead>DATE REQUIRED</TableHead>
-                                <TableHead class="text-center"
+                                <TableHead
+                                    class="w-[180px] font-bold text-slate-600 uppercase text-xs tracking-wider"
+                                    >DATE</TableHead
+                                >
+                                <TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs tracking-wider"
+                                    >DATE REQUIRED</TableHead
+                                >
+                                <TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs tracking-wider"
+                                    >POSITION TYPE</TableHead
+                                >
+                                <TableHead
+                                    class="text-center font-bold text-slate-600 uppercase text-xs tracking-wider"
                                     >DEPT. HEAD</TableHead
                                 >
-                                <TableHead class="text-center"
+                                <TableHead
+                                    class="text-center font-bold text-slate-600 uppercase text-xs tracking-wider"
                                     >HR STATUS</TableHead
                                 >
-                                <TableHead class="text-right"
+                                <TableHead
+                                    class="text-right font-bold text-slate-600 uppercase text-xs tracking-wider px-6"
                                     >ACTIONS</TableHead
                                 >
                             </TableRow>
@@ -114,56 +158,91 @@ const canEdit = (item) => {
                                     :key="item.id"
                                     class="hover:bg-slate-50"
                                 >
-                                    <TableCell class="font-bold">{{
-                                        item.date_filed
-                                    }}</TableCell>
-                                    <TableCell>{{
-                                        item.position_type
-                                    }}</TableCell>
+                                    <TableCell>
+                                        <div class="flex items-center gap-3">
+                                            <div
+                                                class="p-2 bg-blue-50 rounded text-brand-blue"
+                                            >
+                                                <Clock class="w-5 h-5" />
+                                            </div>
+                                            <div
+                                                class="font-bold text-slate-800"
+                                            >
+                                                {{ item.date_filed }}
+                                            </div>
+                                        </div>
+                                    </TableCell>
+
                                     <TableCell>
                                         <div
-                                            class="flex items-center gap-2 text-brand-blue"
+                                            class="text-sm font-medium text-slate-700"
                                         >
-                                            <Calendar class="w-4 h-4" />
                                             {{ item.date_required }}
                                         </div>
                                     </TableCell>
+                                    <TableCell>
+                                        <Badge variant="outline">{{
+                                            item.position_type
+                                        }}</Badge>
+                                    </TableCell>
                                     <TableCell class="text-center">
                                         <Badge
+                                            variant="outline"
                                             :class="
                                                 getStatusClass(
                                                     item.leader_status,
                                                 )
                                             "
-                                            >{{ item.leader_status }}</Badge
                                         >
+                                            {{ item.leader_status }}
+                                        </Badge>
                                     </TableCell>
                                     <TableCell class="text-center">
                                         <Badge
+                                            variant="outline"
                                             :class="
                                                 getStatusClass(item.hr_status)
                                             "
-                                            >{{ item.hr_status }}</Badge
                                         >
+                                            {{ item.hr_status }}
+                                        </Badge>
                                     </TableCell>
-                                    <TableCell class="text-right">
+
+                                    <TableCell
+                                        class="text-right px-6 space-x-1"
+                                    >
                                         <Button
                                             v-if="canEdit(item)"
-                                            variant="outline"
+                                            variant="ghost"
                                             size="sm"
                                             @click="
                                                 router.get(
                                                     `/employee/manpower/edit/${item.id}`,
                                                 )
                                             "
+                                            class="h-8 w-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                                         >
-                                            <Pencil class="w-4 h-4 mr-1" /> Edit
+                                            <Pencil class="w-4 h-4" />
                                         </Button>
-                                        <span
+
+                                        <Button
                                             v-else
-                                            class="text-xs text-slate-400 italic"
-                                            >Locked</span
+                                            variant="ghost"
+                                            size="sm"
+                                            class="h-8 w-8 p-0 text-brand-blue"
+                                            disabled
                                         >
+                                            <Lock class="w-4 h-4" />
+                                        </Button>
+
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            @click="openView(item)"
+                                            class="h-8 w-8 p-0 text-brand-blue hover:bg-blue-50"
+                                        >
+                                            <Eye class="w-4 h-4" />
+                                        </Button>
                                     </TableCell>
                                 </TableRow>
                             </template>
@@ -181,7 +260,158 @@ const canEdit = (item) => {
                         </TableBody>
                     </Table>
                 </div>
+
+                <Pagination :links="manpowers" />
             </CardContent>
         </Card>
+
+        <Dialog v-model:open="isViewOpen">
+            <DialogContent class="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <div class="pr-6">
+                        <DialogTitle class="text-2xl font-bold text-brand-blue">
+                            Manpower Details
+                        </DialogTitle>
+                        <DialogDescription>
+                            Submitted on {{ selectedManpower?.date_filed }}
+                        </DialogDescription>
+                    </div>
+                </DialogHeader>
+
+                <div
+                    class="grid grid-cols-1 md:grid-cols-2 gap-4 py-4 border-y border-slate-100 mt-4"
+                >
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase">
+                            Date Required:
+                        </p>
+                        <p class="text-sm font-semibold">
+                            {{ selectedManpower?.date_required }}
+                        </p>
+                    </div>
+
+                    <div class="flex md:justify-end gap-6">
+                        <div class="md:text-right">
+                            <p
+                                class="text-xs font-bold text-slate-400 uppercase"
+                            >
+                                Leader Status
+                            </p>
+                            <Badge
+                                :class="
+                                    getStatusClass(
+                                        selectedManpower?.leader_status,
+                                    )
+                                "
+                            >
+                                {{ selectedManpower?.leader_status }}
+                            </Badge>
+                        </div>
+                        <div class="md:text-right">
+                            <p
+                                class="text-xs font-bold text-slate-400 uppercase"
+                            >
+                                HR Status
+                            </p>
+                            <Badge
+                                :class="
+                                    getStatusClass(selectedManpower?.hr_status)
+                                "
+                            >
+                                {{ selectedManpower?.hr_status }}
+                            </Badge>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 p-4 rounded-lg border border-slate-100"
+                >
+                    <div>
+                        <p
+                            class="text-[10px] font-bold text-slate-400 uppercase"
+                        >
+                            Report To
+                        </p>
+                        <p class="text-xs font-semibold text-slate-700">
+                            {{ selectedManpower?.report_to }}
+                        </p>
+                    </div>
+
+                    <div>
+                        <p
+                            class="text-[10px] font-bold text-slate-400 uppercase"
+                        >
+                            Position Type
+                        </p>
+                        <p class="text-xs font-semibold text-slate-700">
+                            {{ selectedManpower?.position_type }}
+                        </p>
+                    </div>
+                    <div>
+                        <p
+                            class="text-[10px] font-bold text-slate-400 uppercase"
+                        >
+                            Status
+                        </p>
+                        <p class="text-xs font-semibold text-slate-700">
+                            {{ selectedManpower?.status_type }}
+                        </p>
+                    </div>
+                    <div>
+                        <p
+                            class="text-[10px] font-bold text-slate-400 uppercase"
+                        >
+                            Payment
+                        </p>
+                        <p class="text-xs font-semibold text-slate-700">
+                            {{ selectedManpower?.payment_type }}
+                        </p>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-2">
+                        Job Description
+                    </p>
+                    <div
+                        class="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-sm"
+                    >
+                        <p
+                            class="text-sm text-slate-700 leading-relaxed break-words whitespace-pre-wrap"
+                        >
+                            {{
+                                selectedManpower?.job_description ||
+                                "No reason provided."
+                            }}
+                        </p>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-2">
+                        Justification
+                    </p>
+                    <div
+                        class="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-sm"
+                    >
+                        <p
+                            class="text-sm text-slate-700 leading-relaxed break-words whitespace-pre-wrap"
+                        >
+                            {{
+                                selectedManpower?.justification ||
+                                "No reason provided."
+                            }}
+                        </p>
+                    </div>
+                </div>
+
+                <DialogFooter class="mt-3">
+                    <Button variant="secondary" @click="isViewOpen = false"
+                        >Close</Button
+                    >
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
 </template>

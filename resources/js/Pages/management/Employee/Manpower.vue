@@ -1,6 +1,6 @@
 <script setup>
 import { useForm, router, usePage } from "@inertiajs/vue3";
-import { watch } from "vue";
+import { watch, computed, onMounted } from "vue";
 import {
     Card,
     CardHeader,
@@ -22,22 +22,43 @@ import {
 import { toastStore } from "@/stores/toast";
 import { Save, Send, AlertCircle } from "lucide-vue-next";
 
+const page = usePage();
+
+// Define props to receive data from Controller
 const props = defineProps({
+    authUser: Object,
     report: Object,
     isEditing: Boolean,
-    authUser: Object,
 });
 
-const page = usePage();
-const today = page.props.todayDate || new Date().toISOString().split("T")[0];
-const STORAGE_KEY = "pending_manpower_request";
+const today = new Date().toISOString().split("T")[0];
+const STORAGE_KEY = "pending_manpower_filing";
 
-const savedData = !props.isEditing
-    ? JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}")
-    : {};
+const hasRejected = computed(() => {
+    return (props.report?.approval_statuses || []).some(
+        (s) =>
+            s.status_id === 5 || s.status?.name?.toLowerCase() === "rejected",
+    );
+});
+
+const hasApproved = computed(() => {
+    return (props.report?.approval_statuses || []).some(
+        (s) =>
+            s.status_id === 2 || s.status?.name?.toLowerCase() === "approved",
+    );
+});
+
+const isLocked = computed(
+    () => props.isEditing && hasApproved.value && !hasRejected.value,
+);
+
+// Handle LocalStorage Drafts
+const savedDraft = !props.isEditing
+    ? JSON.parse(localStorage.getItem(STORAGE_KEY))
+    : null;
 
 const form = useForm({
-    // READ-ONLY FIELDS
+    // READ-ONLY DISPLAY FIELDS
     name: props.authUser?.name ?? "",
     department_position: props.authUser
         ? `${props.authUser.department} / ${props.authUser.position ?? ""}`
@@ -47,59 +68,89 @@ const form = useForm({
         : today,
 
     // EDITABLE FIELDS
-    report_to: props.report?.report_to || savedData.report_to || "",
-    date_required: props.report?.date_required || savedData.date_required || "",
-    position_type: props.report?.position_type || savedData.position_type || "",
+    report_to: props.report?.report_to || savedDraft?.report_to || "",
+    date_required:
+        props.report?.date_required || savedDraft?.date_required || "",
+    position_type:
+        props.report?.position_type || savedDraft?.position_type || "",
     replacement_for:
-        props.report?.replacement_for || savedData.replacement_for || "NONE",
+        props.report?.replacement_for || savedDraft?.replacement_for || "NONE",
     job_description:
-        props.report?.job_description || savedData.job_description || "",
-    justification: props.report?.justification || savedData.justification || "",
-    status_type: props.report?.status_type || savedData.status_type || "",
-    payment_type: props.report?.payment_type || savedData.payment_type || "",
+        props.report?.job_description || savedDraft?.job_description || "",
+    justification:
+        props.report?.justification || savedDraft?.justification || "",
+    status_type: props.report?.status_type || savedDraft?.status_type || "",
+    payment_type: props.report?.payment_type || savedDraft?.payment_type || "",
 });
 
-const fields = [
-    "report_to",
-    "date_required",
-    "position_type",
-    "replacement_for",
-    "job_description",
-    "justification",
-    "status_type",
-    "payment_type",
-];
-fields.forEach((field) => {
-    watch(
-        () => form[field],
-        () => {
-            form.clearErrors(field);
-            if (!props.isEditing) {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(form.data()));
+// Clear individual errors on change
+watch(
+    () => form.data(),
+    (newData, oldData) => {
+        Object.keys(newData).forEach((key) => {
+            if (newData[key] !== oldData[key] && form.errors[key]) {
+                form.clearErrors(key);
             }
-        },
-    );
-});
+        });
+    },
+    { deep: true },
+);
+
+// Auto-save draft for new entries
+watch(
+    () => form.data(),
+    (newData) => {
+        if (!props.isEditing) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+        }
+    },
+    { deep: true },
+);
 
 const submit = () => {
-    const url = props.isEditing
-        ? `/employee/manpower/update/${props.report.id}`
-        : "/employee/manpower/store";
-    form[props.isEditing ? "put" : "post"](url, {
-        preserveScroll: true,
-        onSuccess: () => {
-            if (!props.isEditing) localStorage.removeItem(STORAGE_KEY);
-            toastStore.show(
-                `Request ${props.isEditing ? "updated" : "submitted"}!`,
-                "success",
-            );
-        },
-    });
+    if (props.isEditing) {
+        form.put(`/employee/manpower/update/${props.report.id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toastStore.show(
+                    "Manpower request submitted successfully!",
+                    "success",
+                );
+            },
+            onError: () => {
+                toastStore.show(
+                    "Please fix the errors and try again.",
+                    "error",
+                );
+            },
+        });
+    } else {
+        form.post("/employee/manpower/store", {
+            preserveScroll: true,
+            onSuccess: () => {
+                localStorage.removeItem(STORAGE_KEY);
+                form.reset();
+                form.report_date = today;
+                form.report_to = "";
+                form.date_required = "";
+                toastStore.show(
+                    "Manpower request submitted successfully!",
+                    "success",
+                );
+            },
+            onError: () => {
+                toastStore.show(
+                    "Please fix the errors and try again.",
+                    "error",
+                );
+            },
+        });
+    }
 };
 </script>
 
 <template>
-    <div class="p-6 space-y-7 max-w-5xl mx-auto">
+    <div class="p-6 space-y-7">
         <div
             v-if="isEditing"
             class="bg-amber-50 border border-amber-200 p-4 rounded-lg text-amber-800 text-sm flex items-center gap-2"
@@ -141,8 +192,8 @@ const submit = () => {
                     <CardDescription class="text-slate-500">
                         {{
                             isEditing
-                                ? "Modify the existing request to update personnel requirements for your department."
-                                : "Fill out the form below to request additional personnel or replacements for your team."
+                                ? "Modify existing request details."
+                                : "Fill out the form for new personnel requirements."
                         }}
                     </CardDescription>
                 </div>
@@ -158,38 +209,34 @@ const submit = () => {
                     />
                 </div>
                 <div class="col-span-12 md:col-span-6">
-                    <Label class="p-1">Department / Position</Label>
-                    <Input
-                        v-model="form.department_position"
-                        disabled
-                        class="border-2 border-gray-300 bg-slate-50"
-                    />
-                </div>
-                <div class="col-span-12 md:col-span-6">
                     <Label class="p-1">Date Filed</Label>
                     <Input
                         type="date"
                         v-model="form.report_date"
                         disabled
-                        class="border-2 border-gray-300 bg-slate-50"
+                        class="bg-slate-50 border-2"
+                    />
+                </div>
+                <div class="col-span-12 md:col-span-6">
+                    <Label class="p-1">Department / Position</Label>
+                    <Input
+                        v-model="form.department_position"
+                        disabled
+                        class="bg-slate-50 border-2"
                     />
                 </div>
 
                 <div class="col-span-12 md:col-span-6">
-                    <Label class="p-1 text-xs font-bold uppercase"
-                        >Report To</Label
-                    >
+                    <Label class="p-1">Report To</Label>
                     <Input
                         v-model="form.report_to"
                         :class="{ 'border-red-500': form.errors.report_to }"
-                        class="border-2 border-brand-blue/20"
+                        class="border-2"
                     />
                 </div>
 
                 <div class="col-span-12 md:col-span-6">
-                    <Label class="p-1 text-xs font-bold uppercase"
-                        >Date Required</Label
-                    >
+                    <Label class="p-1">Date Required</Label>
                     <Input
                         type="date"
                         v-model="form.date_required"
@@ -199,9 +246,7 @@ const submit = () => {
                 </div>
 
                 <div class="col-span-12 md:col-span-6">
-                    <Label class="p-1 text-xs font-bold uppercase"
-                        >Position Type</Label
-                    >
+                    <Label class="p-1">Position Type</Label>
                     <Select v-model="form.position_type">
                         <SelectTrigger
                             :class="{
@@ -223,19 +268,15 @@ const submit = () => {
                 </div>
 
                 <div
-                    class="col-span-12 md:col-span-6"
                     v-if="form.position_type === 'REPLACEMENT'"
+                    class="col-span-12"
                 >
-                    <Label class="p-1 text-xs font-bold uppercase"
-                        >Replacement For</Label
-                    >
+                    <Label class="p-1">Replacement For</Label>
                     <Input v-model="form.replacement_for" class="border-2" />
                 </div>
 
                 <div class="col-span-12">
-                    <Label class="p-1 text-xs font-bold uppercase"
-                        >Job Description</Label
-                    >
+                    <Label class="p-1">Job Description</Label>
                     <Textarea
                         v-model="form.job_description"
                         :class="{
@@ -244,34 +285,32 @@ const submit = () => {
                         class="min-h-[100px] border-2"
                         placeholder="Describe the roles and responsibilities (min. 20 characters)"
                     />
-                    <span
+                    <p
                         v-if="form.errors.job_description"
                         class="text-red-500 text-xs mt-1"
-                        >{{ form.errors.job_description }}</span
                     >
+                        {{ form.errors.job_description }}
+                    </p>
                 </div>
 
                 <div class="col-span-12">
-                    <Label class="p-1 text-xs font-bold uppercase"
-                        >Justification</Label
-                    >
+                    <Label class="p-1">Justification</Label>
                     <Textarea
                         v-model="form.justification"
                         :class="{ 'border-red-500': form.errors.justification }"
                         class="min-h-[100px] border-2"
                         placeholder="Why is this position needed? (min. 20 characters)"
                     />
-                    <span
+                    <p
                         v-if="form.errors.justification"
                         class="text-red-500 text-xs mt-1"
-                        >{{ form.errors.justification }}</span
                     >
+                        {{ form.errors.justification }}
+                    </p>
                 </div>
 
                 <div class="col-span-12 md:col-span-6">
-                    <Label class="p-1 text-xs font-bold uppercase"
-                        >Employment Status</Label
-                    >
+                    <Label class="p-1">Employment Status</Label>
                     <Select v-model="form.status_type">
                         <SelectTrigger
                             :class="{
@@ -291,7 +330,6 @@ const submit = () => {
                             <SelectItem value="PROJECT BASED"
                                 >PROJECT BASED</SelectItem
                             >
-
                             <SelectItem value="OJT/TRAINEE"
                                 >OJT/TRAINEE</SelectItem
                             >
@@ -307,9 +345,7 @@ const submit = () => {
                 </div>
 
                 <div class="col-span-12 md:col-span-6">
-                    <Label class="p-1 text-xs font-bold uppercase"
-                        >Payment Type</Label
-                    >
+                    <Label class="p-1">Payment Type</Label>
                     <Select v-model="form.payment_type">
                         <SelectTrigger
                             :class="{
@@ -341,8 +377,8 @@ const submit = () => {
                     >Cancel</Button
                 >
                 <Button
-                    class="bg-brand-blue text-white shadow-md hover:bg-brand-blue/90"
-                    :disabled="form.processing"
+                    class="bg-brand-blue text-white"
+                    :disabled="form.processing || isLocked"
                     @click="submit"
                 >
                     <Save v-if="isEditing" class="mr-2 w-4 h-4" />

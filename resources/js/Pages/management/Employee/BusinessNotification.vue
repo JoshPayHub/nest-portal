@@ -1,6 +1,6 @@
 <script setup>
 import { useForm, router, usePage } from "@inertiajs/vue3";
-import { watch } from "vue";
+import { watch, computed } from "vue"; // Added computed
 import {
     Card,
     CardHeader,
@@ -15,15 +15,33 @@ import { Textarea } from "@/Components/ui/textarea";
 import { toastStore } from "@/stores/toast";
 import { Save, Send, AlertCircle, Clock } from "lucide-vue-next";
 
+const page = usePage();
 const props = defineProps({
+    authUser: Object,
     report: Object,
     isEditing: Boolean,
-    authUser: Object,
 });
 
-const page = usePage();
-const today = page.props.todayDate || new Date().toISOString().split("T")[0];
+const today = new Date().toISOString().split("T")[0];
 const STORAGE_KEY = "pending_business_notification";
+
+const hasRejected = computed(() => {
+    return (props.report?.approval_statuses || []).some(
+        (s) =>
+            s.status_id === 5 || s.status?.name?.toLowerCase() === "rejected",
+    );
+});
+
+const hasApproved = computed(() => {
+    return (props.report?.approval_statuses || []).some(
+        (s) =>
+            s.status_id === 2 || s.status?.name?.toLowerCase() === "approved",
+    );
+});
+
+const isLocked = computed(
+    () => props.isEditing && hasApproved.value && !hasRejected.value,
+);
 
 const savedData = !props.isEditing
     ? JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}")
@@ -48,52 +66,95 @@ const form = useForm({
     returned_time: props.report?.returned_time || savedData.returned_time || "",
 });
 
-const fields = [
-    "purposes",
-    "reason",
-    "location",
-    "exact_date",
-    "business_time",
-    "returned_time",
-];
-fields.forEach((field) => {
-    watch(
-        () => form[field],
-        () => {
-            form.clearErrors(field);
-            if (!props.isEditing)
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(form.data()));
-        },
-    );
-});
+// Clear individual errors on change
+watch(
+    () => form.data(),
+    (newData, oldData) => {
+        Object.keys(newData).forEach((key) => {
+            if (newData[key] !== oldData[key] && form.errors[key]) {
+                form.clearErrors(key);
+            }
+        });
+    },
+    { deep: true },
+);
+
+// Auto-save draft for new entries
+watch(
+    () => form.data(),
+    (newData) => {
+        if (!props.isEditing) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+        }
+    },
+    { deep: true },
+);
 
 const submit = () => {
-    const url = props.isEditing
-        ? `/employee/business-notification/update/${props.report.id}`
-        : "/employee/business-notification/store";
-    form[props.isEditing ? "put" : "post"](url, {
-        preserveScroll: true,
-        onSuccess: () => {
-            if (!props.isEditing) localStorage.removeItem(STORAGE_KEY);
-            toastStore.show(
-                `Notification ${props.isEditing ? "updated" : "submitted"}!`,
-                "success",
-            );
-        },
-    });
+    if (isLocked.value) return;
+
+    if (props.isEditing) {
+        form.put(`/employee/business-notification/update/${props.report.id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toastStore.show(
+                    "Business notification updated successfully!",
+                    "success",
+                );
+            },
+            onError: () => {
+                toastStore.show(
+                    "Please fix the errors and try again.",
+                    "error",
+                );
+            },
+        });
+    } else {
+        form.post("/employee/business-notification/store", {
+            preserveScroll: true,
+            onSuccess: () => {
+                localStorage.removeItem(STORAGE_KEY);
+                form.reset();
+                form.purposes = "";
+                form.location = "";
+                form.reason = "";
+                toastStore.show(
+                    "Business notification submitted successfully!",
+                    "success",
+                );
+            },
+            onError: () => {
+                toastStore.show(
+                    "Please fix the errors and try again.",
+                    "error",
+                );
+            },
+        });
+    }
 };
 </script>
 
 <template>
-    <div class="p-6 space-y-7 max-w-5xl mx-auto">
+    <div class="p-6 space-y-7">
         <div
-            v-if="isEditing"
+            v-if="isEditing && !isLocked"
             class="bg-amber-50 border border-amber-200 p-4 rounded-lg text-amber-800 text-sm flex items-center gap-2"
         >
             <AlertCircle class="h-4 w-4" />
             <span
                 ><strong>Notice:</strong> Updating this request will reset
                 status to "Pending".</span
+            >
+        </div>
+
+        <div
+            v-if="isLocked"
+            class="bg-blue-50 border border-blue-200 p-4 rounded-lg text-blue-800 text-sm flex items-center gap-2"
+        >
+            <Clock class="h-4 w-4" />
+            <span
+                ><strong>Notice:</strong> This request is approved and cannot be
+                modified.</span
             >
         </div>
 
@@ -145,6 +206,16 @@ const submit = () => {
                 </div>
 
                 <div class="col-span-12 md:col-span-6">
+                    <Label class="p-1">Date Filed</Label>
+                    <Input
+                        type="date"
+                        v-model="form.report_date"
+                        disabled
+                        class="bg-slate-50 border-2"
+                    />
+                </div>
+
+                <div class="col-span-12 md:col-span-6">
                     <Label class="p-1">Department / Position</Label>
                     <Input
                         v-model="form.department_position"
@@ -153,13 +224,11 @@ const submit = () => {
                     />
                 </div>
 
-                <div class="col-span-12 md:col-span-4">
-                    <Label
-                        class="p-1 text-xs font-bold uppercase text-brand-blue"
-                        >Purpose of Trip</Label
-                    >
+                <div class="col-span-12 md:col-span-6">
+                    <Label class="p-1">Purpose of Trip</Label>
                     <Input
                         v-model="form.purposes"
+                        :disabled="isLocked"
                         :class="{ 'border-red-500': form.errors.purposes }"
                         class="border-2"
                         placeholder="e.g. Client Meeting"
@@ -171,13 +240,11 @@ const submit = () => {
                     >
                 </div>
 
-                <div class="col-span-12 md:col-span-4">
-                    <Label
-                        class="p-1 text-xs font-bold uppercase text-brand-blue"
-                        >Location</Label
-                    >
+                <div class="col-span-12 md:col-span-6">
+                    <Label class="p-1">Location</Label>
                     <Input
                         v-model="form.location"
+                        :disabled="isLocked"
                         :class="{ 'border-red-500': form.errors.location }"
                         class="border-2"
                         placeholder="Destination address"
@@ -189,14 +256,12 @@ const submit = () => {
                     >
                 </div>
 
-                <div class="col-span-12 md:col-span-4">
-                    <Label
-                        class="p-1 text-xs font-bold uppercase text-brand-blue"
-                        >Date of Trip</Label
-                    >
+                <div class="col-span-12 md:col-span-6">
+                    <Label class="p-1">Date of Trip</Label>
                     <Input
                         type="date"
                         v-model="form.exact_date"
+                        :disabled="isLocked"
                         :class="{ 'border-red-500': form.errors.exact_date }"
                         class="border-2"
                     />
@@ -208,13 +273,11 @@ const submit = () => {
                 </div>
 
                 <div class="col-span-12 md:col-span-6">
-                    <Label
-                        class="p-1 text-xs font-bold uppercase text-brand-blue"
-                        >Departure Time</Label
-                    >
+                    <Label class="p-1">Departure Time</Label>
                     <Input
                         type="time"
                         v-model="form.business_time"
+                        :disabled="isLocked"
                         :class="{ 'border-red-500': form.errors.business_time }"
                         class="border-2"
                     />
@@ -226,13 +289,11 @@ const submit = () => {
                 </div>
 
                 <div class="col-span-12 md:col-span-6">
-                    <Label
-                        class="p-1 text-xs font-bold uppercase text-brand-blue"
-                        >Expected Return Time</Label
-                    >
+                    <Label class="p-1">Expected Return Time</Label>
                     <Input
                         type="time"
                         v-model="form.returned_time"
+                        :disabled="isLocked"
                         :class="{ 'border-red-500': form.errors.returned_time }"
                         class="border-2"
                     />
@@ -244,12 +305,10 @@ const submit = () => {
                 </div>
 
                 <div class="col-span-12">
-                    <Label
-                        class="p-1 text-xs font-bold uppercase text-brand-blue"
-                        >Detailed Reason</Label
-                    >
+                    <Label class="p-1">Detailed Reason</Label>
                     <Textarea
                         v-model="form.reason"
+                        :disabled="isLocked"
                         :class="{ 'border-red-500': form.errors.reason }"
                         class="min-h-[100px] border-2"
                         placeholder="Provide more details about the activity..."
@@ -272,7 +331,7 @@ const submit = () => {
                 >
                 <Button
                     class="bg-brand-blue text-white shadow-md hover:bg-brand-blue/90"
-                    :disabled="form.processing"
+                    :disabled="form.processing || isLocked"
                     @click="submit"
                 >
                     <Save v-if="isEditing" class="mr-2 w-4 h-4" />

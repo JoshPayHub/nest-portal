@@ -25,13 +25,25 @@ class BusinessNotification extends Model
     public function department(): BelongsTo { return $this->belongsTo(Department::class); }
     public function position(): BelongsTo { return $this->belongsTo(Position::class); }
 
-    public function status(): HasOne
+    public function approvalStatuses(): HasMany
     {
-        return $this->hasOne(BusinessNotificationStatus::class, 'business_notification_id')->latestOfMany();
+        return $this->hasMany(BusinessNotificationStatus::class);
     }
 
-    public function statuses(): HasMany
+    // Logic to get Leader status (Assumes User Type 2 is Leader/Head)
+    public function leaderStatus()
     {
-        return $this->hasMany(BusinessNotificationStatus::class, 'business_notification_id');
+        return $this->approvalStatuses()
+            ->whereHas('user', fn($q) => $q->where('user_type_id', 3))
+            ->with('status')
+            ->latest();
+    }
+
+    public function hrStatus()
+    {
+        return $this->approvalStatuses()
+            ->whereHas('user', fn($q) => $q->where('user_type_id', 1))
+            ->with('status')
+            ->latest();
     }
 }

@@ -12,26 +12,34 @@ use Illuminate\Support\Facades\DB;
 
 class BusinessNotificationController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $rawNotifications = BusinessNotification::with(['statuses.user.userType', 'statuses.status'])
-            ->where('user_id', Auth::id())
-            ->latest()
-            ->get();
+        $user = $request->user();
 
-        $notifications = $rawNotifications->map(function ($item) {
-            $headEntry = $item->statuses->first(fn($s) => $s->user?->userType?->name === 'Head');
-            $hrEntry = $item->statuses->first(fn($s) => $s->user?->userType?->name === 'HR');
+        $notifications = BusinessNotification::where('user_id', $user->id)
+            ->with([
+                'approvalStatuses.user',
+                'approvalStatuses.status'
+            ])
+            ->orderBy('created_at', 'desc')
+            ->paginate(10)
+            ->through(function ($item) {
+                $leaderEntry = $item->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 3);
+                $hrEntry     = $item->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 1);
 
-            return [
-                'id' => $item->id,
-                'date_filed' => $item->created_at->format('M d, Y'),
-                'purposes' => $item->purposes,
-                'exact_date' => Carbon::parse($item->exact_date)->format('M d, Y'),
-                'leader_status' => $headEntry ? $headEntry->status->name : 'Pending',
-                'hr_status'     => $hrEntry ? $hrEntry->status->name : 'Pending',
-            ];
-        });
+                return [
+                    'id' => $item->id,
+                    'date_filed' => $item->created_at->format('M d, Y'),
+                    'purposes' => $item->purposes,
+                    'reason' => $item->reason,
+                    'location' => $item->location,
+                    'business_time' => Carbon::parse($item->business_time)->format('h:i A'),
+                    'returned_time' => Carbon::parse($item->returned_time)->format('h:i A'),
+                    'exact_date' => Carbon::parse($item->exact_date)->format('M d, Y'),
+                    'leader_status' => $leaderEntry ? $leaderEntry->status->name : 'Pending',
+                    'hr_status'     => $hrEntry ? $hrEntry->status->name : 'Pending',
+                ];
+            }); // Fixed: Closed the through function correctly
 
         return Inertia::render('management/Employee/BusinessNotificationList', [
             'notifications' => $notifications
@@ -68,19 +76,26 @@ class BusinessNotificationController extends Controller
             'position_id' => Auth::user()->position_id,
         ]));
 
-        return redirect()->route('employee.businessnotification.index')->with('message', 'Notification submitted!');
+        return redirect()->back()->with('message', 'Business notification submitted successfully');
     }
 
     public function edit($id)
     {
-        $notification = BusinessNotification::with('statuses.status')->findOrFail($id);
-
-        if ($notification->user_id !== Auth::id()) abort(403);
-
-        $isApproved = $notification->statuses->contains(fn($s) => strtolower($s->status?->name) === 'approved');
-        if ($isApproved) return redirect()->back()->with('error', 'Approved notifications cannot be edited.');
-
         $user = Auth::user()->load(['department', 'position']);
+        $notification = BusinessNotification::with(['approvalStatuses.status'])->findOrFail($id);
+
+        if ($notification->user_id !== $user->id) {
+            return redirect()->route('employee.businessnotification.index')->with('error', 'Unauthorized access.');
+        }
+
+        // Logic to check if locked
+        $hasRejected = $notification->approvalStatuses->contains(fn($s) => $s->status_id === 5 || strtolower($s->status?->name ?? '') === 'rejected');
+        $hasApproved = $notification->approvalStatuses->contains(fn($s) => $s->status_id === 2 || strtolower($s->status?->name ?? '') === 'approved');
+
+        if ($hasApproved && !$hasRejected) {
+            return redirect()->route('employee.businessnotification.index')->with('error', 'This request is approved and cannot be modified.');
+        }
+
         return Inertia::render('management/Employee/BusinessNotification', [
             'report' => $notification,
             'isEditing' => true,
@@ -94,8 +109,11 @@ class BusinessNotificationController extends Controller
 
     public function update(Request $request, $id)
     {
-        $notification = BusinessNotification::findOrFail($id);
-        if ($notification->user_id !== Auth::id()) abort(403);
+        $notification = BusinessNotification::with('approvalStatuses.status')->findOrFail($id);
+
+        if ($notification->user_id !== Auth::id()) {
+            return redirect()->route('employee.businessnotification.index')->with('error', 'Unauthorized.');
+        }
 
         $validated = $request->validate([
             'purposes' => 'required|string',
@@ -108,7 +126,7 @@ class BusinessNotificationController extends Controller
 
         DB::transaction(function () use ($notification, $validated) {
             $notification->update($validated);
-            // Reset statuses to Pending (Assumed ID 4 based on your Manpower controller)
+            // Reset statuses to Pending (Assumed ID 4)
             DB::table('business_notification_statuses')
                 ->where('business_notification_id', $notification->id)
                 ->update(['status_id' => 4, 'updated_at' => now()]);
