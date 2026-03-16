@@ -61,6 +61,9 @@ const form = useForm({
     dept_pos: props.authUser
         ? `${props.authUser.department} / ${props.authUser.position ?? ""}`
         : "",
+    report_date: props.report?.created_at
+        ? new Date(report.created_at).toISOString().split("T")[0]
+        : today,
     undertime_date:
         props.report?.undertime_date || savedDraft.undertime_date || "",
     from_time: props.report?.from_time || savedDraft.from_time || "",
@@ -129,9 +132,9 @@ const submit = () => {
             onSuccess: () => {
                 localStorage.removeItem(STORAGE_KEY);
                 form.reset();
-                // Correctly reset individual fields
+                form.report_date = today;
                 form.undertime_date = "";
-                form.total_time = 0; // Reset this instead of formattedDisplayTime
+                form.total_time = 0;
                 form.from_time = "";
                 form.to_time = "";
                 form.reason = "";
@@ -206,6 +209,16 @@ const submit = () => {
                 </div>
 
                 <div class="col-span-12 md:col-span-6">
+                    <Label class="p-1">Date</Label>
+                    <Input
+                        type="date"
+                        v-model="form.report_date"
+                        disabled
+                        class="border-2 border-gray-300 bg-slate-50"
+                    />
+                </div>
+
+                <div class="col-span-12 md:col-span-6">
                     <Label class="p-1">Department / Position</Label>
                     <Input
                         v-model="form.dept_pos"
@@ -232,7 +245,27 @@ const submit = () => {
                     </p>
                 </div>
 
-                <div class="col-span-12 md:col-span-6">
+                <div class="col-span-12 md:col-span-4">
+                    <Label class="p-1"> From (Start Time) </Label>
+                    <Input
+                        type="time"
+                        v-model="form.from_time"
+                        class="border-2"
+                        :class="{ 'border-red-500': form.errors.from_time }"
+                    />
+                </div>
+
+                <div class="col-span-12 md:col-span-4">
+                    <Label class="p-1"> To (End Time) </Label>
+                    <Input
+                        type="time"
+                        v-model="form.to_time"
+                        class="border-2"
+                        :class="{ 'border-red-500': form.errors.to_time }"
+                    />
+                </div>
+
+                <div class="col-span-12 md:col-span-4">
                     <Label class="p-1"> Calculated Duration </Label>
                     <Input
                         :value="formattedDisplayTime"
@@ -245,26 +278,6 @@ const submit = () => {
                     >
                         Check your time range.
                     </p>
-                </div>
-
-                <div class="col-span-12 md:col-span-6">
-                    <Label class="p-1"> From (Start Time) </Label>
-                    <Input
-                        type="time"
-                        v-model="form.from_time"
-                        class="border-2"
-                        :class="{ 'border-red-500': form.errors.from_time }"
-                    />
-                </div>
-
-                <div class="col-span-12 md:col-span-6">
-                    <Label class="p-1"> To (End Time) </Label>
-                    <Input
-                        type="time"
-                        v-model="form.to_time"
-                        class="border-2"
-                        :class="{ 'border-red-500': form.errors.to_time }"
-                    />
                 </div>
 
                 <div class="col-span-12">

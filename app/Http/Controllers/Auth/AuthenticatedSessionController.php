@@ -23,13 +23,14 @@ class AuthenticatedSessionController extends Controller
     public function store(Request $request)
     {
         $credentials = $request->validate([
-            'email'    => ['required', 'email'],
+            'username' => ['required', 'string'],
             'password' => ['required'],
         ]);
 
+        // 2. Attempt login using username
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
             return back()->withErrors([
-                'email' => 'The provided credentials do not match our records.',
+                'username' => 'The provided credentials do not match our records.',
             ]);
         }
 
@@ -43,8 +44,8 @@ class AuthenticatedSessionController extends Controller
          */
         return redirect()->intended(
             match ((int) $user->user_type_id) {
-                1 => route('hr.dashboard'),        // HR / Admin
-                2 => route('employee.dashboard'),          // Employee
+                1 => route('hr.dashboard'),       // HR / Admin
+                2 => route('employee.dashboard'),
             }
         );
     }

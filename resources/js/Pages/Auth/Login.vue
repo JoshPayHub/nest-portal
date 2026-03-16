@@ -2,7 +2,7 @@
 import { useForm } from "@inertiajs/vue3";
 
 const form = useForm({
-    email: "",
+    username: "", // Changed from email
     password: "",
     remember: false,
 });
@@ -41,30 +41,32 @@ const submit = () => {
                 <form @submit.prevent="submit">
                     <div class="mb-4">
                         <label class="block text-brand-blue mb-1"
-                            >Email Address</label
+                            >Username</label
                         >
                         <div
                             class="flex items-center border rounded-lg px-3 py-2 transition-colors"
                             :class="{
-                                'border-red-500 bg-red-50': form.errors.email,
+                                'border-red-500 bg-red-50':
+                                    form.errors.username,
                             }"
                         >
                             <i
-                                class="fa-solid fa-envelope text-brand-blue mr-2"
+                                class="fa-solid fa-user text-brand-blue mr-2"
                             ></i>
                             <input
-                                v-model="form.email"
-                                type="email"
+                                v-model="form.username"
+                                @input="form.clearErrors('username')"
+                                type="text"
                                 class="w-full outline-none bg-transparent"
-                                placeholder="Enter your email"
+                                placeholder="Enter your username"
                                 required
                             />
                         </div>
                         <span
-                            v-if="form.errors.email"
+                            v-if="form.errors.username"
                             class="text-red-600 text-xs mt-1 block"
                         >
-                            {{ form.errors.email }}
+                            {{ form.errors.username }}
                         </span>
                     </div>
 
@@ -84,6 +86,7 @@ const submit = () => {
                             ></i>
                             <input
                                 v-model="form.password"
+                                @input="form.clearErrors('password')"
                                 type="password"
                                 class="w-full outline-none bg-transparent"
                                 placeholder="Enter your password"
@@ -126,14 +129,6 @@ const submit = () => {
                     </button>
                 </form>
             </div>
-            <!-- <p class="text-sm text-center mt-6">
-                <a
-                    href="/"
-                    class="text-brand-blue hover:underline font-semibold flex items-center justify-center gap-1"
-                >
-                    <i class="fa-solid fa-house"></i> Back to Home
-                </a>
-            </p> -->
         </div>
     </div>
 </template>
