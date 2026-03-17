@@ -67,4 +67,50 @@ class EmployeeController extends Controller
 
         return redirect()->back()->with('success', 'Employee onboarded successfully.');
     }
+
+    public function edit(User $user)
+    {
+        // Format dates specifically for HTML5 date inputs (YYYY-MM-DD)
+        $user->date_hired = $user->date_hired
+            ? Carbon::parse($user->date_hired)->format('Y-m-d')
+            : null;
+
+        $user->regularization_date = $user->regularization_date
+            ? Carbon::parse($user->regularization_date)->format('Y-m-d')
+            : null;
+
+        return Inertia::render('management/HR/AddEmployee', [
+            'employee' => $user,
+            'isEditing' => true,
+            'departments' => Department::where('status_id', 1)->get(),
+            'positions' => Position::where('status_id', 1)->get(),
+            'userTypes' => UserType::all(),
+            'pendingStatus' => Status::where('name', 'Pending')->first(),
+        ]);
+    }
+
+    public function update(Request $request, User $user)
+    {
+        $validated = $request->validate([
+            'employee_id' => 'required|string|unique:users,employee_id,' . $user->id,
+            'username' => 'required|string|unique:users,username,' . $user->id,
+            'company_email' => 'required|email|unique:users,company_email,' . $user->id,
+            'user_type_id' => 'required|exists:user_types,id',
+            'department_id' => 'required|exists:departments,id',
+            'position_id' => 'required|exists:positions,id',
+            'status_id' => 'required|exists:statuses,id',
+            'employment_status' => 'required|in:Regular,Probationary,Contractual,Casual',
+            'employment_type' => 'required|in:Full-Time,Part-Time',
+            'date_hired' => 'required|date',
+            'regularization_date' => 'nullable|date',
+            'immediate_supervisor' => 'nullable|string|max:255',
+            'work_location' => 'nullable|string|max:255',
+            'payroll_group' => 'nullable|string|max:255',
+            'leave_pay' => 'nullable|numeric|min:0',
+        ]);
+
+        $user->update($validated);
+
+        return redirect()->route('hr.employee.index')->with('success', 'Employee updated successfully.');
+    }
 }

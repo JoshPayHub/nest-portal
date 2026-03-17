@@ -95,9 +95,9 @@ class User extends Authenticatable
             'company_email_verified_at' => 'datetime',
             'personal_email_verified_at' => 'datetime',
             'mobile_verified_at' => 'datetime',
-            'date_birth' => 'date',
-            'date_hired' => 'date',
-            'regularization_date' => 'date',
+            'date_birth' => 'date:Y-m-d',
+            'date_hired' => 'date:Y-m-d',
+            'regularization_date' => 'date:Y-m-d',
             'password' => 'hashed',
         ];
     }

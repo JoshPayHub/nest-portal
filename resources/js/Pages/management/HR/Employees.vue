@@ -1,23 +1,18 @@
 <script setup>
-import { ref, watch } from "vue";
-import { Link, useForm, router } from "@inertiajs/vue3";
+import { ref, computed, watch } from "vue";
+import { Link } from "@inertiajs/vue3";
 import {
     Pencil,
-    UserCircle,
     Plus,
-    Search,
-    CheckCircle2,
-    AlertCircle,
     Users,
     Briefcase,
-    Ban,
-    Lock,
+    Search,
+    FileText,
 } from "lucide-vue-next";
 
 // UI Components
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
-import { Label } from "@/Components/ui/label";
 import {
     Card,
     CardHeader,
@@ -26,14 +21,6 @@ import {
     CardContent,
 } from "@/Components/ui/card";
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/Components/ui/dialog";
-import {
     Table,
     TableBody,
     TableCell,
@@ -41,94 +28,68 @@ import {
     TableHeader,
     TableRow,
 } from "@/Components/ui/table";
-import { Alert, AlertDescription, AlertTitle } from "@/Components/ui/alert";
+
+import Pagination from "@/Components/Pagination/Index.vue";
 
 const props = defineProps({
-    employees: Object,
+    employees: Object, // Paginated object containing .data
     departments: Array,
-    positions: Array,
     statuses: Array,
     filters: Object,
 });
 
-const search = ref(props.filters?.search || "");
-const selectedDept = ref(props.filters?.department || "");
-const selectedStatus = ref(props.filters?.status || ""); // New status filter
-const isDialogOpen = ref(false);
+// State for filtering
+const search = ref("");
+const selectedDept = ref("");
+const selectedEmplo = ref("");
+const selectedStatus = ref("");
 
-const alertStatus = ref({
-    show: false,
-    title: "",
-    message: "",
-    variant: "default",
-});
+// 1. Filter the list of employees shown in the "All Employees" dropdown
+// This ensures that if a department is picked, only those users appear in the list.
+const employeeOptions = computed(() => {
+    const allEmployees = props.employees.data || [];
+    if (!selectedDept.value) return allEmployees;
 
-const form = useForm({
-    id: null,
-    name: "",
-    status_id: "",
-    department_id: "",
-    position_id: "",
-});
-
-// Watch status_id: If system status is Inactive (2), clear selections
-watch(
-    () => form.status_id,
-    (newStatus) => {
-        if (newStatus == 2) {
-            form.department_id = "";
-            form.position_id = "";
-        }
-    },
-);
-
-// Update filters and reload table
-const updateFilters = () => {
-    router.get(
-        window.location.pathname,
-        {
-            search: search.value,
-            department: selectedDept.value,
-            status: selectedStatus.value,
-        },
-        { preserveState: true, replace: true },
+    return allEmployees.filter(
+        (emp) => emp.department_id == selectedDept.value,
     );
-};
+});
 
-watch([search, selectedDept, selectedStatus], () => updateFilters());
+// 2. Reset the specific employee selection if the department changes
+watch(selectedDept, () => {
+    selectedEmplo.value = "";
+});
 
-const openEditModal = (emp) => {
-    form.id = emp.id;
-    form.name = emp.name;
-    form.status_id = emp.status_id;
-    form.department_id = emp.department_id;
-    form.position_id = emp.position_id;
-    isDialogOpen.value = true;
-};
+// 3. Table Filter Logic
+const filteredEmployees = computed(() => {
+    let data = props.employees.data || [];
+    const term = search.value.toLowerCase();
 
-const submitUpdate = () => {
-    form.post(`/hr/list-employee/update/${form.id}`, {
-        onSuccess: () => {
-            isDialogOpen.value = false;
-            alertStatus.value = {
-                show: true,
-                title: "Updated",
-                message: "Employee records have been updated successfully.",
-                variant: "default",
-            };
-            setTimeout(() => (alertStatus.value.show = false), 5000);
-        },
-        onError: (errors) => {
-            const firstError = Object.values(errors)[0];
-            alertStatus.value = {
-                show: true,
-                title: "Error",
-                message: firstError || "Failed to update employee.",
-                variant: "destructive",
-            };
-        },
+    return data.filter((emp) => {
+        // Search by Name, ID, or Username
+        const matchesSearch =
+            !term ||
+            emp.employee_id?.toLowerCase().includes(term) ||
+            emp.username?.toLowerCase().includes(term) ||
+            emp.company_email?.toLowerCase().includes(term);
+
+        // Filter by Department
+        const matchesDept =
+            !selectedDept.value || emp.department_id == selectedDept.value;
+
+        // Filter by Specific Employee (The Username Select)
+        const matchesSpecificEmp =
+            !selectedEmplo.value || emp.id == selectedEmplo.value;
+
+        // Filter by Status
+        const matchesStatus =
+            !selectedStatus.value || emp.status_id == selectedStatus.value;
+
+        return (
+            matchesSearch && matchesDept && matchesStatus && matchesSpecificEmp
+        );
     });
-};
+});
 </script>
 
 <template>
@@ -140,13 +101,13 @@ const submitUpdate = () => {
                 >
                     <div>
                         <CardTitle
-                            class="text-4xl font-extrabold text-brand-blue tracking-tight"
-                            >Employee Directory</CardTitle
+                            class="text-3xl font-extrabold text-brand-blue tracking-tight"
                         >
-                        <CardDescription class="text-lg mt-2"
-                            >Manage workforce assignments and
-                            status.</CardDescription
-                        >
+                            Employee Directory
+                        </CardTitle>
+                        <CardDescription class="text-base mt-1 text-slate-500">
+                            View and manage workforce assignments.
+                        </CardDescription>
                     </div>
                     <Link href="/hr/add-employees">
                         <Button
@@ -159,40 +120,23 @@ const submitUpdate = () => {
             </CardHeader>
 
             <CardContent>
-                <transition name="fade">
-                    <Alert
-                        v-if="alertStatus.show"
-                        :variant="alertStatus.variant"
-                        class="mb-6 border-2"
-                    >
-                        <component
-                            :is="
-                                alertStatus.variant === 'destructive'
-                                    ? AlertCircle
-                                    : CheckCircle2
-                            "
-                            class="h-5 w-5"
+                <div
+                    class="flex flex-col md:flex-row gap-3 mb-6 items-center pt-3"
+                >
+                    <div class="relative w-full md:w-1/3">
+                        <Search
+                            class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
                         />
-                        <AlertTitle class="font-bold">{{
-                            alertStatus.title
-                        }}</AlertTitle>
-                        <AlertDescription>{{
-                            alertStatus.message
-                        }}</AlertDescription>
-                    </Alert>
-                </transition>
-
-                <!-- Filters -->
-                <div class="flex flex-col md:flex-row gap-3 mb-4 items-center">
-                    <Input
-                        v-model="search"
-                        placeholder="Search employee..."
-                        class="h-12 w-full md:w-1/3"
-                    />
+                        <Input
+                            v-model="search"
+                            placeholder="Search Name, ID, or Username..."
+                            class="pl-10 h-12"
+                        />
+                    </div>
 
                     <select
                         v-model="selectedDept"
-                        class="h-12 rounded-md border border-slate-200 bg-white px-3 text-sm outline-none"
+                        class="h-12 w-full md:w-1/4 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
                     >
                         <option value="">All Departments</option>
                         <option
@@ -205,8 +149,22 @@ const submitUpdate = () => {
                     </select>
 
                     <select
+                        v-model="selectedEmplo"
+                        class="h-12 w-full md:w-1/4 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
+                    >
+                        <option value="">All Employees</option>
+                        <option
+                            v-for="emp in employeeOptions"
+                            :key="emp.id"
+                            :value="emp.id"
+                        >
+                            {{ emp.username }}
+                        </option>
+                    </select>
+
+                    <select
                         v-model="selectedStatus"
-                        class="h-12 rounded-md border border-slate-200 bg-white px-3 text-sm outline-none"
+                        class="h-12 w-full md:w-1/4 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
                     >
                         <option value="">All Statuses</option>
                         <option v-for="s in statuses" :key="s.id" :value="s.id">
@@ -219,49 +177,55 @@ const submitUpdate = () => {
                     <Table>
                         <TableHeader class="bg-slate-50/50">
                             <TableRow>
-                                <TableHead class="font-bold text-slate-700"
-                                    >EMPLOYEE</TableHead
+                                <TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs tracking-wider"
+                                    >ID & USERNAME</TableHead
                                 >
-                                <TableHead class="font-bold text-slate-700"
+                                <TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs tracking-wider"
+                                    >COMPANY EMAIL</TableHead
+                                >
+                                <TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs tracking-wider"
                                     >DEPARTMENT & POSITION</TableHead
                                 >
                                 <TableHead
-                                    class="font-bold text-slate-700 text-center"
+                                    class="text-center font-bold text-slate-600 uppercase text-xs tracking-wider"
                                     >STATUS</TableHead
                                 >
                                 <TableHead
-                                    class="text-right font-bold text-slate-700 px-6"
+                                    class="text-right font-bold text-slate-600 uppercase text-xs tracking-wider px-6"
                                     >ACTIONS</TableHead
                                 >
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            <template v-if="employees.length > 0">
+                            <template v-if="filteredEmployees.length > 0">
                                 <TableRow
-                                    v-for="emp in employees"
+                                    v-for="emp in filteredEmployees"
                                     :key="emp.id"
                                     class="hover:bg-blue-50/30 transition-colors group"
                                 >
                                     <TableCell>
-                                        <div class="flex items-center gap-3">
-                                            <div
-                                                class="p-2 bg-blue-50 rounded text-brand-blue"
+                                        <div class="flex flex-col">
+                                            <span
+                                                class="font-bold text-slate-800"
                                             >
-                                                <UserCircle class="w-5 h-5" />
-                                            </div>
-                                            <div>
-                                                <div
-                                                    class="font-bold text-slate-800"
-                                                >
-                                                    {{ emp.name }}
-                                                </div>
-                                                <div
-                                                    class="text-xs text-slate-500"
-                                                >
-                                                    {{ emp.email }}
-                                                </div>
-                                            </div>
+                                                {{ emp.employee_id || "N/A" }}
+                                            </span>
+                                            <span
+                                                class="text-xs text-brand-blue font-medium"
+                                            >
+                                                @{{ emp.username }}
+                                            </span>
                                         </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <span
+                                            class="text-slate-600 font-medium"
+                                        >
+                                            {{ emp.company_email || emp.email }}
+                                        </span>
                                     </TableCell>
                                     <TableCell>
                                         <div class="flex flex-col gap-1">
@@ -302,163 +266,37 @@ const submitUpdate = () => {
                                         </span>
                                     </TableCell>
                                     <TableCell class="text-right px-6">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            @click="openEditModal(emp)"
-                                            class="text-brand-blue hover:bg-blue-100"
+                                        <Link
+                                            :href="`/hr/employees/edit/${emp.id}`"
                                         >
-                                            <Pencil class="w-4 h-4 mr-2" /> Edit
-                                        </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                class="h-8 w-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                            >
+                                                <Pencil class="w-4 h-4" />
+                                            </Button>
+                                        </Link>
                                     </TableCell>
                                 </TableRow>
                             </template>
-
                             <TableRow v-else>
                                 <TableCell
-                                    colspan="4"
-                                    class="text-center text-slate-500 py-4"
+                                    colspan="5"
+                                    class="text-center text-slate-500 py-10 italic"
                                 >
-                                    No results found.
+                                    <FileText
+                                        class="w-10 h-10 mx-auto mb-2 opacity-20"
+                                    />
+                                    No employees found matching your criteria.
                                 </TableCell>
                             </TableRow>
                         </TableBody>
                     </Table>
                 </div>
+
+                <Pagination :links="employees" />
             </CardContent>
         </Card>
-
-        <Dialog :open="isDialogOpen" @update:open="isDialogOpen = $event">
-            <DialogContent class="sm:max-w-[480px]">
-                <DialogHeader>
-                    <DialogTitle class="text-2xl font-bold text-brand-blue"
-                        >Edit Employee</DialogTitle
-                    >
-                    <DialogDescription
-                        >Update assignment details for
-                        {{ form.name }}.</DialogDescription
-                    >
-                </DialogHeader>
-
-                <form @submit.prevent="submitUpdate" class="space-y-5">
-                    <div class="space-y-2">
-                        <Label
-                            class="text-xs font-bold uppercase text-slate-500"
-                            >Full Name</Label
-                        >
-                        <Input
-                            v-model="form.name"
-                            class="h-12 border-slate-200"
-                            required
-                        />
-                    </div>
-
-                    <div class="space-y-2">
-                        <Label
-                            class="text-xs font-bold uppercase text-slate-500"
-                            >System Status</Label
-                        >
-                        <select
-                            v-model="form.status_id"
-                            class="flex h-12 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:ring-2 focus:ring-brand-blue outline-none"
-                        >
-                            <option
-                                v-for="s in statuses"
-                                :key="s.id"
-                                :value="s.id"
-                            >
-                                {{ s.name }}
-                            </option>
-                        </select>
-                    </div>
-
-                    <div class="space-y-2 relative">
-                        <Label
-                            class="text-xs font-bold uppercase text-slate-500 flex items-center gap-2"
-                        >
-                            Department
-                            <Ban
-                                v-if="form.status_id == 2"
-                                class="h-3 w-3 text-red-500"
-                            />
-                        </Label>
-                        <div class="relative">
-                            <select
-                                v-model="form.department_id"
-                                :disabled="form.status_id == 2"
-                                class="flex h-12 w-full rounded-md border border-slate-200 bg-white px-3 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed outline-none"
-                                :required="form.status_id != 2"
-                            >
-                                <option value="">Select Department</option>
-                                <option
-                                    v-for="d in departments"
-                                    :key="d.id"
-                                    :value="d.id"
-                                    :disabled="d.status_id == 2"
-                                >
-                                    {{ d.name }}
-                                    {{ d.status_id == 2 ? "(Inactive)" : "" }}
-                                </option>
-                            </select>
-                            <Lock
-                                v-if="form.status_id == 2"
-                                class="absolute right-8 top-3.5 h-5 w-5 text-slate-400"
-                            />
-                        </div>
-                    </div>
-
-                    <div class="space-y-2 relative">
-                        <Label
-                            class="text-xs font-bold uppercase text-slate-500 flex items-center gap-2"
-                        >
-                            Position
-                            <Ban
-                                v-if="form.status_id == 2"
-                                class="h-3 w-3 text-red-500"
-                            />
-                        </Label>
-                        <div class="relative">
-                            <select
-                                v-model="form.position_id"
-                                :disabled="form.status_id == 2"
-                                class="flex h-12 w-full rounded-md border border-slate-200 bg-white px-3 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed outline-none"
-                                :required="form.status_id != 2"
-                            >
-                                <option value="">Select Position</option>
-                                <option
-                                    v-for="p in positions"
-                                    :key="p.id"
-                                    :value="p.id"
-                                    :disabled="p.status_id == 2"
-                                >
-                                    {{ p.name }}
-                                    {{ p.status_id == 2 ? "(Inactive)" : "" }}
-                                </option>
-                            </select>
-                            <Lock
-                                v-if="form.status_id == 2"
-                                class="absolute right-8 top-3.5 h-5 w-5 text-slate-400"
-                            />
-                        </div>
-                    </div>
-
-                    <DialogFooter class="pt-4 gap-2">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            @click="isDialogOpen = false"
-                            class="px-8 h-12 font-bold"
-                            >Cancel</Button
-                        >
-                        <Button
-                            type="submit"
-                            class="bg-brand-blue px-8 h-12 font-bold shadow-lg"
-                            :disabled="form.processing"
-                            >Save Updates</Button
-                        >
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
     </div>
 </template>

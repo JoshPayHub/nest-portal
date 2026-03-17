@@ -20,7 +20,9 @@ Route::middleware(['auth', 'user_type:HR'])->prefix('hr')->name('hr.')->group(fu
 
     Route::get('/add-employees', [EmployeeController::class, 'index'])->name('addemployees.index');
     Route::post('/add-employees/store', [EmployeeController::class, 'store'])->name('addemployees.store');
-
+    Route::get('/employees/edit/{user}', [EmployeeController::class, 'edit'])->name('employees.edit');
+    Route::put('/employees/update/{user}', [EmployeeController::class, 'update'])->name('employees.update');
+    Route::get('/list-employee', [EmployeeListController::class, 'index'])->name('employee.index');
 
     Route::get('/department', [DepartmentController::class, 'index'])->name('department.index');
     Route::post('/department/store', [DepartmentController::class, 'store'])->name('department.store');
@@ -29,8 +31,4 @@ Route::middleware(['auth', 'user_type:HR'])->prefix('hr')->name('hr.')->group(fu
     Route::get('/position', [PositionController::class, 'index'])->name('position.index');
     Route::post('/position/store', [PositionController::class, 'store'])->name('position.store');
     Route::post('/position/update/{id}', [PositionController::class, 'update'])->name('position.update');
-
-    Route::get('/list-employee', [EmployeeListController::class, 'index'])->name('employee.index');
-    Route::post('/list-employee/store', [EmployeeListController::class, 'store'])->name('employee.store');
-    Route::post('/list-employee/update/{id}', [EmployeeListController::class, 'update'])->name('employee.update');
 });

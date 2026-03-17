@@ -13,7 +13,16 @@ import {
     CardContent,
     CardFooter,
 } from "@/Components/ui/card";
-import { Save, ArrowLeft, Briefcase, MapPin } from "lucide-vue-next";
+import {
+    Save,
+    ArrowLeft,
+    Briefcase,
+    MapPin,
+    BadgeCheck,
+    Send,
+    User,
+    Info,
+} from "lucide-vue-next";
 
 const props = defineProps({
     employee: Object,
@@ -30,6 +39,7 @@ const STORAGE_KEY = props.isEditing
     : "onboarding_form_draft";
 
 const form = useForm({
+    // --- Work Information (Editable/Store fields) ---
     employee_id: props.employee?.employee_id || "",
     username: props.employee?.username || "",
     company_email: props.employee?.company_email || "",
@@ -39,12 +49,45 @@ const form = useForm({
     status_id: props.employee?.status_id || props.pendingStatus?.id || "",
     employment_status: props.employee?.employment_status || "",
     employment_type: props.employee?.employment_type || "",
-    date_hired: props.employee?.date_hired || "",
-    regularization_date: props.employee?.regularization_date || "",
-    immediate_supervisor: props.employee?.immediate_supervisor || "",
+    date_hired: props.employee?.date_hired ?? "",
+    regularization_date: props.employee?.regularization_date ?? "",
+    immediate_supervisor: props.employee?.immediate_supervisor ?? "",
     work_location: props.employee?.work_location || "",
     payroll_group: props.employee?.payroll_group || "",
     leave_pay: props.employee?.leave_pay || 0,
+
+    // --- Personal Profile (Read-Only fields) ---
+    profile_photo: props.employee?.profile_photo || null,
+    first_name: props.employee?.first_name || "",
+    middle_name: props.employee?.middle_name || "",
+    last_name: props.employee?.last_name || "",
+    suffix: props.employee?.suffix || "",
+    gender: props.employee?.gender || "",
+    date_birth: props.employee?.date_birth || "",
+    civil_status: props.employee?.civil_status || "",
+    nationality: props.employee?.nationality || "",
+
+    // --- Contact Information ---
+    personal_email: props.employee?.personal_email || "",
+    mobile_number: props.employee?.mobile_number || "",
+    telephone_number: props.employee?.telephone_number || "",
+    present_address: props.employee?.present_address || "",
+    permanent_address: props.employee?.permanent_address || "",
+
+    // --- Government Information ---
+    sss_number: props.employee?.sss_number || "",
+    philhealth_number: props.employee?.philhealth_number || "",
+    pagibig_number: props.employee?.pagibig_number || "",
+    tin_number: props.employee?.tin_number || "",
+
+    // --- Emergency Information ---
+    contact_person: props.employee?.contact_person || "",
+    relationship: props.employee?.relationship || "",
+    contact_number: props.employee?.contact_number || "",
+    address: props.employee?.address || "",
+
+    // --- Attachments ---
+    resume: props.employee?.resume || null,
 });
 
 // Load draft from localStorage on refresh
@@ -387,24 +430,29 @@ const submit = () => {
             </CardContent>
 
             <CardFooter
-                class="flex items-center justify-between pt-6 border-t border-slate-100 bg-slate-50/20"
+                class="flex items-center justify-between py-6 border-t border-b border-slate-100 bg-slate-50/20"
             >
                 <Button
+                    v-if="!isEditing"
                     type="button"
-                    variant="ghost"
+                    variant="secondary"
                     @click="form.reset()"
                     class="text-slate-500"
                 >
                     Reset Changes
                 </Button>
+                <div v-else></div>
 
                 <div class="flex gap-3">
                     <Button
                         form="employeeForm"
                         type="submit"
-                        class="bg-brand-blue hover:bg-brand-blue/90 px-8 font-bold shadow-md shadow-blue-200"
+                        class="bg-brand-blue text-white shadow-md"
                         :disabled="form.processing"
                     >
+                        <Save v-if="isEditing" class="mr-2 w-4 h-4" />
+                        <Send v-else class="mr-2 w-4 h-4" />
+
                         {{
                             form.processing
                                 ? "Saving..."
@@ -415,6 +463,323 @@ const submit = () => {
                     </Button>
                 </div>
             </CardFooter>
+
+            <div class="px-6 pb-8">
+                <section class="space-y-8">
+                    <div
+                        v-if="form.status_id == 4"
+                        class="mb-6 flex items-start gap-4 p-4 bg-amber-50 border border-amber-200 rounded-xl"
+                    >
+                        <div class="p-2 bg-amber-100 rounded-lg text-amber-600">
+                            <Info class="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h5 class="text-sm font-bold text-amber-900">
+                                Personal Information Pending
+                            </h5>
+                            <p class="text-sm text-amber-700 leading-relaxed">
+                                These fields are currently empty. Once the
+                                employee completes their onboarding profile,
+                                their personal details, government IDs, and
+                                contact information will automatically appear
+                                here.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div
+                        class="flex items-center gap-2 text-brand-blue font-bold border-l-4 border-brand-blue pl-3"
+                    >
+                        <User class="w-5 h-5" />
+                        <h3>Employee Personal Record (Read-Only)</h3>
+                    </div>
+
+                    <div class="space-y-4">
+                        <h4
+                            class="text-[12px] font-semibold text-slate-500 uppercase tracking-wider"
+                        >
+                            Basic Profile
+                        </h4>
+                        <div
+                            class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50/50 p-4 rounded-xl border border-dashed border-slate-200"
+                        >
+                            <div
+                                class="md:col-span-4 flex items-center gap-4 mb-2"
+                            >
+                                <div
+                                    class="w-16 h-16 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center overflow-hidden"
+                                >
+                                    <img
+                                        v-if="employee?.profile_photo"
+                                        :src="employee.profile_photo"
+                                        class="object-cover w-full h-full"
+                                    />
+                                    <User v-else class="text-slate-400" />
+                                </div>
+                                <p class="text-xs text-slate-400 italic">
+                                    User Profile Image
+                                </p>
+                            </div>
+
+                            <div class="space-y-2">
+                                <Label>First Name</Label>
+                                <Input
+                                    v-model="form.first_name"
+                                    readonly
+                                    disabled
+                                    class="bg-slate-100/50 cursor-not-allowed"
+                                />
+                            </div>
+                            <div class="space-y-2">
+                                <Label>Middle Name</Label>
+                                <Input
+                                    v-model="form.middle_name"
+                                    readonly
+                                    disabled
+                                    class="bg-slate-100/50 cursor-not-allowed"
+                                />
+                            </div>
+                            <div class="space-y-2">
+                                <Label>Last Name</Label>
+                                <Input
+                                    v-model="form.last_name"
+                                    readonly
+                                    disabled
+                                    class="bg-slate-100/50 cursor-not-allowed"
+                                />
+                            </div>
+                            <div class="space-y-2">
+                                <Label>Suffix</Label>
+                                <Input
+                                    v-model="form.suffix"
+                                    readonly
+                                    disabled
+                                    class="bg-slate-100/50 cursor-not-allowed"
+                                />
+                            </div>
+                            <div class="space-y-2">
+                                <Label>Gender</Label>
+                                <Input
+                                    v-model="form.gender"
+                                    readonly
+                                    disabled
+                                    class="bg-slate-100/50 cursor-not-allowed"
+                                />
+                            </div>
+                            <div class="space-y-2">
+                                <Label>Date of Birth</Label>
+                                <Input
+                                    v-model="form.date_birth"
+                                    readonly
+                                    disabled
+                                    class="bg-slate-100/50 cursor-not-allowed"
+                                />
+                            </div>
+                            <div class="space-y-2">
+                                <Label>Civil Status</Label>
+                                <Input
+                                    v-model="form.civil_status"
+                                    readonly
+                                    disabled
+                                    class="bg-slate-100/50 cursor-not-allowed"
+                                />
+                            </div>
+                            <div class="space-y-2">
+                                <Label>Nationality</Label>
+                                <Input
+                                    v-model="form.nationality"
+                                    readonly
+                                    disabled
+                                    class="bg-slate-100/50 cursor-not-allowed"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <h4
+                            class="text-[12px] font-semibold text-slate-500 uppercase tracking-wider"
+                        >
+                            Contact Details
+                        </h4>
+                        <div
+                            class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50/50 p-4 rounded-xl border border-dashed border-slate-200"
+                        >
+                            <div class="space-y-2">
+                                <Label>Personal Email</Label>
+                                <Input
+                                    v-model="form.personal_email"
+                                    readonly
+                                    disabled
+                                    class="bg-slate-100/50 cursor-not-allowed"
+                                />
+                            </div>
+                            <div class="space-y-2">
+                                <Label>Mobile Number</Label>
+                                <Input
+                                    v-model="form.mobile_number"
+                                    readonly
+                                    disabled
+                                    class="bg-slate-100/50 cursor-not-allowed"
+                                />
+                            </div>
+                            <div class="space-y-2">
+                                <Label>Telephone Number</Label>
+                                <Input
+                                    v-model="form.telephone_number"
+                                    readonly
+                                    disabled
+                                    class="bg-slate-100/50 cursor-not-allowed"
+                                />
+                            </div>
+                            <div class="md:col-span-3 space-y-2">
+                                <Label>Present Address</Label>
+                                <Input
+                                    v-model="form.present_address"
+                                    readonly
+                                    disabled
+                                    class="bg-slate-100/50 cursor-not-allowed"
+                                />
+                            </div>
+                            <div class="md:col-span-3 space-y-2">
+                                <Label>Permanent Address</Label>
+                                <Input
+                                    v-model="form.permanent_address"
+                                    readonly
+                                    disabled
+                                    class="bg-slate-100/50 cursor-not-allowed"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <h4
+                            class="text-[12px] font-semibold text-slate-500 uppercase tracking-wider"
+                        >
+                            Government IDs
+                        </h4>
+                        <div
+                            class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50/50 p-4 rounded-xl border border-dashed border-slate-200"
+                        >
+                            <div class="space-y-2">
+                                <Label>SSS Number</Label>
+                                <Input
+                                    v-model="form.sss_number"
+                                    readonly
+                                    disabled
+                                    class="bg-slate-100/50 cursor-not-allowed"
+                                />
+                            </div>
+                            <div class="space-y-2">
+                                <Label>PhilHealth Number</Label>
+                                <Input
+                                    v-model="form.philhealth_number"
+                                    readonly
+                                    disabled
+                                    class="bg-slate-100/50 cursor-not-allowed"
+                                />
+                            </div>
+                            <div class="space-y-2">
+                                <Label>Pag-IBIG Number</Label>
+                                <Input
+                                    v-model="form.pagibig_number"
+                                    readonly
+                                    disabled
+                                    class="bg-slate-100/50 cursor-not-allowed"
+                                />
+                            </div>
+                            <div class="space-y-2">
+                                <Label>TIN Number</Label>
+                                <Input
+                                    v-model="form.tin_number"
+                                    readonly
+                                    disabled
+                                    class="bg-slate-100/50 cursor-not-allowed"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <h4
+                            class="text-[12px] font-semibold text-slate-500 uppercase tracking-wider"
+                        >
+                            Emergency Information
+                        </h4>
+                        <div
+                            class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50/50 p-4 rounded-xl border border-dashed border-slate-200"
+                        >
+                            <div class="space-y-2">
+                                <Label>Contact Person</Label>
+                                <Input
+                                    v-model="form.contact_person"
+                                    readonly
+                                    disabled
+                                    class="bg-white/50 cursor-not-allowed"
+                                />
+                            </div>
+                            <div class="space-y-2">
+                                <Label>Relationship</Label>
+                                <Input
+                                    v-model="form.relationship"
+                                    readonly
+                                    disabled
+                                    class="bg-white/50 cursor-not-allowed"
+                                />
+                            </div>
+                            <div class="space-y-2">
+                                <Label>Emergency Contact Number</Label>
+                                <Input
+                                    v-model="form.contact_number"
+                                    readonly
+                                    disabled
+                                    class="bg-white/50 cursor-not-allowed"
+                                />
+                            </div>
+                            <div class="space-y-2">
+                                <Label>Address</Label>
+                                <Input
+                                    v-model="form.address"
+                                    readonly
+                                    disabled
+                                    class="bg-white/50 cursor-not-allowed"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <h4
+                            class="text-[12px] font-semibold text-slate-500 uppercase tracking-wider"
+                        >
+                            Attachments
+                        </h4>
+                        <div
+                            class="bg-slate-50/50 p-4 rounded-xl border border-dashed border-slate-200"
+                        >
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-slate-600 font-medium"
+                                    >Employee Resume / CV</span
+                                >
+                                <a
+                                    v-if="employee?.resume"
+                                    :href="employee.resume"
+                                    target="_blank"
+                                    class="text-brand-blue text-sm font-bold hover:underline"
+                                >
+                                    View Uploaded Resume
+                                </a>
+                                <span
+                                    v-else
+                                    class="text-xs text-slate-400 italic"
+                                    >No resume uploaded</span
+                                >
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
         </Card>
     </div>
 </template>
