@@ -24,13 +24,15 @@ class HandleInertiaRequests extends Middleware
                     'id' => $request->user()->id,
                     'name' => $request->user()->name,
                     'type' => $request->user()->userType?->name,
+                    'status_id' => $request->user()->status_id,
                 ] : null,
             ],
 
             // flash section to share session messages with Vue
             'flash' => [
-                'message' => fn () => $request->session()->get('message'),
-                'error'   => fn () => $request->session()->get('error'),
+                'message' => $request->session()->get('message'),
+                'success' => $request->session()->get('success'),
+                'error' => $request->session()->get('error'),
             ],
 
         ]);

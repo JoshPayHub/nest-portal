@@ -8,6 +8,7 @@ use App\Http\Controllers\Employee\LeaveAbsenceController;
 use App\Http\Controllers\Employee\LeaveController;
 use App\Http\Controllers\Employee\ManpowerController;
 use App\Http\Controllers\Employee\OvertimeRequestController;
+use App\Http\Controllers\Employee\ProfileController;
 use App\Http\Controllers\Employee\UndertimeFormController;
 use Illuminate\Support\Facades\Route;
 
@@ -70,4 +71,8 @@ Route::middleware(['auth', 'user_type:Employee'])->prefix('employee')->name('emp
     Route::post('/undertime-form/store', [UndertimeFormController::class, 'store'])->name('undertimeform.store');
     Route::get('/undertime-form/edit/{id}', [UndertimeFormController::class, 'edit'])->name('undertimeform.edit');
     Route::put('/undertime-form/update/{id}', [UndertimeFormController::class, 'update'])->name('undertimeform.update');
+
+    // Profile
+    Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
+    Route::put('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
 });

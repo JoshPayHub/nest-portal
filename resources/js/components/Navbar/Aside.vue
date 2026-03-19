@@ -19,6 +19,10 @@ import { Button } from "@/components/ui/button";
 const page = usePage();
 const user = page.props.auth.user;
 
+const isPending = computed(() => {
+    return user?.type === "Employee" && page.props.auth.user.status_id == 4;
+});
+
 // Tracking dialog state
 const isLogoutOpen = ref(false);
 
@@ -140,6 +144,11 @@ const menuItems = {
             icon: "fa-solid fa-gauge",
         },
         {
+            label: "My Profile",
+            href: "/employee/profile",
+            icon: "fa-solid fa-user-gear",
+        },
+        {
             label: "Announcements & Policies",
             href: "/management/AnnouncementAndPolicy",
             icon: "fa-solid fa-scroll",
@@ -195,7 +204,16 @@ const menuItems = {
 
 // 4. Filter the menu based on the user's type
 const filteredMenu = computed(() => {
-    // If user is HR, this returns the HR array. If Employee, returns Employee array.
+    if (isPending.value) {
+        return [
+            {
+                label: "My Profile",
+                href: "/employee/profile", // Match your actual route
+                icon: "fa-solid fa-user-gear",
+            },
+        ];
+    }
+
     return menuItems[user?.type] || [];
 });
 
@@ -214,6 +232,16 @@ const goTo = (href) => {
         <!-- Scrollable sidebar buttons Start -->
         <div class="flex-1 overflow-y-auto min-h-0 scrollbar-custom">
             <div class="grid gap-2">
+                <div
+                    v-if="isPending"
+                    class="px-4 py-3 mb-2 bg-white/10 border border-white/20 rounded-md"
+                >
+                    <p class="text-xs text-white/80 leading-tight">
+                        <i class="fa-solid fa-lock me-2"></i>
+                        Menu locked until profile is activated.
+                    </p>
+                </div>
+
                 <template v-for="(item, index) in filteredMenu" :key="index">
                     <!-- CATEGORY -->
                     <div v-if="item.children" class="relative">

@@ -20,6 +20,8 @@ class AuthenticatedSessionController extends Controller
     /**
      * Handle login request
      */
+
+
     public function store(Request $request)
     {
         $credentials = $request->validate([
@@ -27,7 +29,6 @@ class AuthenticatedSessionController extends Controller
             'password' => ['required'],
         ]);
 
-        // 2. Attempt login using username
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
             return back()->withErrors([
                 'username' => 'The provided credentials do not match our records.',
@@ -35,17 +36,21 @@ class AuthenticatedSessionController extends Controller
         }
 
         $request->session()->regenerate();
-
         $user = Auth::user();
 
+        // Check if employee is Pending (status_id 4)
+        if ($user->user_type_id == 2 && $user->status_id == 4) {
+            return redirect()->route('employee.profile');
+        }
+
         /**
-         * Redirect based on user type
-         * Use intended() so middleware redirects still work
+         * Redirect based on user type for Active users
          */
         return redirect()->intended(
             match ((int) $user->user_type_id) {
-                1 => route('hr.dashboard'),       // HR / Admin
+                1 => route('hr.dashboard'),
                 2 => route('employee.dashboard'),
+                default => '/',
             }
         );
     }

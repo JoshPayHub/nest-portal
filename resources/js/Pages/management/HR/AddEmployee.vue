@@ -1,6 +1,6 @@
 <script setup>
 import { useForm, router } from "@inertiajs/vue3";
-import { onMounted, watch } from "vue";
+import { onMounted, watch, ref, computed } from "vue";
 import { toastStore } from "@/stores/toast";
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
@@ -89,6 +89,18 @@ const form = useForm({
     // --- Attachments ---
     resume: props.employee?.resume || null,
 });
+
+const existingPhoto = computed(() => {
+    return props.employee?.profile_photo
+        ? `/storage/${props.employee.profile_photo}`
+        : null;
+});
+
+const existingResume = computed(() => {
+    return props.employee?.resume ? `/storage/${props.employee.resume}` : null;
+});
+
+const preview = ref(null);
 
 // Load draft from localStorage on refresh
 onMounted(() => {
@@ -189,22 +201,26 @@ const submit = () => {
                 >
                     <section class="space-y-5">
                         <div
-                            class="flex items-center gap-2 text-brand-blue font-bold border-l-4 border-brand-blue pl-3"
+                            class="flex items-center gap-3 text-brand-blue font-bold border-l-4 border-brand-blue pl-3"
                         >
                             <BadgeCheck class="w-5 h-5" />
                             <h3>Basic Identification</h3>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div class="space-y-2">
-                                <Label
+                        <div
+                            class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-200"
+                        >
+                            <div class="flex flex-col">
+                                <label
+                                    class="text-xs font-semibold mb-1 text-gray-500"
                                     :class="{
                                         'text-red-500': form.errors.employee_id,
                                     }"
-                                    >Employee ID</Label
+                                    >Employee ID</label
                                 >
                                 <Input
                                     v-model="form.employee_id"
                                     placeholder="EMP-2026-001"
+                                    class="bg-white"
                                     :class="{
                                         'border-red-500':
                                             form.errors.employee_id,
@@ -217,15 +233,17 @@ const submit = () => {
                                     {{ form.errors.employee_id }}
                                 </p>
                             </div>
-                            <div class="space-y-2">
-                                <Label
+                            <div class="flex flex-col">
+                                <label
+                                    class="text-xs font-semibold mb-1 text-gray-500"
                                     :class="{
                                         'text-red-500': form.errors.username,
                                     }"
-                                    >Username</Label
+                                    >Username</label
                                 >
                                 <Input
                                     v-model="form.username"
+                                    class="bg-white"
                                     placeholder="j.delacruz"
                                     :class="{
                                         'border-red-500': form.errors.username,
@@ -238,16 +256,18 @@ const submit = () => {
                                     {{ form.errors.username }}
                                 </p>
                             </div>
-                            <div class="space-y-2">
-                                <Label
+                            <div class="flex flex-col">
+                                <label
+                                    class="text-xs font-semibold mb-1 text-gray-500"
                                     :class="{
                                         'text-red-500':
                                             form.errors.company_email,
                                     }"
-                                    >Company Email</Label
+                                    >Company Email</label
                                 >
                                 <Input
                                     v-model="form.company_email"
+                                    class="bg-white"
                                     type="email"
                                     placeholder="work@company.com"
                                     :class="{
@@ -272,14 +292,17 @@ const submit = () => {
                             <Briefcase class="w-5 h-5" />
                             <h3>Employment Details</h3>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                            <div class="space-y-2">
-                                <Label
+                        <div
+                            class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-200"
+                        >
+                            <div class="flex flex-col">
+                                <label
+                                    class="text-xs font-semibold mb-1 text-gray-500"
                                     :class="{
                                         'text-red-500':
                                             form.errors.user_type_id,
                                     }"
-                                    >User Type (Role)</Label
+                                    >User Type (Role)</label
                                 >
                                 <select
                                     v-model="form.user_type_id"
@@ -295,13 +318,14 @@ const submit = () => {
                                     </option>
                                 </select>
                             </div>
-                            <div class="space-y-2">
-                                <Label
+                            <div class="flex flex-col">
+                                <label
+                                    class="text-xs font-semibold mb-1 text-gray-500"
                                     :class="{
                                         'text-red-500':
                                             form.errors.department_id,
                                     }"
-                                    >Department</Label
+                                    >Department</label
                                 >
                                 <select
                                     v-model="form.department_id"
@@ -317,12 +341,13 @@ const submit = () => {
                                     </option>
                                 </select>
                             </div>
-                            <div class="space-y-2">
-                                <Label
+                            <div class="flex flex-col">
+                                <label
+                                    class="text-xs font-semibold mb-1 text-gray-500"
                                     :class="{
                                         'text-red-500': form.errors.position_id,
                                     }"
-                                    >Position</Label
+                                    >Position</label
                                 >
                                 <select
                                     v-model="form.position_id"
@@ -338,8 +363,11 @@ const submit = () => {
                                     </option>
                                 </select>
                             </div>
-                            <div class="space-y-2">
-                                <Label>Employment Status</Label>
+                            <div class="flex flex-col">
+                                <label
+                                    class="text-xs font-semibold mb-1 text-gray-500"
+                                    >Employment Status</label
+                                >
                                 <select
                                     v-model="form.employment_status"
                                     class="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:border-brand-blue outline-none"
@@ -354,11 +382,12 @@ const submit = () => {
                                     </option>
                                 </select>
                             </div>
-                        </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                            <div class="space-y-2">
-                                <Label>Employment Type</Label>
+                            <div class="flex flex-col">
+                                <label
+                                    class="text-xs font-semibold mb-1 text-gray-500"
+                                    >Employment Type</label
+                                >
                                 <select
                                     v-model="form.employment_type"
                                     class="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:border-brand-blue outline-none"
@@ -368,21 +397,36 @@ const submit = () => {
                                     <option value="Part-Time">Part-Time</option>
                                 </select>
                             </div>
-                            <div class="space-y-2">
-                                <Label>Date Hired</Label>
-                                <Input v-model="form.date_hired" type="date" />
-                            </div>
-                            <div class="space-y-2">
-                                <Label>Regularization Date</Label>
+                            <div class="flex flex-col">
+                                <label
+                                    class="text-xs font-semibold mb-1 text-gray-500"
+                                    >Date Hired</label
+                                >
                                 <Input
-                                    v-model="form.regularization_date"
+                                    v-model="form.date_hired"
+                                    class="bg-white"
                                     type="date"
                                 />
                             </div>
-                            <div class="space-y-2">
-                                <Label>Immediate Supervisor</Label>
+                            <div class="flex flex-col">
+                                <label
+                                    class="text-xs font-semibold mb-1 text-gray-500"
+                                    >Regularization Date</label
+                                >
+                                <Input
+                                    v-model="form.regularization_date"
+                                    class="bg-white"
+                                    type="date"
+                                />
+                            </div>
+                            <div class="flex flex-col">
+                                <label
+                                    class="text-xs font-semibold mb-1 text-gray-500"
+                                    >Immediate Supervisor</label
+                                >
                                 <Input
                                     v-model="form.immediate_supervisor"
+                                    class="bg-white"
                                     placeholder="Reports to..."
                                 />
                             </div>
@@ -397,10 +441,13 @@ const submit = () => {
                             <h3>Work Settings & Payroll</h3>
                         </div>
                         <div
-                            class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50/50 p-4 rounded-xl border border-dashed border-slate-200"
+                            class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-200"
                         >
                             <div class="space-y-2">
-                                <Label>Work Location</Label>
+                                <label
+                                    class="text-xs font-semibold mb-1 text-gray-500"
+                                    >Work Location</label
+                                >
                                 <Input
                                     v-model="form.work_location"
                                     placeholder="Office Location"
@@ -408,7 +455,10 @@ const submit = () => {
                                 />
                             </div>
                             <div class="space-y-2">
-                                <Label>Payroll Group</Label>
+                                <label
+                                    class="text-xs font-semibold mb-1 text-gray-500"
+                                    >Payroll Group</label
+                                >
                                 <Input
                                     v-model="form.payroll_group"
                                     placeholder="e.g. Weekly"
@@ -416,7 +466,10 @@ const submit = () => {
                                 />
                             </div>
                             <div class="space-y-2">
-                                <Label>Leave Pay Credits</Label>
+                                <label
+                                    class="text-xs font-semibold mb-1 text-gray-500"
+                                    >Leave Pay Credits</label
+                                >
                                 <Input
                                     v-model="form.leave_pay"
                                     type="number"
@@ -475,7 +528,7 @@ const submit = () => {
                         </div>
                         <div>
                             <h5 class="text-sm font-bold text-amber-900">
-                                Personal Information Pending
+                                Personal Information
                             </h5>
                             <p class="text-sm text-amber-700 leading-relaxed">
                                 These fields are currently empty. Once the
@@ -495,259 +548,213 @@ const submit = () => {
                     </div>
 
                     <div class="space-y-4">
-                        <h4
-                            class="text-[12px] font-semibold text-slate-500 uppercase tracking-wider"
-                        >
-                            Basic Profile
-                        </h4>
-                        <div
-                            class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50/50 p-4 rounded-xl border border-dashed border-slate-200"
-                        >
+                        <div class="w-full flex items-center gap-4 mb-10">
                             <div
-                                class="md:col-span-4 flex items-center gap-4 mb-2"
+                                class="w-28 h-28 rounded-full bg-gray-100 overflow-hidden border-2 grid place-items-center"
+                            >
+                                <img
+                                    v-if="preview || existingPhoto"
+                                    :src="preview || existingPhoto"
+                                    class="w-full h-full object-cover"
+                                    alt="Employee Profile"
+                                />
+
+                                <User v-else class="text-gray-400 w-12 h-12" />
+                            </div>
+                            <p class="text-xs text-slate-400 italic">
+                                User Profile Image
+                            </p>
+                        </div>
+
+                        <section class="space-y-5">
+                            <h4
+                                class="text-xs font-semibold text-slate-500 uppercase"
+                            >
+                                Basic Profile
+                            </h4>
+                            <div
+                                class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-200"
                             >
                                 <div
-                                    class="w-16 h-16 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center overflow-hidden"
+                                    v-for="field in [
+                                        {
+                                            key: 'first_name',
+                                            label: 'First Name',
+                                        },
+                                        {
+                                            key: 'middle_name',
+                                            label: 'Middle Name',
+                                        },
+                                        {
+                                            key: 'last_name',
+                                            label: 'Last Name',
+                                        },
+                                        { key: 'suffix', label: 'Suffix' },
+                                        { key: 'gender', label: 'Gender' },
+                                        {
+                                            key: 'date_birth',
+                                            label: 'Date of Birth',
+                                            type: 'date',
+                                        },
+                                        {
+                                            key: 'civil_status',
+                                            label: 'Civil Status',
+                                        },
+                                        {
+                                            key: 'nationality',
+                                            label: 'Nationality',
+                                        },
+                                    ]"
+                                    :key="field.key"
+                                    class="flex flex-col"
                                 >
-                                    <img
-                                        v-if="employee?.profile_photo"
-                                        :src="employee.profile_photo"
-                                        class="object-cover w-full h-full"
+                                    <label
+                                        class="text-xs font-semibold mb-1 text-gray-500"
+                                        >{{ field.label }}</label
+                                    >
+                                    <Input
+                                        v-model="form[field.key]"
+                                        :type="field.type || 'text'"
+                                        :placeholder="field.label"
+                                        readonly
+                                        disabled
                                     />
-                                    <User v-else class="text-slate-400" />
                                 </div>
-                                <p class="text-xs text-slate-400 italic">
-                                    User Profile Image
-                                </p>
                             </div>
-
-                            <div class="space-y-2">
-                                <Label>First Name</Label>
-                                <Input
-                                    v-model="form.first_name"
-                                    readonly
-                                    disabled
-                                    class="bg-slate-100/50 cursor-not-allowed"
-                                />
-                            </div>
-                            <div class="space-y-2">
-                                <Label>Middle Name</Label>
-                                <Input
-                                    v-model="form.middle_name"
-                                    readonly
-                                    disabled
-                                    class="bg-slate-100/50 cursor-not-allowed"
-                                />
-                            </div>
-                            <div class="space-y-2">
-                                <Label>Last Name</Label>
-                                <Input
-                                    v-model="form.last_name"
-                                    readonly
-                                    disabled
-                                    class="bg-slate-100/50 cursor-not-allowed"
-                                />
-                            </div>
-                            <div class="space-y-2">
-                                <Label>Suffix</Label>
-                                <Input
-                                    v-model="form.suffix"
-                                    readonly
-                                    disabled
-                                    class="bg-slate-100/50 cursor-not-allowed"
-                                />
-                            </div>
-                            <div class="space-y-2">
-                                <Label>Gender</Label>
-                                <Input
-                                    v-model="form.gender"
-                                    readonly
-                                    disabled
-                                    class="bg-slate-100/50 cursor-not-allowed"
-                                />
-                            </div>
-                            <div class="space-y-2">
-                                <Label>Date of Birth</Label>
-                                <Input
-                                    v-model="form.date_birth"
-                                    readonly
-                                    disabled
-                                    class="bg-slate-100/50 cursor-not-allowed"
-                                />
-                            </div>
-                            <div class="space-y-2">
-                                <Label>Civil Status</Label>
-                                <Input
-                                    v-model="form.civil_status"
-                                    readonly
-                                    disabled
-                                    class="bg-slate-100/50 cursor-not-allowed"
-                                />
-                            </div>
-                            <div class="space-y-2">
-                                <Label>Nationality</Label>
-                                <Input
-                                    v-model="form.nationality"
-                                    readonly
-                                    disabled
-                                    class="bg-slate-100/50 cursor-not-allowed"
-                                />
-                            </div>
-                        </div>
+                        </section>
                     </div>
 
-                    <div class="space-y-4">
+                    <section class="space-y-5">
                         <h4
-                            class="text-[12px] font-semibold text-slate-500 uppercase tracking-wider"
+                            class="text-xs font-semibold text-slate-500 uppercase"
                         >
                             Contact Details
                         </h4>
                         <div
-                            class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50/50 p-4 rounded-xl border border-dashed border-slate-200"
+                            class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-200"
                         >
-                            <div class="space-y-2">
-                                <Label>Personal Email</Label>
+                            <div
+                                v-for="field in [
+                                    {
+                                        key: 'personal_email',
+                                        label: 'Personal Email',
+                                    },
+                                    {
+                                        key: 'mobile_number',
+                                        label: 'Mobile Number',
+                                    },
+                                    {
+                                        key: 'telephone_number',
+                                        label: 'Telephone',
+                                    },
+                                    {
+                                        key: 'present_address',
+                                        label: 'Present Address',
+                                        span: 'md:col-span-3',
+                                    },
+                                    {
+                                        key: 'permanent_address',
+                                        label: 'Permanent Address',
+                                        span: 'md:col-span-3',
+                                    },
+                                ]"
+                                :key="field.key"
+                                :class="['flex flex-col', field.span]"
+                            >
+                                <label
+                                    class="text-xs font-semibold mb-1 text-gray-500"
+                                    >{{ field.label }}</label
+                                >
                                 <Input
-                                    v-model="form.personal_email"
+                                    v-model="form[field.key]"
+                                    :placeholder="field.label"
                                     readonly
                                     disabled
-                                    class="bg-slate-100/50 cursor-not-allowed"
-                                />
-                            </div>
-                            <div class="space-y-2">
-                                <Label>Mobile Number</Label>
-                                <Input
-                                    v-model="form.mobile_number"
-                                    readonly
-                                    disabled
-                                    class="bg-slate-100/50 cursor-not-allowed"
-                                />
-                            </div>
-                            <div class="space-y-2">
-                                <Label>Telephone Number</Label>
-                                <Input
-                                    v-model="form.telephone_number"
-                                    readonly
-                                    disabled
-                                    class="bg-slate-100/50 cursor-not-allowed"
-                                />
-                            </div>
-                            <div class="md:col-span-3 space-y-2">
-                                <Label>Present Address</Label>
-                                <Input
-                                    v-model="form.present_address"
-                                    readonly
-                                    disabled
-                                    class="bg-slate-100/50 cursor-not-allowed"
-                                />
-                            </div>
-                            <div class="md:col-span-3 space-y-2">
-                                <Label>Permanent Address</Label>
-                                <Input
-                                    v-model="form.permanent_address"
-                                    readonly
-                                    disabled
-                                    class="bg-slate-100/50 cursor-not-allowed"
                                 />
                             </div>
                         </div>
-                    </div>
+                    </section>
 
-                    <div class="space-y-4">
+                    <section class="space-y-5">
                         <h4
-                            class="text-[12px] font-semibold text-slate-500 uppercase tracking-wider"
+                            class="text-xs font-semibold text-slate-500 uppercase"
                         >
                             Government IDs
                         </h4>
                         <div
-                            class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50/50 p-4 rounded-xl border border-dashed border-slate-200"
+                            class="grid grid-cols-1 md:grid-cols-4 gap-6 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-200"
                         >
-                            <div class="space-y-2">
-                                <Label>SSS Number</Label>
+                            <div
+                                v-for="field in [
+                                    { key: 'sss_number', label: 'SSS Number' },
+                                    {
+                                        key: 'philhealth_number',
+                                        label: 'PhilHealth Number',
+                                    },
+                                    {
+                                        key: 'pagibig_number',
+                                        label: 'Pag-IBIG Number',
+                                    },
+                                    { key: 'tin_number', label: 'TIN Number' },
+                                ]"
+                                :key="field.key"
+                                class="flex flex-col"
+                            >
+                                <label
+                                    class="text-xs font-semibold mb-1 text-gray-500"
+                                    >{{ field.label }}</label
+                                >
                                 <Input
-                                    v-model="form.sss_number"
+                                    v-model="form[field.key]"
+                                    :placeholder="field.label"
                                     readonly
                                     disabled
-                                    class="bg-slate-100/50 cursor-not-allowed"
-                                />
-                            </div>
-                            <div class="space-y-2">
-                                <Label>PhilHealth Number</Label>
-                                <Input
-                                    v-model="form.philhealth_number"
-                                    readonly
-                                    disabled
-                                    class="bg-slate-100/50 cursor-not-allowed"
-                                />
-                            </div>
-                            <div class="space-y-2">
-                                <Label>Pag-IBIG Number</Label>
-                                <Input
-                                    v-model="form.pagibig_number"
-                                    readonly
-                                    disabled
-                                    class="bg-slate-100/50 cursor-not-allowed"
-                                />
-                            </div>
-                            <div class="space-y-2">
-                                <Label>TIN Number</Label>
-                                <Input
-                                    v-model="form.tin_number"
-                                    readonly
-                                    disabled
-                                    class="bg-slate-100/50 cursor-not-allowed"
                                 />
                             </div>
                         </div>
-                    </div>
+                    </section>
 
-                    <div class="space-y-4">
+                    <section class="space-y-5">
                         <h4
-                            class="text-[12px] font-semibold text-slate-500 uppercase tracking-wider"
+                            class="text-xs font-semibold text-slate-500 uppercase"
                         >
                             Emergency Information
                         </h4>
                         <div
-                            class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50/50 p-4 rounded-xl border border-dashed border-slate-200"
+                            class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-200"
                         >
-                            <div class="space-y-2">
-                                <Label>Contact Person</Label>
+                            <div
+                                v-for="field in [
+                                    {
+                                        key: 'contact_person',
+                                        label: 'Contact Person',
+                                    },
+                                    {
+                                        key: 'relationship',
+                                        label: 'Relationship',
+                                    },
+                                    {
+                                        key: 'contact_number',
+                                        label: 'Contact Number',
+                                    },
+                                    { key: 'address', label: 'Address' },
+                                ]"
+                                :key="field.key"
+                                class="flex flex-col"
+                            >
+                                <label
+                                    class="text-xs font-semibold mb-1 text-gray-500"
+                                    >{{ field.label }}</label
+                                >
                                 <Input
-                                    v-model="form.contact_person"
+                                    v-model="form[field.key]"
+                                    :placeholder="field.label"
                                     readonly
                                     disabled
-                                    class="bg-white/50 cursor-not-allowed"
-                                />
-                            </div>
-                            <div class="space-y-2">
-                                <Label>Relationship</Label>
-                                <Input
-                                    v-model="form.relationship"
-                                    readonly
-                                    disabled
-                                    class="bg-white/50 cursor-not-allowed"
-                                />
-                            </div>
-                            <div class="space-y-2">
-                                <Label>Emergency Contact Number</Label>
-                                <Input
-                                    v-model="form.contact_number"
-                                    readonly
-                                    disabled
-                                    class="bg-white/50 cursor-not-allowed"
-                                />
-                            </div>
-                            <div class="space-y-2">
-                                <Label>Address</Label>
-                                <Input
-                                    v-model="form.address"
-                                    readonly
-                                    disabled
-                                    class="bg-white/50 cursor-not-allowed"
                                 />
                             </div>
                         </div>
-                    </div>
+                    </section>
 
                     <div class="space-y-4">
                         <h4
@@ -762,14 +769,17 @@ const submit = () => {
                                 <span class="text-sm text-slate-600 font-medium"
                                     >Employee Resume / CV</span
                                 >
+
                                 <a
-                                    v-if="employee?.resume"
-                                    :href="employee.resume"
+                                    v-if="existingResume"
+                                    :href="existingResume"
                                     target="_blank"
                                     class="text-brand-blue text-sm font-bold hover:underline"
                                 >
-                                    View Uploaded Resume
+                                    View Current Resume
+                                    <ExternalLink class="w-3 h-3" />
                                 </a>
+
                                 <span
                                     v-else
                                     class="text-xs text-slate-400 italic"

@@ -11,14 +11,22 @@ class CheckUserType
 {
     public function handle(Request $request, Closure $next, string $type): Response
     {
-        // 1. Check if user is even logged in
         if (!Auth::check()) {
             return redirect('/');
         }
 
-        $userType = $request->user()->userType?->name;
+        $user = Auth::user();
+        $userType = $user->userType?->name;
 
+        // Check if the user type matches (e.g., 'employee')
         if (strtolower($userType) === strtolower($type)) {
+
+            // ADD THIS: Redirect pending employees to profile if they try to access other employee pages
+            if ($userType === 'employee' && $user->status_id == 4 && !$request->routeIs('employee.profile')) {
+                return redirect()->route('employee.profile')
+                    ->with('message', 'Please complete your profile first.');
+            }
+
             return $next($request);
         }
 
