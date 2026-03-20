@@ -11,7 +11,20 @@ class PositionSeeder extends Seeder
     {
 
     $statusIds = 1;
-    $names = ['Head', 'Staff'];
+    $names = [
+        'Head',
+        'Manager',
+        'Supervisor',
+        'Team Leader',
+        'Senior Staff',
+        'Junior Staff',
+        'Staff',
+        'Assistant',
+        'Coordinator',
+        'Administrator',
+        'Officer',
+        'Specialist'
+    ];
 
     foreach ($names as $name) {
         DB::table('positions')->insert([

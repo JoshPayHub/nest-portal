@@ -3,61 +3,114 @@
 namespace App\Http\Controllers\Hr;
 
 use App\Http\Controllers\Controller;
-use App\Models\Announcement;
-use App\Models\Policies;
+use App\Models\AnnouncementPolicy;
+use App\Models\AnnouncementPolicyFilter;
 use App\Models\Department;
+use App\Models\Position;
 use App\Models\Status;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class AnnouncementPolicyController extends Controller
 {
-    public function index()
+   public function index(Request $request)
     {
+        $query = AnnouncementPolicy::with(['status', 'filters.department', 'filters.position'])
+            ->when($request->search, function ($query, $search) {
+                $query->where('title', 'like', "%{$search}%");
+            })
+            ->when($request->tab && $request->tab !== 'all', function ($query) use ($request) {
+                $query->where('types', $request->tab);
+            })
+            ->when($request->status, function ($query, $status) {
+                $query->where('status_id', $status);
+            })
+            ->latest('announcements_policies.created_at')
+            ->paginate(10)
+            ->withQueryString();
+
+        // Map through the data to ensure 'status_name' exists for the Vue template
+        $query->getCollection()->transform(function ($item) {
+            $item->status_name = $item->status ? $item->status->name : 'Unknown';
+            return $item;
+        });
+
         return Inertia::render('management/HR/AnnouncementAndPolicy', [
-            'announcements' => Announcement::with(['department', 'status'])->latest()->get(),
-            'policies' => Policies::with(['department', 'status'])->latest()->get(),
+            'data' => $query,
             'departments' => Department::all(),
-            'statuses' => Status::all(),
+            'positions' => Position::all(),
+            'statuses' => Status::whereIn('id', [1, 2])->get(),
+            'filters' => $request->only(['search', 'tab', 'status'])
         ]);
     }
 
-   public function store(Request $request)
-{
-    $validated = $request->validate([
-        'type' => 'required|in:announcement,policy',
-        'title' => 'required|string|max:255',
-        'description' => 'nullable|string',
-        'department_id' => 'required|exists:departments,id', // single department
-        'status_id' => 'required|exists:statuses,id',
-    ]);
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'types' => 'required|in:announcements,policies',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'status_id' => 'required|integer',
+            'selected_departments' => 'nullable|array',
+            'selected_positions' => 'nullable|array',
+        ]);
 
-    if ($request->type === 'announcement') {
-        Announcement::create($validated);
-    } else {
-        Policies::create($validated);
+        DB::transaction(function () use ($validated) {
+            $record = AnnouncementPolicy::create([
+                'types' => $validated['types'],
+                'title' => $validated['title'],
+                'description' => $validated['description'],
+                'status_id' => $validated['status_id'],
+            ]);
+
+            $this->saveFilters($record->id, $validated);
+        });
+
+        return redirect()->back();
     }
 
-    return redirect()->back();
-}
+    public function update(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'types' => 'required|string',
+            'description' => 'nullable|string',
+            'status_id' => 'required|exists:statuses,id',
+            'selected_departments' => 'nullable|array',
+            'selected_positions' => 'nullable|array',
+        ]);
 
-public function update(Request $request, $id)
-{
-    $validated = $request->validate([
-        'type' => 'required|in:announcement,policy',
-        'title' => 'required|string|max:255',
-        'description' => 'nullable|string',
-        'department_id' => 'required|exists:departments,id', // single department
-        'status_id' => 'required|exists:statuses,id',
-    ]);
+        DB::transaction(function () use ($validated, $id) {
+            $record = AnnouncementPolicy::findOrFail($id);
+            $record->update([
+                'types' => $validated['types'],
+                'title' => $validated['title'],
+                'description' => $validated['description'],
+                'status_id' => $validated['status_id'],
+            ]);
 
-    $model = $request->type === 'announcement'
-        ? Announcement::findOrFail($id)
-        : Policies::findOrFail($id);
+            // Clean and re-save filters to keep it consistent with store
+            AnnouncementPolicyFilter::where('announcement_policy_id', $id)->delete();
+            $this->saveFilters($id, $validated);
+        });
 
-    $model->update($validated);
+        return redirect()->back();
+    }
 
-    return redirect()->back();
-}
+    private function saveFilters($recordId, $validated)
+    {
+        $deptIds = !empty($validated['selected_departments']) ? $validated['selected_departments'] : [null];
+        $posIds = !empty($validated['selected_positions']) ? $validated['selected_positions'] : [null];
 
+        foreach ($deptIds as $dId) {
+            foreach ($posIds as $pId) {
+                AnnouncementPolicyFilter::create([
+                    'announcement_policy_id' => $recordId,
+                    'department_id' => $dId,
+                    'position_id' => $pId,
+                ]);
+            }
+        }
+    }
 }

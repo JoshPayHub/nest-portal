@@ -11,7 +11,20 @@ class DepartmentSeeder extends Seeder
     {
 
     $statusIds = 1;
-    $names = ['IT Department', 'Admin Department', 'HR Department', 'Finance'];
+    $names = [
+        'IT Department',
+        'Admin Department',
+        'HR Department',
+        'Finance Department',
+        'Accounting Department',
+        'Marketing Department',
+        'Sales Department',
+        'Operations Department',
+        'Customer Service Department',
+        'Procurement Department',
+        'Research and Development Department',
+        'Legal Department'
+    ];
 
     foreach ($names as $name) {
         DB::table('departments')->insert([

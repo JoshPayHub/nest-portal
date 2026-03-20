@@ -47,7 +47,7 @@ const menuItems = {
         },
         {
             label: "Announcements & Policies",
-            href: "/hr/announcement-and-policy",
+            href: "/hr/announcements-policies",
             icon: "fa-solid fa-scroll",
         },
         {

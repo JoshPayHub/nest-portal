@@ -14,9 +14,12 @@ Route::middleware(['auth', 'user_type:HR'])->prefix('hr')->name('hr.')->group(fu
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::get('/announcement-and-policy', [AnnouncementPolicyController::class, 'index'])->name('announcementpolicy.index');
-    Route::post('/announcement-and-policy/store', [AnnouncementPolicyController::class, 'store'])->name('announcementpolicy.store');
-    Route::put('/announcement-and-policy/update/{id}', [AnnouncementPolicyController::class, 'update'])->name('announcementpolicy.update'); // change POST → PUT
+    Route::controller(AnnouncementPolicyController::class)->group(function () {
+        Route::get('/announcements-policies', 'index')->name('announcementpolicy.index');
+        Route::post('/announcements-policies', 'store')->name('announcementpolicy.store');
+        Route::post('/announcements-policies/{announcementPolicy}', 'update')->name('announcementpolicy.update');
+        Route::delete('/announcements-policies/{announcementPolicy}', 'destroy')->name('announcementpolicy.destroy');
+    });
 
     Route::get('/add-employees', [EmployeeController::class, 'index'])->name('addemployees.index');
     Route::post('/add-employees/store', [EmployeeController::class, 'store'])->name('addemployees.store');

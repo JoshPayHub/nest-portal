@@ -13,8 +13,9 @@ class ProfileController extends Controller
 
     public function index()
     {
+        // Eager load the relationships so their names are available
         return Inertia::render('management/Employee/ProfileEdit', [
-            'employee' => Auth::user()->load('status'),
+            'employee' => Auth::user()->load(['status', 'department', 'position']),
         ]);
     }
 

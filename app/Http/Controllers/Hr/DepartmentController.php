@@ -10,13 +10,21 @@ use Inertia\Inertia;
 
 class DepartmentController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $departments = Department::join('statuses', 'departments.status_id', '=', 'statuses.id')
+            ->select('departments.*', 'statuses.name as status_name')
+            ->when($request->search, function ($query, $search) {
+                $query->where('departments.name', 'like', "%{$search}%");
+            })
+            ->latest('departments.created_at')
+            ->paginate(10)
+            ->withQueryString();
+
         return Inertia::render('management/HR/Department', [
-            'departments' => Department::join('statuses', 'departments.status_id', '=', 'statuses.id')
-                ->select('departments.*', 'statuses.name as status_name')
-                ->get(),
+            'departments' => $departments,
             'statuses' => Status::whereIn('id', [1, 2])->get(),
+            'filters' => $request->only(['search'])
         ]);
     }
 
@@ -28,8 +36,7 @@ class DepartmentController extends Controller
         ]);
 
         Department::create($validated);
-
-        return redirect()->back()->with('message', 'Department added successfully!');
+        return redirect()->back();
     }
 
     public function update(Request $request, $id)
@@ -42,7 +49,6 @@ class DepartmentController extends Controller
         ]);
 
         $department->update($validated);
-
-        return redirect()->back()->with('message', 'Department updated successfully!');
+        return redirect()->back();
     }
 }

@@ -10,13 +10,21 @@ use Inertia\Inertia;
 
 class PositionController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $positions = Position::join('statuses', 'positions.status_id', '=', 'statuses.id')
+            ->select('positions.*', 'statuses.name as status_name')
+            ->when($request->search, function ($query, $search) {
+                $query->where('positions.name', 'like', "%{$search}%");
+            })
+            ->latest('positions.created_at')
+            ->paginate(10)
+            ->withQueryString();
+
         return Inertia::render('management/HR/Position', [
-            'positions' => Position::join('statuses', 'positions.status_id', '=', 'statuses.id')
-                ->select('positions.*', 'statuses.name as status_name')
-                ->get(),
+            'positions' => $positions,
             'statuses' => Status::whereIn('id', [1, 2])->get(),
+            'filters' => $request->only(['search'])
         ]);
     }
 
@@ -28,8 +36,7 @@ class PositionController extends Controller
         ]);
 
         Position::create($validated);
-
-        return redirect()->back()->with('message', 'Position added successfully!');
+        return redirect()->back();
     }
 
     public function update(Request $request, $id)
@@ -42,7 +49,6 @@ class PositionController extends Controller
         ]);
 
         $position->update($validated);
-
-        return redirect()->back()->with('message', 'Position updated successfully!');
+        return redirect()->back();
     }
 }

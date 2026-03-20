@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed } from "vue";
-import { useForm } from "@inertiajs/vue3";
+import { ref, watch } from "vue";
+import { useForm, router } from "@inertiajs/vue3";
 import {
     Pencil,
     Building2,
@@ -8,10 +8,13 @@ import {
     Search,
     CheckCircle2,
     AlertCircle,
-    X,
+    FileText,
 } from "lucide-vue-next";
 
-// Shadcn UI Components
+// Import Toast Store
+import { toastStore } from "@/stores/toast";
+
+// UI Components
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
 import { Label } from "@/Components/ui/label";
@@ -38,35 +41,32 @@ import {
     TableHeader,
     TableRow,
 } from "@/Components/ui/table";
-import { Alert, AlertDescription, AlertTitle } from "@/Components/ui/alert";
+// Alert imports removed as they are no longer used for notifications
+import Pagination from "@/Components/Pagination/Index.vue";
 
 const props = defineProps({
-    departments: Array,
+    departments: Object,
     statuses: Array,
+    filters: Object,
 });
 
 // State
 const isDialogOpen = ref(false);
 const isEditing = ref(false);
 const currentEditId = ref(null);
-const searchQuery = ref("");
-
-const alertStatus = ref({
-    show: false,
-    title: "",
-    message: "",
-    variant: "default",
-});
+const search = ref(props.filters.search || "");
 
 const form = useForm({
     name: "",
     status_id: 1,
 });
 
-// Filtered Departments
-const filteredDepartments = computed(() => {
-    return props.departments.filter((dept) =>
-        dept.name.toLowerCase().includes(searchQuery.value.toLowerCase()),
+// Server-side search watcher
+watch(search, (value) => {
+    router.get(
+        "/hr/department",
+        { search: value },
+        { preserveState: true, replace: true },
     );
 });
 
@@ -77,11 +77,11 @@ const openCreateModal = () => {
     isDialogOpen.value = true;
 };
 
-const openEditModal = (dept) => {
+const openEditModal = (pos) => {
     isEditing.value = true;
-    currentEditId.value = dept.id;
-    form.name = dept.name;
-    form.status_id = dept.status_id;
+    currentEditId.value = pos.id;
+    form.name = pos.name;
+    form.status_id = pos.status_id;
     isDialogOpen.value = true;
 };
 
@@ -94,24 +94,23 @@ const submit = () => {
         onSuccess: () => {
             isDialogOpen.value = false;
             form.reset();
-            alertStatus.value = {
-                show: true,
-                title: "Action Successful",
-                message: isEditing.value
+
+            // Trigger Toast Success
+            toastStore.show(
+                isEditing.value
                     ? "Department details updated."
                     : "New department added to system.",
-                variant: "default",
-            };
-            setTimeout(() => (alertStatus.value.show = false), 5000);
+                "success",
+            );
         },
         onError: (errors) => {
             const firstError = Object.values(errors)[0];
-            alertStatus.value = {
-                show: true,
-                title: "Error Occurred",
-                message: firstError || "Please check your inputs.",
-                variant: "destructive",
-            };
+
+            // Trigger Toast Error
+            toastStore.show(
+                firstError || "Please check your inputs.",
+                "danger", // or "destructive" depending on your store's accepted types
+            );
         },
     });
 };
@@ -119,25 +118,25 @@ const submit = () => {
 
 <template>
     <div class="p-6 space-y-8">
-        <Card class="shadow-sm border-blue-100 max-w-6xl mx-auto">
+        <Card class="shadow-sm border-blue-100 max-w-7xl mx-auto">
             <CardHeader class="border-b border-slate-50">
                 <div
                     class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
                 >
                     <div>
                         <CardTitle
-                            class="text-4xl font-extrabold text-brand-blue tracking-tight"
+                            class="text-3xl font-extrabold text-brand-blue tracking-tight"
                         >
                             Department Management
                         </CardTitle>
-                        <CardDescription class="text-lg mt-2">
+                        <CardDescription class="text-base mt-1 text-slate-500">
                             Organize company structures and manage department
                             availability.
                         </CardDescription>
                     </div>
                     <Button
                         @click="openCreateModal"
-                        class="bg-brand-blue hover:bg-brand-blue/90 h-12 px-8 text-base font-bold shadow-md transition-all active:scale-95"
+                        class="bg-brand-blue hover:bg-brand-blue/90 h-12 px-8 font-bold shadow-md transition-all active:scale-95"
                     >
                         <Plus class="w-5 h-5 mr-2" /> Add New Department
                     </Button>
@@ -145,38 +144,19 @@ const submit = () => {
             </CardHeader>
 
             <CardContent>
-                <transition name="fade">
-                    <Alert
-                        v-if="alertStatus.show"
-                        :variant="alertStatus.variant"
-                        class="mb-6 border-2"
-                    >
-                        <component
-                            :is="
-                                alertStatus.variant === 'destructive'
-                                    ? AlertCircle
-                                    : CheckCircle2
-                            "
-                            class="h-5 w-5"
-                        />
-                        <AlertTitle class="font-bold">{{
-                            alertStatus.title
-                        }}</AlertTitle>
-                        <AlertDescription>{{
-                            alertStatus.message
-                        }}</AlertDescription>
-                    </Alert>
-                </transition>
-
                 <div
-                    class="flex items-center space-x-2 bg-slate-50 rounded-lg border border-slate-200 px-4 h-12 mb-6"
+                    class="flex flex-col md:flex-row gap-3 mb-6 items-center pt-3"
                 >
-                    <Search class="w-5 h-5 text-slate-400" />
-                    <input
-                        v-model="searchQuery"
-                        placeholder="Filter by department name..."
-                        class="flex-1 border-none focus:ring-0 text-sm outline-none bg-transparent"
-                    />
+                    <div class="relative w-full md:w-1/3">
+                        <Search
+                            class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
+                        />
+                        <Input
+                            v-model="search"
+                            placeholder="Filter by department name..."
+                            class="pl-10 h-12"
+                        />
+                    </div>
                 </div>
 
                 <div class="rounded-md border border-slate-200 overflow-hidden">
@@ -184,76 +164,86 @@ const submit = () => {
                         <TableHeader class="bg-slate-50/50">
                             <TableRow>
                                 <TableHead
-                                    class="font-bold text-slate-700 w-[100px]"
+                                    class="font-bold text-slate-600 uppercase text-xs tracking-wider w-[100px]"
                                     >ID</TableHead
                                 >
-                                <TableHead class="font-bold text-slate-700"
-                                    >DEPARTMENT NAME</TableHead
+                                <TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs tracking-wider"
+                                    >Department Name</TableHead
                                 >
                                 <TableHead
-                                    class="font-bold text-slate-700 text-center"
-                                    >STATUS</TableHead
+                                    class="text-center font-bold text-slate-600 uppercase text-xs tracking-wider"
+                                    >Status</TableHead
                                 >
                                 <TableHead
-                                    class="text-right font-bold text-slate-700 px-6"
-                                    >ACTIONS</TableHead
+                                    class="text-right font-bold text-slate-600 uppercase text-xs tracking-wider px-6"
+                                    >Actions</TableHead
                                 >
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            <TableRow
-                                v-for="dept in filteredDepartments"
-                                :key="dept.id"
-                                class="hover:bg-blue-50/30 transition-colors group"
-                            >
-                                <TableCell
-                                    class="font-mono text-slate-500 text-xs"
-                                    >#{{ dept.id }}</TableCell
+                            <template v-if="departments.data.length > 0">
+                                <TableRow
+                                    v-for="pos in departments.data"
+                                    :key="pos.id"
+                                    class="hover:bg-blue-50/30 transition-colors group"
                                 >
-                                <TableCell class="font-semibold text-slate-800">
-                                    <div class="flex items-center gap-3">
-                                        <div
-                                            class="p-2 bg-blue-50 rounded text-brand-blue"
-                                        >
-                                            <Building2 class="w-4 h-4" />
+                                    <TableCell
+                                        class="font-mono text-slate-500 text-xs"
+                                        >#{{ pos.id }}</TableCell
+                                    >
+                                    <TableCell
+                                        class="font-semibold text-slate-800"
+                                    >
+                                        <div class="flex items-center gap-3">
+                                            <div
+                                                class="p-2 bg-blue-50 rounded text-brand-blue"
+                                            >
+                                                <Building2 class="w-4 h-4" />
+                                            </div>
+                                            {{ pos.name }}
                                         </div>
-                                        {{ dept.name }}
-                                    </div>
-                                </TableCell>
-                                <TableCell class="text-center">
-                                    <span
-                                        :class="[
-                                            'inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider',
-                                            dept.status_id === 1
-                                                ? 'bg-green-100 text-green-700'
-                                                : 'bg-red-100 text-red-700',
-                                        ]"
-                                    >
-                                        {{ dept.status_name }}
-                                    </span>
-                                </TableCell>
-                                <TableCell class="text-right px-6">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        @click="openEditModal(dept)"
-                                        class="text-brand-blue hover:bg-blue-100"
-                                    >
-                                        <Pencil class="w-4 h-4 mr-2" /> Edit
-                                    </Button>
-                                </TableCell>
-                            </TableRow>
-                            <TableRow v-if="filteredDepartments.length === 0">
+                                    </TableCell>
+                                    <TableCell class="text-center">
+                                        <span
+                                            :class="[
+                                                'inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase',
+                                                pos.status_id === 1
+                                                    ? 'bg-green-100 text-green-700'
+                                                    : 'bg-red-100 text-red-700',
+                                            ]"
+                                        >
+                                            {{ pos.status_name }}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell class="text-right px-6">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            @click="openEditModal(pos)"
+                                            class="h-8 w-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                        >
+                                            <Pencil class="w-4 h-4" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            </template>
+                            <TableRow v-else>
                                 <TableCell
                                     colspan="4"
-                                    class="h-32 text-center text-slate-400 italic"
+                                    class="text-center text-slate-500 py-10 italic"
                                 >
-                                    No records found matching your search.
+                                    <FileText
+                                        class="w-10 h-10 mx-auto mb-2 opacity-20"
+                                    />
+                                    No records found matching your criteria.
                                 </TableCell>
                             </TableRow>
                         </TableBody>
                     </Table>
                 </div>
+
+                <Pagination :links="departments" />
             </CardContent>
         </Card>
 
@@ -284,7 +274,7 @@ const submit = () => {
                         <Input
                             id="name"
                             v-model="form.name"
-                            placeholder="e.g., Marketing & Growth"
+                            placeholder="e.g., Senior Web Developer"
                             class="h-12 border-slate-200 focus:ring-brand-blue"
                             required
                         />
@@ -299,7 +289,7 @@ const submit = () => {
                         <select
                             id="status"
                             v-model="form.status_id"
-                            class="flex h-12 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-brand-blue outline-none transition-all"
+                            class="flex h-12 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-brand-blue outline-none transition-all cursor-pointer"
                         >
                             <option
                                 v-for="status in statuses"
@@ -333,14 +323,3 @@ const submit = () => {
         </Dialog>
     </div>
 </template>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-    transition: opacity 0.4s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-    opacity: 0;
-}
-</style>

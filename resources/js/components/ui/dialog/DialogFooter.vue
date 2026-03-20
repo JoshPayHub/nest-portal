@@ -1,8 +1,11 @@
 <script setup>
+import { DialogClose } from "reka-ui";
 import { cn } from "@/lib/utils";
+import { Button } from '@/components/ui/button';
 
 const props = defineProps({
   class: { type: null, required: false },
+  showCloseButton: { type: Boolean, required: false, default: false },
 });
 </script>
 
@@ -14,5 +17,8 @@ const props = defineProps({
     "
   >
     <slot />
+    <DialogClose v-if="showCloseButton" as-child>
+      <Button variant="outline"> Close </Button>
+    </DialogClose>
   </div>
 </template>

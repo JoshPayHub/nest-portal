@@ -55,16 +55,22 @@ const form = useForm({
     profile_photo: null,
 
     // view only
+    department_name: employee.department?.name || "N/A",
+    position_name: employee.position?.name || "N/A",
+    department_id: employee.department_id,
+    position_id: employee.position_id,
+
     employee_id: employee.employee_id,
     username: employee.username,
     company_email: employee.company_email,
-
     date_hired: employee.date_hired,
     regularization_date: employee.regularization_date,
     immediate_supervisor: employee.immediate_supervisor,
     work_location: employee.work_location,
     payroll_group: employee.payroll_group,
     leave_pay: employee.leave_pay,
+    employment_status: employee.employment_status,
+    employment_type: employee.employment_type,
 });
 
 const preview = ref(null);
@@ -213,8 +219,31 @@ const clearError = (field) => {
                                         label: 'Middle Name',
                                     },
                                     { key: 'last_name', label: 'Last Name' },
-                                    { key: 'suffix', label: 'Suffix' },
-                                    { key: 'gender', label: 'Gender' },
+                                    {
+                                        key: 'suffix',
+                                        label: 'Suffix',
+                                        type: 'select',
+                                        options: [
+                                            'N/A',
+                                            'Jr.',
+                                            'Sr.',
+                                            'II',
+                                            'III',
+                                            'IV',
+                                            'V',
+                                        ],
+                                    },
+                                    {
+                                        key: 'gender',
+                                        label: 'Gender',
+                                        type: 'select',
+                                        options: [
+                                            'Male',
+                                            'Female',
+                                            'Other',
+                                            'Prefer not to say',
+                                        ],
+                                    },
                                     {
                                         key: 'date_birth',
                                         label: 'Date of Birth',
@@ -223,6 +252,8 @@ const clearError = (field) => {
                                     {
                                         key: 'civil_status',
                                         label: 'Civil Status',
+                                        type: 'select',
+                                        options: ['Single', 'Married', 'Other'],
                                     },
                                     {
                                         key: 'nationality',
@@ -234,9 +265,32 @@ const clearError = (field) => {
                             >
                                 <label
                                     class="text-xs font-semibold mb-1 text-gray-500"
-                                    >{{ field.label }}</label
                                 >
+                                    {{ field.label }}
+                                </label>
+
+                                <select
+                                    v-if="field.type === 'select'"
+                                    v-model="form[field.key]"
+                                    class="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+                                    :class="
+                                        form.errors[field.key]
+                                            ? 'border-red-500'
+                                            : ''
+                                    "
+                                    @change="clearError(field.key)"
+                                >
+                                    <option
+                                        v-for="opt in field.options"
+                                        :key="opt"
+                                        :value="opt"
+                                    >
+                                        {{ opt }}
+                                    </option>
+                                </select>
+
                                 <Input
+                                    v-else
                                     v-model="form[field.key]"
                                     :type="field.type || 'text'"
                                     :placeholder="field.label"
@@ -248,11 +302,13 @@ const clearError = (field) => {
                                     "
                                     @input="clearError(field.key)"
                                 />
+
                                 <span
                                     v-if="form.errors[field.key]"
-                                    class="text-red-500 text-sm"
-                                    >{{ form.errors[field.key] }}</span
+                                    class="text-red-500 text-xs mt-1"
                                 >
+                                    {{ form.errors[field.key] }}
+                                </span>
                             </div>
                         </div>
                     </section>
@@ -556,21 +612,21 @@ const clearError = (field) => {
                                         label: 'User Type (Role)',
                                     },
                                     {
-                                        key: 'Department',
+                                        key: 'department_name',
                                         label: 'Department',
                                     },
                                     {
-                                        key: 'company_email',
+                                        key: 'position_name',
                                         label: 'Position',
                                     },
 
                                     {
-                                        key: 'Employment Status',
+                                        key: 'employment_status',
                                         label: 'Employment Status',
                                     },
 
                                     {
-                                        key: 'Employment Type',
+                                        key: 'employment_type',
                                         label: 'Employment Type',
                                     },
 
