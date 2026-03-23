@@ -117,9 +117,7 @@ const clearError = (field) => {
 
 <template>
     <div class="p-6 space-y-6">
-        <Card
-            class="max-w-6xl mx-auto shadow-md border border-gray-200 rounded-xl"
-        >
+        <Card class="max-w-7xl mx-auto shadow-sm border-blue-100">
             <div
                 v-if="employee.status_id == 4"
                 class="m-6 flex items-start gap-4 p-4 bg-amber-50 border border-amber-200 rounded-xl"

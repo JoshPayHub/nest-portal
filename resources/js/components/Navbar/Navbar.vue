@@ -288,7 +288,7 @@ const notifications = ref([
                 </div>
 
                 <!-- Settings -->
-                <div class="relative dropdown-wrapper">
+                <!-- <div class="relative dropdown-wrapper">
                     <div
                         @click.stop="toggleDropdown('settings')"
                         class="h-[50px] w-[50px] rounded-full grid place-items-center bg-light-blue cursor-pointer"
@@ -326,10 +326,10 @@ const notifications = ref([
                             <Link href="/settings/appearance">Appearance</Link>
                         </div>
                     </div>
-                </div>
+                </div> -->
 
                 <!-- Profile -->
-                <div class="relative dropdown-wrapper">
+                <!-- <div class="relative dropdown-wrapper">
                     <div
                         @click.stop="toggleDropdown('profile')"
                         class="h-[50px] w-[50px] rounded-full grid place-items-center bg-light-blue cursor-pointer"
@@ -404,7 +404,7 @@ const notifications = ref([
                             </DialogContent>
                         </Dialog>
                     </div>
-                </div>
+                </div> -->
             </div>
         </div>
     </nav>

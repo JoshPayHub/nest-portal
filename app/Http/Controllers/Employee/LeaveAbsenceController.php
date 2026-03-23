@@ -50,7 +50,7 @@ class LeaveAbsenceController extends Controller
         $user = Auth::user()->load(['department', 'position']);
         return Inertia::render('management/Employee/LeaveAbsence', [
             'authUser' => [
-                'name' => $user->name,
+                'name' => $user->first_name . ' ' . $user->last_name,
                 'department' => $user->department?->name ?? 'N/A',
                 'position' => $user->position?->name ?? 'N/A',
             ],

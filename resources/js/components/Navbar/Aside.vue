@@ -150,7 +150,7 @@ const menuItems = {
         },
         {
             label: "Announcements & Policies",
-            href: "/management/AnnouncementAndPolicy",
+            href: "/employee/announcements-policies",
             icon: "fa-solid fa-scroll",
         },
         {

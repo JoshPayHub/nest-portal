@@ -166,6 +166,13 @@ const getTableFilterLabel = (item) => {
     ];
     return depts.length === 0 ? "All Departments" : depts.join(", ");
 };
+
+watch(searchQuery, (value) => {
+    clearTimeout(window._searchTimeout);
+    window._searchTimeout = setTimeout(() => {
+        handleFilter();
+    }, 300);
+});
 </script>
 
 <template>
@@ -215,7 +222,7 @@ const getTableFilterLabel = (item) => {
                         <Input
                             v-model="searchQuery"
                             @keyup.enter="handleFilter"
-                            placeholder="Search by title (Press Enter)..."
+                            placeholder="Search by title..."
                             class="pl-10 h-12 border-slate-200"
                         />
                     </div>
@@ -255,6 +262,11 @@ const getTableFilterLabel = (item) => {
                                 <TableHead
                                     class="font-bold text-slate-600 uppercase text-xs w-[120px]"
                                     >Type</TableHead
+                                >
+
+                                <TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs"
+                                    >Date</TableHead
                                 >
                                 <TableHead
                                     class="font-bold text-slate-600 uppercase text-xs"
@@ -300,8 +312,13 @@ const getTableFilterLabel = (item) => {
                                     </TableCell>
                                     <TableCell
                                         class="font-bold text-slate-800"
+                                        >{{ item.created_at }}</TableCell
+                                    >
+                                    <TableCell
+                                        class="font-bold text-slate-800"
                                         >{{ item.title }}</TableCell
                                     >
+
                                     <TableCell>
                                         <div
                                             class="flex items-center gap-1.5 text-slate-500 text-sm italic"
@@ -337,7 +354,7 @@ const getTableFilterLabel = (item) => {
                             </template>
                             <TableRow v-else>
                                 <TableCell
-                                    colspan="5"
+                                    colspan="6"
                                     class="text-center text-slate-500 py-20 italic"
                                 >
                                     <FileText
@@ -352,7 +369,7 @@ const getTableFilterLabel = (item) => {
                     </Table>
                 </div>
 
-                <Pagination :links="data.links" />
+                <Pagination :links="data" />
             </CardContent>
         </Card>
 

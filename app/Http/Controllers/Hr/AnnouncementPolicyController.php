@@ -14,36 +14,45 @@ use Inertia\Inertia;
 
 class AnnouncementPolicyController extends Controller
 {
-   public function index(Request $request)
-    {
-        $query = AnnouncementPolicy::with(['status', 'filters.department', 'filters.position'])
-            ->when($request->search, function ($query, $search) {
-                $query->where('title', 'like', "%{$search}%");
-            })
-            ->when($request->tab && $request->tab !== 'all', function ($query) use ($request) {
-                $query->where('types', $request->tab);
-            })
-            ->when($request->status, function ($query, $status) {
-                $query->where('status_id', $status);
-            })
-            ->latest('announcements_policies.created_at')
-            ->paginate(10)
-            ->withQueryString();
-
-        // Map through the data to ensure 'status_name' exists for the Vue template
-        $query->getCollection()->transform(function ($item) {
-            $item->status_name = $item->status ? $item->status->name : 'Unknown';
-            return $item;
+  public function index(Request $request)
+{
+    $query = AnnouncementPolicy::with(['status', 'filters.department', 'filters.position'])
+        ->when($request->search, function ($query, $search) {
+            $query->where('title', 'like', "%{$search}%");
+        })
+        ->when($request->tab && $request->tab !== 'all', function ($query) use ($request) {
+            $query->where('types', $request->tab);
+        })
+        ->when($request->status, function ($query, $status) {
+            $query->where('status_id', $status);
+        })
+        ->latest('announcements_policies.created_at')
+        ->paginate(10)
+        ->withQueryString()
+        ->through(function ($item) {
+            // Everything is handled here in one go
+            return [
+                'id' => $item->id,
+                'types' => $item->types,
+                'title' => $item->title,
+                'description' => $item->description,
+                'status_id' => $item->status_id,
+                // Accessing the object here works fine because $item is still a Model
+                'status' => $item->status ? $item->status->name : 'No Status',
+                'status_name' => $item->status ? $item->status->name : 'Unknown',
+                'filters' => $item->filters,
+                'created_at' => $item->created_at->format('F j, Y'),
+            ];
         });
 
-        return Inertia::render('management/HR/AnnouncementAndPolicy', [
-            'data' => $query,
-            'departments' => Department::all(),
-            'positions' => Position::all(),
-            'statuses' => Status::whereIn('id', [1, 2])->get(),
-            'filters' => $request->only(['search', 'tab', 'status'])
-        ]);
-    }
+    return Inertia::render('management/HR/AnnouncementAndPolicy', [
+        'data' => $query,
+        'departments' => Department::all(),
+        'positions' => Position::all(),
+        'statuses' => Status::whereIn('id', [1, 2])->get(),
+        'filters' => $request->only(['search', 'tab', 'status'])
+    ]);
+}
 
     public function store(Request $request)
     {

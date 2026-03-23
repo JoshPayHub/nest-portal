@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Employee\AccomplishmentReportController;
+use App\Http\Controllers\Employee\AnnouncementPolicyController;
 use App\Http\Controllers\Employee\BusinessNotificationController;
 use App\Http\Controllers\Employee\ChangeOffController;
 use App\Http\Controllers\Employee\DashboardController;
@@ -75,4 +76,8 @@ Route::middleware(['auth', 'user_type:Employee'])->prefix('employee')->name('emp
     // Profile
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
     Route::put('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
+
+
+    Route::get('/announcements-policies', [AnnouncementPolicyController::class, 'index'])->name('announcementpolicy.index');
+
 });
