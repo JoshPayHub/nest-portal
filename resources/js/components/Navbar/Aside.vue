@@ -200,6 +200,70 @@ const menuItems = {
             ],
         },
     ],
+
+    Head: [
+        {
+            label: "Dashboard",
+            href: "/head/dashboard",
+            icon: "fa-solid fa-gauge",
+        },
+        {
+            label: "My Profile",
+            href: "/head/profile",
+            icon: "fa-solid fa-user-gear",
+        },
+        {
+            label: "Announcements & Policies",
+            href: "/head/announcements-policies",
+            icon: "fa-solid fa-scroll",
+        },
+        {
+            category: "Staff Forms",
+            icon: "fa-solid fa-file-lines",
+            children: [
+                {
+                    label: "Accomplishment Report",
+                    href: "/head/accomplishment-report",
+                    icon: "fa-solid fa-file-lines",
+                },
+                {
+                    label: "Change Off",
+                    href: "/head/change-off",
+                    icon: "fa-solid fa-right-left",
+                },
+                {
+                    label: "Leave Form",
+                    href: "/head/leave",
+                    icon: "fa-solid fa-calendar-plus",
+                },
+                {
+                    label: "Leave of Absence Report",
+                    href: "/head/leave-of-absence",
+                    icon: "fa-solid fa-calendar-xmark",
+                },
+                {
+                    label: "Manpower Requisition Form",
+                    href: "/head/manpower",
+                    icon: "fa-solid fa-user-group",
+                },
+                {
+                    label: "Official Business Notification",
+                    href: "/head/business-notification",
+                    icon: "fa-solid fa-briefcase",
+                },
+                {
+                    label: "Overtime Request Form",
+                    href: "/head/overtime-request",
+                    icon: "fa-solid fa-clock-rotate-left",
+                },
+                {
+                    label: "Undertime Form",
+                    href: "/head/undertime-form",
+                    icon: "fa-solid fa-clock",
+                },
+            ],
+        },
+    ],
 };
 
 // 4. Filter the menu based on the user's type

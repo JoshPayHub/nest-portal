@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Employee;
+namespace App\Http\Controllers\Head;
 
 use App\Http\Controllers\Controller;
 use App\Models\AnnouncementPolicy;
@@ -46,7 +46,7 @@ class DashboardController extends Controller
             'recent_reports' => AccomplishReport::where('user_id', $user->id)->count(),
         ];
 
-        return Inertia::render('management/Employee/Index', [
+        return Inertia::render('management/Head/Index', [
             'announcements' => $announcements,
             'stats' => $stats,
             'user' => [
@@ -58,6 +58,3 @@ class DashboardController extends Controller
         ]);
     }
 }
-
-
-//  return Inertia::render('management/Employee/Index');

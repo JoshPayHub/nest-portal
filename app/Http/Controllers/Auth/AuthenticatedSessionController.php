@@ -50,6 +50,7 @@ class AuthenticatedSessionController extends Controller
             match ((int) $user->user_type_id) {
                 1 => route('hr.dashboard'),
                 2 => route('employee.dashboard'),
+                3 => route('head.dashboard'),
                 default => '/',
             }
         );

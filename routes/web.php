@@ -54,5 +54,6 @@ Route::get('/management/register', function () {
 require __DIR__ . '/auth.php';
 require __DIR__ . '/hr.php';
 require __DIR__ . '/employee.php';
+require __DIR__ . '/head.php';
 
 
