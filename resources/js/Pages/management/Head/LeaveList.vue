@@ -1,29 +1,29 @@
 <script setup>
-import { ref, computed, watch } from "vue";
-import { usePage, router } from "@inertiajs/vue3";
+import { ref, watch } from "vue";
+import { router } from "@inertiajs/vue3";
 import {
     Search,
-    FileText,
     Calendar,
     Eye,
     Check,
     X,
     User,
-    CheckCircle2,
+    FileText,
     Clock,
+    ClipboardList,
 } from "lucide-vue-next";
 import { toastStore } from "@/stores/toast";
 
 // UI Components
-import { Button } from "@/Components/ui/button";
-import { Input } from "@/Components/ui/input";
 import {
     Card,
+    CardContent,
     CardHeader,
     CardTitle,
     CardDescription,
-    CardContent,
 } from "@/Components/ui/card";
+import { Button } from "@/Components/ui/button";
+import { Input } from "@/Components/ui/input";
 import {
     Table,
     TableBody,
@@ -44,21 +44,33 @@ import {
 } from "@/Components/ui/dialog";
 
 const props = defineProps({
-    reports: Object,
-    employeeOptions: Array,
-    filters: Object,
+    items: {
+        type: Object,
+        default: () => ({ data: [] }),
+    },
+    employeeOptions: {
+        type: Array,
+        default: () => [],
+    },
+    filters: {
+        type: Object,
+        default: () => ({ search: "", employee_id: "" }),
+    },
 });
 
-const search = ref("");
+const search = ref(props.filters.search || "");
 const selectedEmployee = ref(props.filters.employee_id || "");
 const isViewOpen = ref(false);
-const selectedReport = ref(null);
+const selectedItem = ref(null);
 const processingId = ref(null);
 
-watch(selectedEmployee, (value) => {
+watch([search, selectedEmployee], ([newSearch, newEmp]) => {
     router.get(
-        "/head/accomplishment-report", // Adjust to your actual route path
-        { employee_id: value },
+        window.location.pathname,
+        {
+            search: newSearch,
+            employee_id: newEmp,
+        },
         {
             preserveState: true,
             replace: true,
@@ -67,50 +79,29 @@ watch(selectedEmployee, (value) => {
     );
 });
 
-const filteredReports = computed(() => {
-    const reportsArray = props.reports.data || [];
-    let filtered = reportsArray;
-
-    // Frontend Search (Employee name or Date)
-    if (search.value) {
-        const searchTerm = search.value.toLowerCase();
-        filtered = filtered.filter((report) => {
-            return (
-                report.employee_name.toLowerCase().includes(searchTerm) ||
-                report.report_date.toLowerCase().includes(searchTerm)
-            );
-        });
-    }
-
-    return filtered;
-});
-
-const openView = (report) => {
-    selectedReport.value = report;
+const openView = (item) => {
+    selectedItem.value = item;
     isViewOpen.value = true;
 };
 
-// Fixed handleAction to use hardcoded URL strings instead of the route() helper
-const handleAction = (reportId, statusId) => {
-    processingId.value = reportId;
-
-    // We use a template literal string to build the URL manually,
-    // just like how your Position script does it.
+const handleAction = (id, statusId) => {
+    processingId.value = id;
     router.post(
-        `/head/accomplishment-report/${reportId}/approve`,
-        {
-            status_id: statusId,
-        },
+        `${window.location.pathname}/${id}/approve`,
+        { status_id: statusId },
         {
             preserveScroll: true,
             onSuccess: () => {
-                toastStore.show("Status updated successfully", "success");
+                toastStore.show("Leave status updated successfully", "success");
                 processingId.value = null;
                 isViewOpen.value = false;
             },
             onError: (errors) => {
                 const firstError = Object.values(errors)[0];
-                toastStore.show(firstError || "Something went wrong", "danger");
+                toastStore.show(
+                    firstError || "Error updating leave record",
+                    "danger",
+                );
                 processingId.value = null;
             },
         },
@@ -137,10 +128,10 @@ const getStatusClass = (status) => {
                         <CardTitle
                             class="text-3xl font-extrabold text-brand-blue tracking-tight"
                         >
-                            Team Approvals
+                            Leave Approvals
                         </CardTitle>
                         <CardDescription class="text-base mt-1 text-slate-500">
-                            Review and manage accomplishment reports from your
+                            Review and manage employee leave requests for your
                             department.
                         </CardDescription>
                     </div>
@@ -157,7 +148,7 @@ const getStatusClass = (status) => {
                         />
                         <Input
                             v-model="search"
-                            placeholder="Search in results..."
+                            placeholder="Search by employee name..."
                             class="h-12 pl-10 w-full"
                         />
                     </div>
@@ -172,9 +163,7 @@ const getStatusClass = (status) => {
                             :key="emp.id"
                             :value="emp.id"
                         >
-                            {{ emp.first_name }} {{ emp.last_name }} ({{
-                                emp.username
-                            }})
+                            {{ emp.first_name }} {{ emp.last_name }}
                         </option>
                     </select>
                 </div>
@@ -185,15 +174,15 @@ const getStatusClass = (status) => {
                             <TableRow>
                                 <TableHead
                                     class="font-bold text-slate-600 uppercase text-xs"
-                                    >Employee</TableHead
+                                    >Employee / Ref No.</TableHead
                                 >
                                 <TableHead
                                     class="font-bold text-slate-600 uppercase text-xs"
-                                    >Period Covered</TableHead
+                                    >Leave Details</TableHead
                                 >
                                 <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs"
-                                    >Activities</TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs"
+                                    >Duration</TableHead
                                 >
                                 <TableHead
                                     class="text-center font-bold text-slate-600 uppercase text-xs"
@@ -210,10 +199,10 @@ const getStatusClass = (status) => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            <template v-if="filteredReports.length > 0">
+                            <template v-if="items?.data?.length > 0">
                                 <TableRow
-                                    v-for="report in filteredReports"
-                                    :key="report.id"
+                                    v-for="item in items.data"
+                                    :key="item.id"
                                     class="hover:bg-blue-50/30 transition-colors group"
                                 >
                                     <TableCell>
@@ -223,40 +212,58 @@ const getStatusClass = (status) => {
                                             >
                                                 <User class="w-4 h-4" />
                                             </div>
+                                            <div>
+                                                <p
+                                                    class="font-semibold text-slate-700"
+                                                >
+                                                    {{ item.employee_name }}
+                                                </p>
+                                                <p
+                                                    class="text-[10px] font-mono text-brand-blue uppercase"
+                                                >
+                                                    {{ item.reference_no }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div class="flex flex-col">
                                             <span
-                                                class="font-semibold text-slate-700"
-                                                >{{
-                                                    report.employee_name
-                                                }}</span
+                                                class="text-sm font-medium text-slate-700"
+                                                >{{ item.type_leave }}</span
+                                            >
+                                            <Badge
+                                                variant="secondary"
+                                                class="w-fit text-[10px] mt-1"
+                                                >{{ item.pay_type }}</Badge
                                             >
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <span
-                                            class="text-sm font-medium text-slate-600"
-                                        >
-                                            {{ report.period_from }} -
-                                            {{ report.period_to }}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell class="text-center">
-                                        <Badge variant="outline"
-                                            >{{
-                                                report.activities_count
-                                            }}
-                                            Items</Badge
-                                        >
+                                        <div class="flex flex-col">
+                                            <span
+                                                class="text-sm text-slate-600 font-medium"
+                                                >{{ item.start_date }} -
+                                                {{ item.end_date }}</span
+                                            >
+                                            <span
+                                                class="text-[11px] text-slate-400 flex items-center gap-1"
+                                            >
+                                                <Clock class="w-3 h-3" />
+                                                {{ item.total_days }} Day(s)
+                                            </span>
+                                        </div>
                                     </TableCell>
                                     <TableCell class="text-center">
                                         <Badge
                                             variant="outline"
                                             :class="
                                                 getStatusClass(
-                                                    report.leader_status_name,
+                                                    item.leader_status_name,
                                                 )
                                             "
                                         >
-                                            {{ report.leader_status_name }}
+                                            {{ item.leader_status_name }}
                                         </Badge>
                                     </TableCell>
                                     <TableCell class="text-center">
@@ -264,20 +271,18 @@ const getStatusClass = (status) => {
                                             variant="outline"
                                             :class="
                                                 getStatusClass(
-                                                    report.hr_status_name,
+                                                    item.hr_status_name,
                                                 )
                                             "
                                         >
-                                            {{ report.hr_status_name }}
+                                            {{ item.hr_status_name }}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell
-                                        class="text-right px-6 space-x-2"
-                                    >
+                                    <TableCell class="text-right px-6">
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            @click="openView(report)"
+                                            @click="openView(item)"
                                             class="h-8 w-8 p-0 text-brand-blue hover:bg-blue-50"
                                         >
                                             <Eye class="w-4 h-4" />
@@ -293,73 +298,92 @@ const getStatusClass = (status) => {
                                     <FileText
                                         class="w-10 h-10 mx-auto mb-2 opacity-20"
                                     />
-                                    <p>
-                                        No pending reports for your department.
-                                    </p>
+                                    <p>No leave requests found.</p>
                                 </TableCell>
                             </TableRow>
                         </TableBody>
                     </Table>
                 </div>
-                <Pagination :links="reports" />
+                <Pagination v-if="items?.links" :links="items.links" />
             </CardContent>
         </Card>
 
         <Dialog v-model:open="isViewOpen">
-            <DialogContent class="max-w-4xl max-h-[90vh] flex flex-col p-0">
+            <DialogContent class="max-w-2xl max-h-[90vh] flex flex-col p-0">
                 <DialogHeader class="p-6 pb-0">
-                    <DialogTitle class="text-2xl font-bold text-brand-blue">
-                        Report Details: {{ selectedReport?.employee_name }}
+                    <DialogTitle
+                        class="text-2xl font-bold text-brand-blue flex items-center gap-2"
+                    >
+                        <ClipboardList class="w-6 h-6" /> Leave Request Detail
                     </DialogTitle>
                     <DialogDescription>
-                        Submitted on {{ selectedReport?.report_date }}
+                        Reference No: {{ selectedItem?.reference_no }} | Filed
+                        on {{ selectedItem?.date_filed }}
                     </DialogDescription>
                 </DialogHeader>
 
                 <div class="flex-1 overflow-y-auto p-6 pt-4">
                     <div
-                        class="grid grid-cols-2 gap-4 py-4 border-y border-slate-100"
+                        class="grid grid-cols-2 gap-6 py-4 border-y border-slate-100 mb-4"
                     >
-                        <div>
+                        <div class="space-y-1">
                             <p
                                 class="text-xs font-bold text-slate-400 uppercase"
                             >
-                                Period Covered
+                                Employee
                             </p>
-                            <p class="text-sm font-semibold">
-                                {{ selectedReport?.period_from }} to
-                                {{ selectedReport?.period_to }}
+                            <p class="text-sm font-semibold text-slate-700">
+                                {{ selectedItem?.employee_name }}
+                            </p>
+                        </div>
+                        <div class="space-y-1">
+                            <p
+                                class="text-xs font-bold text-slate-400 uppercase"
+                            >
+                                Leave Type
+                            </p>
+                            <p class="text-sm font-semibold text-slate-700">
+                                {{ selectedItem?.type_leave }} ({{
+                                    selectedItem?.pay_type
+                                }})
+                            </p>
+                        </div>
+                        <div class="space-y-1">
+                            <p
+                                class="text-xs font-bold text-slate-400 uppercase"
+                            >
+                                Inclusive Dates
+                            </p>
+                            <p class="text-sm font-semibold text-slate-700">
+                                {{ selectedItem?.start_date }} to
+                                {{ selectedItem?.end_date }}
+                            </p>
+                        </div>
+                        <div class="space-y-1">
+                            <p
+                                class="text-xs font-bold text-slate-400 uppercase"
+                            >
+                                Total Days
+                            </p>
+                            <p class="text-sm font-semibold text-slate-700">
+                                {{ selectedItem?.total_days }} Day(s)
                             </p>
                         </div>
                     </div>
 
-                    <div class="space-y-3 mt-4">
-                        <div
-                            v-for="(act, index) in selectedReport?.activities"
-                            :key="index"
-                            class="bg-white border border-slate-200 rounded-xl p-4"
+                    <div
+                        class="bg-slate-50 rounded-xl p-4 border border-slate-200"
+                    >
+                        <p
+                            class="text-xs font-bold text-slate-400 uppercase mb-2"
                         >
-                            <div
-                                class="flex items-center justify-between border-b pb-2 mb-2"
-                            >
-                                <span
-                                    class="text-sm font-bold text-slate-700 flex items-center gap-1"
-                                >
-                                    <Calendar
-                                        class="w-3.5 h-3.5 text-brand-blue"
-                                    />
-                                    {{ act.date }}
-                                </span>
-                                <Badge variant="outline" class="text-[10px]">{{
-                                    act.status_name
-                                }}</Badge>
-                            </div>
-                            <p
-                                class="text-sm text-slate-600 whitespace-pre-wrap"
-                            >
-                                {{ act.activity }}
-                            </p>
-                        </div>
+                            Reason for Leave
+                        </p>
+                        <p
+                            class="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed"
+                        >
+                            {{ selectedItem?.reason || "No reason provided." }}
+                        </p>
                     </div>
                 </div>
 
@@ -370,38 +394,43 @@ const getStatusClass = (status) => {
                         >Close</Button
                     >
 
-                    <div class="flex gap-2">
+                    <div
+                        class="flex gap-2"
+                        v-if="
+                            selectedItem?.leader_status_name?.toLowerCase() ===
+                            'pending'
+                        "
+                    >
                         <Button
-                            v-if="
-                                selectedReport?.leader_status_name.toLowerCase() ===
-                                'pending'
-                            "
                             variant="outline"
                             class="border-red-200 text-red-600 hover:bg-red-50"
-                            :disabled="processingId === selectedReport?.id"
-                            @click="handleAction(selectedReport.id, 8)"
+                            :disabled="processingId === selectedItem?.id"
+                            @click="handleAction(selectedItem.id, 8)"
                         >
                             <X class="w-4 h-4 mr-1" /> Reject
                         </Button>
 
                         <Button
-                            v-if="
-                                selectedReport?.leader_status_name.toLowerCase() ===
-                                    'pending' ||
-                                selectedReport?.leader_status_name.toLowerCase() ===
-                                    'rejected'
-                            "
                             class="bg-emerald-600 hover:bg-emerald-700 text-white"
-                            :disabled="processingId === selectedReport?.id"
-                            @click="handleAction(selectedReport.id, 7)"
+                            :disabled="processingId === selectedItem?.id"
+                            @click="handleAction(selectedItem.id, 7)"
                         >
-                            <Check class="w-4 h-4 mr-1" />
-                            {{
-                                selectedReport?.leader_status_name.toLowerCase() ===
-                                "rejected"
-                                    ? "Change to Approve"
-                                    : "Approve Report"
-                            }}
+                            <Check class="w-4 h-4 mr-1" /> Approve Request
+                        </Button>
+                    </div>
+                    <div
+                        v-else-if="
+                            selectedItem?.leader_status_name?.toLowerCase() ===
+                                'rejected' &&
+                            selectedItem?.hr_status_name?.toLowerCase() ===
+                                'pending'
+                        "
+                    >
+                        <Button
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white"
+                            @click="handleAction(selectedItem.id, 7)"
+                        >
+                            <Check class="w-4 h-4 mr-1" /> Re-Approve
                         </Button>
                     </div>
                 </DialogFooter>

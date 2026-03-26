@@ -154,6 +154,8 @@ const submit = () => {
             onSuccess: () => {
                 localStorage.removeItem(STORAGE_KEY);
                 form.reset();
+                form.original_date = "";
+                form.new_date = "";
                 form.report_date = today;
                 toastStore.show(
                     "Change Off submitted successfully!",

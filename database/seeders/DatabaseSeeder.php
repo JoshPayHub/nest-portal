@@ -9,13 +9,13 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Run Parent Seeders First
-        // These MUST exist to satisfy foreign key constraints
+
         $this->call([
-        StatusSeeder::class,      // ID 1 (Active) usually created here
-        UserTypeSeeder::class,    // Depends on nothing or Status
-        DepartmentSeeder::class,  // Now it can find status_id 1
-        PositionSeeder::class,    // Now it can find status_id 1
+        StatusSeeder::class,
+        UserTypeSeeder::class,
+        DepartmentSeeder::class,
+        PositionSeeder::class,
+        OffSeeder::class,
         ]);
 
         // 2. Setup Default Values

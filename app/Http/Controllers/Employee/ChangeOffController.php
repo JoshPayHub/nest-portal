@@ -95,8 +95,8 @@ class ChangeOffController extends Controller
                 'new_date'        => $validated['new_date'],
                 'original_day_id' => $validated['original_off_id'],
                 'new_day_id'      => $validated['new_off_id'],
-                'original_time'   => $validated['original_time'],
-                'new_time'        => $validated['new_time'],
+                'original_time'   => $validated['request_type'] == 2 ? null : $validated['original_time'],
+                'new_time'        => $validated['request_type'] == 2 ? null : $validated['new_time'],
             ]);
         });
 
@@ -174,8 +174,8 @@ class ChangeOffController extends Controller
                 'new_date'        => $validated['new_date'],
                 'original_day_id' => $validated['original_off_id'],
                 'new_day_id'      => $validated['new_off_id'],
-                'original_time'   => $validated['original_time'],
-                'new_time'        => $validated['new_time'],
+                'original_time'   => $validated['request_type'] == 2 ? null : $validated['original_time'],
+                'new_time'        => $validated['request_type'] == 2 ? null : $validated['new_time'],
             ]);
 
             DB::table('change_off_statuses')
