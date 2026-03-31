@@ -11,6 +11,7 @@ import {
     FileText,
     Clock,
     ClipboardList,
+    FileTextIcon,
 } from "lucide-vue-next";
 import { toastStore } from "@/stores/toast";
 
@@ -314,11 +315,10 @@ const getStatusClass = (status) => {
                     <DialogTitle
                         class="text-2xl font-bold text-brand-blue flex items-center gap-2"
                     >
-                        <ClipboardList class="w-6 h-6" /> Leave Request Detail
+                        Request Detail: {{ selectedItem?.employee_name }}
                     </DialogTitle>
                     <DialogDescription>
-                        Reference No: {{ selectedItem?.reference_no }} | Filed
-                        on {{ selectedItem?.date_filed }}
+                        Submitted on {{ selectedItem?.date_filed }}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -330,10 +330,11 @@ const getStatusClass = (status) => {
                             <p
                                 class="text-xs font-bold text-slate-400 uppercase"
                             >
-                                Employee
+                                Period Covered
                             </p>
                             <p class="text-sm font-semibold text-slate-700">
-                                {{ selectedItem?.employee_name }}
+                                {{ selectedItem?.start_date }} to
+                                {{ selectedItem?.end_date }}
                             </p>
                         </div>
                         <div class="space-y-1">
@@ -348,17 +349,7 @@ const getStatusClass = (status) => {
                                 }})
                             </p>
                         </div>
-                        <div class="space-y-1">
-                            <p
-                                class="text-xs font-bold text-slate-400 uppercase"
-                            >
-                                Inclusive Dates
-                            </p>
-                            <p class="text-sm font-semibold text-slate-700">
-                                {{ selectedItem?.start_date }} to
-                                {{ selectedItem?.end_date }}
-                            </p>
-                        </div>
+
                         <div class="space-y-1">
                             <p
                                 class="text-xs font-bold text-slate-400 uppercase"
@@ -371,19 +362,29 @@ const getStatusClass = (status) => {
                         </div>
                     </div>
 
-                    <div
-                        class="bg-slate-50 rounded-xl p-4 border border-slate-200"
-                    >
-                        <p
-                            class="text-xs font-bold text-slate-400 uppercase mb-2"
+                    <div class="mt-4">
+                        <div
+                            class="bg-white border border-slate-200 rounded-xl p-4"
                         >
-                            Reason for Leave
-                        </p>
-                        <p
-                            class="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed"
-                        >
-                            {{ selectedItem?.reason || "No reason provided." }}
-                        </p>
+                            <div class="border-b pb-2 mb-2">
+                                <span
+                                    class="text-sm font-bold text-slate-700 flex items-center gap-1"
+                                >
+                                    <FileTextIcon
+                                        class="w-3.5 h-3.5 text-brand-blue"
+                                    />
+                                    Reason for Leave
+                                </span>
+                            </div>
+                            <p
+                                class="text-sm text-slate-600 whitespace-pre-wrap"
+                            >
+                                {{
+                                    selectedItem?.reason ||
+                                    "No reason provided."
+                                }}
+                            </p>
+                        </div>
                     </div>
                 </div>
 

@@ -296,28 +296,52 @@ const formatScheduleSub = (day, time) => {
                         Request Details: {{ selectedRequest?.employee_name }}
                     </DialogTitle>
                     <DialogDescription>
-                        Type: {{ selectedRequest?.request_type }} | Submitted on
+                        Submitted on
                         {{ selectedRequest?.date_filed }}
                     </DialogDescription>
                 </DialogHeader>
 
-                <div class="p-6 pt-4 space-y-6">
+                <div class="flex-1 overflow-y-auto p-6 pt-4">
                     <div
-                        class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-4 rounded-xl border border-slate-100"
+                        class="grid grid-cols-2 gap-4 py-4 border-y border-slate-100"
                     >
-                        <div class="space-y-1">
-                            <span
-                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
-                                >Original Schedule</span
+                        <div>
+                            <p
+                                class="text-xs font-bold text-slate-400 uppercase"
                             >
-                            <div class="flex items-center gap-2 text-slate-700">
-                                <Calendar class="w-4 h-4 text-slate-400" />
+                                Type:
+                                <span class="text-sm font-semibold text-black">
+                                    {{ selectedRequest?.request_type }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 mt-4">
+                        <div
+                            class="bg-white border border-slate-200 rounded-xl p-4"
+                        >
+                            <div
+                                class="flex items-center justify-between border-b pb-2 mb-2"
+                            >
+                                <span
+                                    class="text-sm font-bold text-slate-700 flex items-center gap-1"
+                                >
+                                    <Calendar
+                                        class="w-3.5 h-3.5 text-brand-blue"
+                                    />
+                                   Original Schedule
+                                </span>
+                            </div>
+                            <p
+                                class="grid gap-1"
+                            >
+                                <div class="text-slate-700">
                                 <span class="text-sm font-bold">{{
                                     selectedRequest?.original_date
                                 }}</span>
                             </div>
-                            <div class="flex items-center gap-2 text-slate-500">
-                                <Clock class="w-4 h-4 text-slate-400" />
+                            <div class="text-slate-500">
                                 <span class="text-xs">{{
                                     formatScheduleSub(
                                         selectedRequest?.original_day,
@@ -325,25 +349,33 @@ const formatScheduleSub = (day, time) => {
                                     )
                                 }}</span>
                             </div>
+                            </p>
                         </div>
 
-                        <div class="space-y-1">
-                            <span
-                                class="text-[10px] font-bold text-brand-blue uppercase tracking-wider"
-                                >Proposed Schedule</span
-                            >
+                        <div
+                            class="bg-white border border-slate-200 rounded-xl p-4"
+                        >
                             <div
-                                class="flex items-center gap-2 text-brand-blue"
+                                class="flex items-center justify-between border-b pb-2 mb-2"
                             >
-                                <Calendar class="w-4 h-4" />
+                                <span
+                                    class="text-sm font-bold text-slate-700 flex items-center gap-1"
+                                >
+                                    <Calendar
+                                        class="w-3.5 h-3.5 text-brand-blue"
+                                    />
+                                   Proposed Schedule
+                                </span>
+                            </div>
+                            <p
+                                class="grid gap-1"
+                            >
+                                <div class="ftext-slate-700">
                                 <span class="text-sm font-bold">{{
                                     selectedRequest?.new_date
                                 }}</span>
                             </div>
-                            <div
-                                class="flex items-center gap-2 text-brand-blue/70"
-                            >
-                                <Clock class="w-4 h-4" />
+                            <div class="text-slate-500">
                                 <span class="text-xs">{{
                                     formatScheduleSub(
                                         selectedRequest?.new_day,
@@ -351,6 +383,7 @@ const formatScheduleSub = (day, time) => {
                                     )
                                 }}</span>
                             </div>
+                            </p>
                         </div>
                     </div>
                 </div>
