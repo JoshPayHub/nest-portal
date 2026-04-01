@@ -127,6 +127,42 @@ const menuItems = {
             ],
         },
         {
+            category: "Payroll Management",
+            icon: "fa-solid fa-file-invoice-dollar",
+            children: [
+                {
+                    label: "Payroll Cut-off",
+                    href: "/forms/payroll-cut-off",
+                    icon: "fa-solid fa-calendar-days",
+                },
+                {
+                    label: "Undertime Form",
+                    href: "/forms/undertime",
+                    icon: "fa-solid fa-clock",
+                },
+                {
+                    label: "Overtime Request Form",
+                    href: "/forms/overtime-request",
+                    icon: "fa-solid fa-clock-rotate-left",
+                },
+                {
+                    label: "Leave of Absence Report",
+                    href: "/hr/leave-of-absence",
+                    icon: "fa-solid fa-calendar-xmark",
+                },
+                {
+                    label: "Holiday Management",
+                    href: "/hr/holiday",
+                    icon: "fa-solid fa-holly-berry",
+                },
+                {
+                    label: "Salary Payroll",
+                    href: "/forms/salary-payroll",
+                    icon: "fa-solid fa-money-check-dollar",
+                },
+            ],
+        },
+        {
             label: "Department Management",
             href: "/hr/department",
             icon: "fa-solid fa-building",
@@ -308,7 +344,7 @@ const goTo = (href) => {
 
                 <template v-for="(item, index) in filteredMenu" :key="index">
                     <!-- CATEGORY -->
-                    <div v-if="item.children" class="relative">
+                    <div v-if="item.children">
                         <!-- Category Button -->
                         <button
                             class="bg-white hover:bg-gray-100 text-brand-blue cursor-pointer text-sm py-2 pe-3 ps-4 flex justify-between items-center rounded-md w-full mt-2 transition-all"
@@ -326,31 +362,30 @@ const goTo = (href) => {
                             ></i>
                         </button>
 
-                        <!-- Vertical Line (only for dropdown) -->
-                        <div
-                            v-if="
-                                item.children && openCategories[item.category]
-                            "
-                            class="h-78 w-0.5 bg-white absolute top-13 bottom-0 start-0 rounded"
-                        ></div>
-
                         <!-- Dropdown with smooth transition -->
                         <transition name="slide-fade">
                             <div
                                 v-show="openCategories[item.category]"
-                                class="mt-1 space-y-1"
+                                class="relative"
                             >
-                                <button
-                                    v-for="child in item.children"
-                                    :key="child.href"
-                                    class="hover:bg-white/20 text-white bg-transparent cursor-pointer text-sm py-2 px-3 flex gap-3 items-center rounded-md w-full transition-all"
-                                    @click="goTo(child.href)"
-                                >
-                                    <div class="ps-1">
-                                        <i :class="child.icon"></i>
-                                    </div>
-                                    <div>{{ child.label }}</div>
-                                </button>
+                                <!-- Vertical Line (only for dropdown) -->
+                                <div
+                                    class="h-full w-0.5 bg-white absolute top-0 bottom-0 start-0 rounded"
+                                ></div>
+
+                                <div class="mt-1 space-y-1">
+                                    <button
+                                        v-for="child in item.children"
+                                        :key="child.href"
+                                        class="hover:bg-white/20 text-white bg-transparent cursor-pointer text-sm py-2 px-3 flex gap-3 items-center rounded-md w-full transition-all"
+                                        @click="goTo(child.href)"
+                                    >
+                                        <div class="ps-1">
+                                            <i :class="child.icon"></i>
+                                        </div>
+                                        <div>{{ child.label }}</div>
+                                    </button>
+                                </div>
                             </div>
                         </transition>
                     </div>

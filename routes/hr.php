@@ -5,6 +5,7 @@ use App\Http\Controllers\Hr\DashboardController;
 use App\Http\Controllers\Hr\DepartmentController;
 use App\Http\Controllers\Hr\EmployeeController;
 use App\Http\Controllers\Hr\EmployeeListController;
+use App\Http\Controllers\Hr\HolidayController;
 use App\Http\Controllers\Hr\PositionController;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
@@ -34,4 +35,8 @@ Route::middleware(['auth', 'user_type:HR'])->prefix('hr')->name('hr.')->group(fu
     Route::get('/position', [PositionController::class, 'index'])->name('position.index');
     Route::post('/position/store', [PositionController::class, 'store'])->name('position.store');
     Route::post('/position/update/{id}', [PositionController::class, 'update'])->name('position.update');
+
+    Route::get('/holiday', [HolidayController::class, 'index'])->name('holiday.index');
+    Route::post('/holiday/store', [HolidayController::class, 'store'])->name('holiday.store');
+    Route::post('/holiday/update/{id}', [HolidayController::class, 'update'])->name('holiday.update');
 });
