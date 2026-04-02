@@ -127,4 +127,9 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Status::class);
     }
+
+    public function salaryEmployee()
+    {
+        return $this->hasOne(SalaryEmployee::class, 'user_id');
+    }
 }

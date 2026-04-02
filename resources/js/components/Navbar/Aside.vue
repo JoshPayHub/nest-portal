@@ -131,19 +131,14 @@ const menuItems = {
             icon: "fa-solid fa-file-invoice-dollar",
             children: [
                 {
+                    label: "Holiday Management",
+                    href: "/hr/holiday",
+                    icon: "fa-solid fa-holly-berry",
+                },
+                {
                     label: "Payroll Cut-off",
-                    href: "/forms/payroll-cut-off",
+                    href: "/hr/payroll-cut-off",
                     icon: "fa-solid fa-calendar-days",
-                },
-                {
-                    label: "Undertime Form",
-                    href: "/forms/undertime",
-                    icon: "fa-solid fa-clock",
-                },
-                {
-                    label: "Overtime Request Form",
-                    href: "/forms/overtime-request",
-                    icon: "fa-solid fa-clock-rotate-left",
                 },
                 {
                     label: "Leave of Absence Report",
@@ -151,14 +146,24 @@ const menuItems = {
                     icon: "fa-solid fa-calendar-xmark",
                 },
                 {
-                    label: "Holiday Management",
-                    href: "/hr/holiday",
-                    icon: "fa-solid fa-holly-berry",
+                    label: "Overtime Request Form",
+                    href: "/forms/overtime-request",
+                    icon: "fa-solid fa-clock-rotate-left",
+                },
+                {
+                    label: "Undertime Form",
+                    href: "/forms/undertime",
+                    icon: "fa-solid fa-clock",
                 },
                 {
                     label: "Salary Payroll",
-                    href: "/forms/salary-payroll",
+                    href: "/hr/salary-payroll",
                     icon: "fa-solid fa-money-check-dollar",
+                },
+                {
+                    label: "Salary of Employee",
+                    href: "/hr/salary-employee",
+                    icon: "fa-solid fa-address-card",
                 },
             ],
         },
@@ -209,11 +214,6 @@ const menuItems = {
                     icon: "fa-solid fa-calendar-plus",
                 },
                 {
-                    label: "Leave of Absence Report",
-                    href: "/employee/leave-of-absence",
-                    icon: "fa-solid fa-calendar-xmark",
-                },
-                {
                     label: "Manpower Requisition Form",
                     href: "/employee/manpower",
                     icon: "fa-solid fa-user-group",
@@ -222,6 +222,22 @@ const menuItems = {
                     label: "Official Business Notification",
                     href: "/employee/business-notification",
                     icon: "fa-solid fa-briefcase",
+                },
+            ],
+        },
+        {
+            category: "Payroll Management",
+            icon: "fa-solid fa-file-invoice-dollar",
+            children: [
+                {
+                    label: "Payroll Cut-off",
+                    href: "/employee/payroll-cut-off",
+                    icon: "fa-solid fa-calendar-days",
+                },
+                {
+                    label: "Leave of Absence Report",
+                    href: "/employee/leave-of-absence",
+                    icon: "fa-solid fa-calendar-xmark",
                 },
                 {
                     label: "Overtime Request Form",
@@ -232,6 +248,11 @@ const menuItems = {
                     label: "Undertime Form",
                     href: "/employee/undertime-form",
                     icon: "fa-solid fa-clock",
+                },
+                {
+                    label: "Salary Payroll",
+                    href: "/employee/salary-payroll",
+                    icon: "fa-solid fa-money-check-dollar",
                 },
             ],
         },

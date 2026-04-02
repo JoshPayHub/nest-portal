@@ -6,7 +6,9 @@ use App\Http\Controllers\Hr\DepartmentController;
 use App\Http\Controllers\Hr\EmployeeController;
 use App\Http\Controllers\Hr\EmployeeListController;
 use App\Http\Controllers\Hr\HolidayController;
+use App\Http\Controllers\Hr\PayrollCutOffController;
 use App\Http\Controllers\Hr\PositionController;
+use App\Http\Controllers\Hr\SalaryEmployeeController;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
 
@@ -39,4 +41,13 @@ Route::middleware(['auth', 'user_type:HR'])->prefix('hr')->name('hr.')->group(fu
     Route::get('/holiday', [HolidayController::class, 'index'])->name('holiday.index');
     Route::post('/holiday/store', [HolidayController::class, 'store'])->name('holiday.store');
     Route::post('/holiday/update/{id}', [HolidayController::class, 'update'])->name('holiday.update');
+
+    Route::get('/payroll-cut-off', [PayrollCutOffController::class, 'index'])->name('payrollcutoff.index');
+    Route::post('/payroll-cut-off/store', [PayrollCutOffController::class, 'store'])->name('payrollcutoff.store');
+    Route::post('/payroll-cut-off/update/{id}', [PayrollCutOffController::class, 'update'])->name('payrollcutoff.update');
+
+    Route::get('/salary-employee', [SalaryEmployeeController::class, 'index'])->name('payrollcutoff.index');
+    Route::post('/salary-employee/store', [SalaryEmployeeController::class, 'store'])->name('payrollcutoff.store');
+    Route::post('/salary-employee/update/{id}', [SalaryEmployeeController::class, 'update'])->name('payrollcutoff.update');
+
 });

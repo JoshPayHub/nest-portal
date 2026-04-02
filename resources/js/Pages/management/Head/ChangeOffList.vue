@@ -367,7 +367,7 @@ const formatScheduleSub = (day, time) => {
                                    Proposed Schedule
                                 </span>
                             </div>
-                            <p
+                            <div
                                 class="grid gap-1"
                             >
                                 <div class="ftext-slate-700">
@@ -383,7 +383,7 @@ const formatScheduleSub = (day, time) => {
                                     )
                                 }}</span>
                             </div>
-                            </p>
+                            </div>
                         </div>
                     </div>
                 </div>

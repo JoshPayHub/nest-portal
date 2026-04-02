@@ -16,6 +16,9 @@ class DatabaseSeeder extends Seeder
         DepartmentSeeder::class,
         PositionSeeder::class,
         OffSeeder::class,
+        DeductionSettingSeeder::class,
+        TaxBracketSeeder::class,
+        SSSContributionSeeder::class,
         ]);
 
         // 2. Setup Default Values
