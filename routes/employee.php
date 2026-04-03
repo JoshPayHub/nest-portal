@@ -10,6 +10,7 @@ use App\Http\Controllers\Employee\LeaveController;
 use App\Http\Controllers\Employee\ManpowerController;
 use App\Http\Controllers\Employee\OvertimeRequestController;
 use App\Http\Controllers\Employee\PayrollCutOffController;
+use App\Http\Controllers\Employee\AttendanceController;
 use App\Http\Controllers\Employee\ProfileController;
 use App\Http\Controllers\Employee\UndertimeFormController;
 use Illuminate\Support\Facades\Route;
@@ -81,10 +82,13 @@ Route::middleware(['auth', 'user_type:Employee'])->prefix('employee')->name('emp
     // Announcements
     Route::get('/announcements-policies', [AnnouncementPolicyController::class, 'index'])->name('announcementpolicy.index');
 
-    Route::get('/payroll-cut-off', [PayrollCutOffController::class, 'index'])->name('payrollcutoff.index');
-    Route::get('/payroll-cut-off/create', [PayrollCutOffController::class, 'createIndex'])->name('accomplishmentreport.createIndex');
-    Route::post('/payroll-cut-off/store', [PayrollCutOffController::class, 'store'])->name('accomplishmentreport.store');
-    Route::get('/payroll-cut-off/edit/{id}', [PayrollCutOffController::class, 'edit'])->name('accomplishmentreport.edit');
-    Route::put('/payroll-cut-off/update/{id}', [PayrollCutOffController::class, 'update'])->name('accomplishmentreport.update');
+    Route::get('/payroll-cut-off', [PayrollCutOffController::class, 'index'])
+        ->name('payrollcutoff.index');
+
+    Route::get('/payroll-cut-off/{id}/attendance', [PayrollCutOffController::class, 'attendancePage'])
+        ->name('payrollcutoff.attendance');
+
+    Route::post('/attendance/store', [AttendanceController::class, 'store'])
+        ->name('attendance.store');
 
 });

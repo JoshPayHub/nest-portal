@@ -40,6 +40,7 @@ import {
     TableRow,
 } from "@/Components/ui/table";
 import Pagination from "@/Components/Pagination/Index.vue";
+import { Badge } from "@/Components/ui/badge";
 
 const props = defineProps({
     cutoffs: Object,
@@ -74,14 +75,8 @@ const openCreateModal = () => {
     isDialogOpen.value = true;
 };
 
-const openEditModal = (item) => {
-    isEditing.value = true;
-    currentEditId.value = item.id;
-    form.name = item.name;
-    form.from_cutoff_date = item.from_cutoff_date;
-    form.to_cutoff_date = item.to_cutoff_date;
-    form.status_id = item.status_id;
-    isDialogOpen.value = true;
+const viewAttendance = (id) => {
+    router.get(`/employee/payroll-cut-off/${id}/attendance`);
 };
 
 const formatDate = (dateString) => {
@@ -112,6 +107,32 @@ const submit = () => {
             toastStore.show(firstError || "Check your inputs.", "danger");
         },
     });
+};
+
+/* =========================
+   LOGIC
+========================= */
+const openView = (ot) => {
+    selectedOvertime.value = ot;
+    isViewOpen.value = true;
+};
+
+const canEdit = (item) => {
+    const leader = item.leader_status_name?.toLowerCase();
+    const hr = item.hr_status_name?.toLowerCase();
+
+    if (leader === "rejected" || hr === "rejected") return true;
+    if (leader === "approved" || hr === "approved") return false;
+
+    return true;
+};
+
+const getStatusClass = (status) => {
+    const s = status?.toLowerCase();
+    if (s === "approved") return "bg-emerald-100 text-emerald-700";
+    if (s === "rejected") return "bg-red-100 text-red-700";
+    if (s === "pending") return "bg-amber-100 text-amber-700";
+    return "bg-slate-100 text-slate-600";
 };
 </script>
 
@@ -161,11 +182,15 @@ const submit = () => {
                                 >
                                 <TableHead
                                     class="font-bold text-slate-600 uppercase text-xs"
-                                    >Period From</TableHead
+                                    >Period</TableHead
                                 >
                                 <TableHead
-                                    class="font-bold text-slate-600 uppercase text-xs"
-                                    >Period To</TableHead
+                                    class="text-center font-bold text-slate-600 uppercase text-xs tracking-wider"
+                                    >Dept. Head</TableHead
+                                >
+                                <TableHead
+                                    class="text-center font-bold text-slate-600 uppercase text-xs tracking-wider"
+                                    >HR Status</TableHead
                                 >
                                 <TableHead
                                     class="text-right font-bold text-slate-600 uppercase text-xs px-6"
@@ -191,16 +216,40 @@ const submit = () => {
                                         <span v-else> Second Cut Off </span>
                                     </TableCell>
                                     <TableCell>{{
-                                        formatDate(item.from_cutoff_date)
-                                    }}</TableCell>
-                                    <TableCell>{{
+                                        formatDate(item.from_cutoff_date) +
+                                        " - " +
                                         formatDate(item.to_cutoff_date)
                                     }}</TableCell>
+                                    <TableCell class="text-center">
+                                        <Badge
+                                            variant="outline"
+                                            :class="
+                                                getStatusClass(
+                                                    item.leader_status_name,
+                                                )
+                                            "
+                                        >
+                                            {{ item.leader_status_name }}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell class="text-center">
+                                        <Badge
+                                            variant="outline"
+                                            :class="
+                                                getStatusClass(
+                                                    item.hr_status_name,
+                                                )
+                                            "
+                                        >
+                                            {{ item.hr_status_name }}
+                                        </Badge>
+                                    </TableCell>
+
                                     <TableCell class="text-right px-6">
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            @click="openEditModal(item)"
+                                            @click="viewAttendance(item.id)"
                                             class="text-brand-blue"
                                         >
                                             <Eye class="w-4 h-4" />

@@ -18,7 +18,11 @@ return new class extends Migration
                 ->constrained('attendance_employees')
                 ->onDelete('cascade');
 
-            $table->foreignId('user_id')
+            $table->foreignId('employee_id')
+                ->constrained('users')
+                ->onDelete('restrict');
+
+            $table->foreignId('approval_id')
                 ->constrained('users')
                 ->onDelete('restrict');
 
