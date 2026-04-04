@@ -30,6 +30,9 @@ import {
     TableRow,
 } from "@/Components/ui/table";
 
+// Custom store
+import { toastStore } from "@/stores/toast";
+
 const props = defineProps({
     cutoff: Object,
     attendanceData: Object,
@@ -49,7 +52,18 @@ const submit = () => {
     form.post(`/employee/attendance/store`, {
         preserveScroll: true,
         onSuccess: () => {
-            // Optional: add toastStore.show call here if available
+            toastStore.show(
+                props.isEditing
+                    ? "Attendance updated successfully!"
+                    : "Attendance submitted successfully!",
+                "success",
+            );
+        },
+        onError: () => {
+            toastStore.show(
+                "Failed to save attendance. Please check your inputs.",
+                "error",
+            );
         },
     });
 };
@@ -65,7 +79,7 @@ const formatDate = (dateString) => {
 </script>
 
 <template>
-    <Head title="Submit Attendance" />
+    <Head :title="isEditing ? 'Edit Attendance' : 'Submit Attendance'" />
 
     <div class="p-6 space-y-7 max-w-6xl mx-auto">
         <div class="flex items-center justify-between">
@@ -73,10 +87,10 @@ const formatDate = (dateString) => {
                 class="flex items-center gap-2 text-xs uppercase tracking-wider text-slate-400"
             >
                 <span
-                    class="hover:text-brand-blue cursor-pointer transition-colors"
+                    class="hover:text-brand-blue cursor-pointer transition-colors flex items-center gap-1"
                     @click="router.get('/employee/payroll-cut-off')"
                 >
-                    Payroll Cut Off
+                    <ArrowLeft class="w-3 h-3" /> Payroll Cut Off
                 </span>
                 <span class="text-slate-300">/</span>
                 <span class="font-bold text-brand-blue">
@@ -93,7 +107,7 @@ const formatDate = (dateString) => {
             </div>
         </div>
 
-        <Card class="border-blue-100 overflow-hidden">
+        <Card class="border-blue-100 overflow-hidden shadow-sm">
             <CardHeader
                 class="space-y-4 bg-slate-50/50 border-b border-blue-50/50 pb-6"
             >
