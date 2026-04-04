@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class AttendanceEmployee extends Model
 {
@@ -16,59 +18,61 @@ class AttendanceEmployee extends Model
         'payroll_cut_off_id',
     ];
 
-    /**
-     * Relationships
-     */
-
-    // Employee (User)
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    // Department
-    public function department()
+    // department snapshot
+    public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
     }
 
-    // Position
-    public function position()
+    // position snapshot
+    public function position(): BelongsTo
     {
         return $this->belongsTo(Position::class);
     }
 
-    // Payroll Cut Off
-    public function payrollCutOff()
+    /**
+     * Relationship used by AttendanceController for processing updates.
+     */
+    public function attendanceLists(): HasMany
     {
-        return $this->belongsTo(PayrollCutOff::class);
+        return $this->hasMany(AttendanceList::class, 'attendance_employee_id');
     }
 
-    // Attendance Lists (child records)
-    public function attendanceLists()
+    /**
+     * ALIAS: renamed back to attendances() to fix the error in PayrollCutOffController.
+     * This allows both 'attendanceLists' and 'attendances' to work.
+     */
+    public function attendances(): HasMany
     {
-        return $this->hasMany(AttendanceList::class);
+        return $this->hasMany(AttendanceList::class, 'attendance_employee_id');
     }
 
+    // All approval logs
     public function approvalStatuses(): HasMany
     {
-        return $this->hasMany(AttendanceEmployeeStatus::class);
+        return $this->hasMany(AttendanceEmployeeStatus::class, 'attendance_employee_id');
     }
 
-    // Logic to get Leader status (Assumes User Type 2 is Leader/Head)
-    public function leaderStatus()
+    // Logic to get Leader status (User Type 3 is Leader)
+    public function leaderStatus(): HasOne
     {
-        return $this->approvalStatuses()
+        return $this->hasOne(AttendanceEmployeeStatus::class, 'attendance_employee_id')
             ->whereHas('user', fn($q) => $q->where('user_type_id', 3))
             ->with('status')
-            ->latest();
+            ->latestOfMany();
     }
 
-    public function hrStatus()
+    // Logic to get HR status (User Type 1 is HR)
+    public function hrStatus(): HasOne
     {
-        return $this->approvalStatuses()
+        return $this->hasOne(AttendanceEmployeeStatus::class, 'attendance_employee_id')
             ->whereHas('user', fn($q) => $q->where('user_type_id', 1))
             ->with('status')
-            ->latest();
+            ->latestOfMany();
     }
 }

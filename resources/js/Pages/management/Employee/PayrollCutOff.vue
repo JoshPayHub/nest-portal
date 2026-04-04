@@ -3,19 +3,17 @@ import { ref, watch } from "vue";
 import { useForm, router } from "@inertiajs/vue3";
 import {
     Pencil,
-    Building2,
-    Plus,
     Search,
-    FileText,
     Calendar,
     Eye,
+    Lock,
+    Clock,
+    AlertCircle,
 } from "lucide-vue-next";
-import { toastStore } from "@/stores/toast";
 
 // UI Components
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
-import { Label } from "@/Components/ui/label";
 import {
     Card,
     CardHeader,
@@ -44,36 +42,20 @@ import { Badge } from "@/Components/ui/badge";
 
 const props = defineProps({
     cutoffs: Object,
-    statuses: Array,
     filters: Object,
 });
 
-const isDialogOpen = ref(false);
-const isEditing = ref(false);
-const currentEditId = ref(null);
+const isViewOpen = ref(false);
+const selectedItem = ref(null);
 const search = ref(props.filters.search || "");
-
-const form = useForm({
-    name: "first_cutoff",
-    from_cutoff_date: "",
-    to_cutoff_date: "",
-    status_id: 1,
-});
 
 watch(search, (value) => {
     router.get(
-        "/hr/payroll-cut-off",
+        "/employee/payroll-cut-off",
         { search: value },
         { preserveState: true, replace: true },
     );
 });
-
-const openCreateModal = () => {
-    isEditing.value = false;
-    currentEditId.value = null;
-    form.reset();
-    isDialogOpen.value = true;
-};
 
 const viewAttendance = (id) => {
     router.get(`/employee/payroll-cut-off/${id}/attendance`);
@@ -88,32 +70,8 @@ const formatDate = (dateString) => {
     });
 };
 
-const submit = () => {
-    const url = isEditing.value
-        ? `/hr/payroll-cut-off/update/${currentEditId.value}`
-        : "/hr/payroll-cut-off/store";
-
-    form.post(url, {
-        onSuccess: () => {
-            isDialogOpen.value = false;
-            form.reset();
-            toastStore.show(
-                isEditing.value ? "Cutoff updated." : "Cutoff added.",
-                "success",
-            );
-        },
-        onError: (errors) => {
-            const firstError = Object.values(errors)[0];
-            toastStore.show(firstError || "Check your inputs.", "danger");
-        },
-    });
-};
-
-/* =========================
-   LOGIC
-========================= */
-const openView = (ot) => {
-    selectedOvertime.value = ot;
+const openView = (item) => {
+    selectedItem.value = item;
     isViewOpen.value = true;
 };
 
@@ -132,6 +90,7 @@ const getStatusClass = (status) => {
     if (s === "approved") return "bg-emerald-100 text-emerald-700";
     if (s === "rejected") return "bg-red-100 text-red-700";
     if (s === "pending") return "bg-amber-100 text-amber-700";
+    if (s === "no record") return "bg-slate-100 text-slate-500 italic";
     return "bg-slate-100 text-slate-600";
 };
 </script>
@@ -146,12 +105,12 @@ const getStatusClass = (status) => {
                     <div>
                         <CardTitle
                             class="text-3xl font-extrabold text-brand-blue tracking-tight"
-                            >Payroll Cut Off</CardTitle
                         >
-                        <CardDescription class="text-base mt-1 text-slate-500"
-                            >Manage payroll period ranges and
-                            statuses.</CardDescription
-                        >
+                            Payroll Cut Off
+                        </CardTitle>
+                        <CardDescription class="text-base mt-1 text-slate-500">
+                            View and manage your attendance for payroll periods.
+                        </CardDescription>
                     </div>
                 </div>
             </CardHeader>
@@ -185,11 +144,11 @@ const getStatusClass = (status) => {
                                     >Period</TableHead
                                 >
                                 <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs tracking-wider"
+                                    class="text-center font-bold text-slate-600 uppercase text-xs"
                                     >Dept. Head</TableHead
                                 >
                                 <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs tracking-wider"
+                                    class="text-center font-bold text-slate-600 uppercase text-xs"
                                     >HR Status</TableHead
                                 >
                                 <TableHead
@@ -208,18 +167,16 @@ const getStatusClass = (status) => {
                                     <TableCell
                                         class="font-semibold text-slate-800"
                                     >
-                                        <span
-                                            v-if="item.name === 'first_cutoff'"
-                                        >
-                                            First Cut Off
-                                        </span>
-                                        <span v-else> Second Cut Off </span>
+                                        {{
+                                            item.name === "first_cutoff"
+                                                ? "First Cut Off"
+                                                : "Second Cut Off"
+                                        }}
                                     </TableCell>
-                                    <TableCell>{{
-                                        formatDate(item.from_cutoff_date) +
-                                        " - " +
-                                        formatDate(item.to_cutoff_date)
-                                    }}</TableCell>
+                                    <TableCell>
+                                        {{ formatDate(item.from_cutoff_date) }}
+                                        - {{ formatDate(item.to_cutoff_date) }}
+                                    </TableCell>
                                     <TableCell class="text-center">
                                         <Badge
                                             variant="outline"
@@ -244,13 +201,34 @@ const getStatusClass = (status) => {
                                             {{ item.hr_status_name }}
                                         </Badge>
                                     </TableCell>
-
-                                    <TableCell class="text-right px-6">
+                                    <TableCell
+                                        class="text-right px-6 space-x-1"
+                                    >
                                         <Button
+                                            v-if="canEdit(item)"
                                             variant="ghost"
                                             size="sm"
                                             @click="viewAttendance(item.id)"
-                                            class="text-brand-blue"
+                                            class="h-8 w-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                            title="Edit Attendance"
+                                        >
+                                            <Pencil class="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                            v-else
+                                            variant="ghost"
+                                            size="sm"
+                                            class="h-8 w-8 p-0 text-slate-400"
+                                            disabled
+                                        >
+                                            <Lock class="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            @click="openView(item)"
+                                            class="h-8 w-8 p-0 text-brand-blue hover:bg-blue-50"
+                                            title="View Details"
                                         >
                                             <Eye class="w-4 h-4" />
                                         </Button>
@@ -261,8 +239,9 @@ const getStatusClass = (status) => {
                                 <TableCell
                                     colspan="5"
                                     class="text-center text-slate-500 py-10 italic"
-                                    >No records found.</TableCell
                                 >
+                                    No records found.
+                                </TableCell>
                             </TableRow>
                         </TableBody>
                     </Table>
@@ -271,94 +250,120 @@ const getStatusClass = (status) => {
             </CardContent>
         </Card>
 
-        <Dialog :open="isDialogOpen" @update:open="isDialogOpen = $event">
-            <DialogContent class="sm:max-w-[450px]">
+        <Dialog v-model:open="isViewOpen">
+            <DialogContent class="max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>{{
-                        isEditing ? "Update Cut Off" : "New Cut Off"
-                    }}</DialogTitle>
+                    <DialogTitle class="text-2xl font-bold text-brand-blue"
+                        >Attendance Details</DialogTitle
+                    >
+                    <DialogDescription>
+                        Summary for
+                        {{
+                            selectedItem?.name === "first_cutoff"
+                                ? "First Cut Off"
+                                : "Second Cut Off"
+                        }}
+                        ({{ formatDate(selectedItem?.from_cutoff_date) }} -
+                        {{ formatDate(selectedItem?.to_cutoff_date) }})
+                    </DialogDescription>
                 </DialogHeader>
 
-                <form @submit.prevent="submit" class="space-y-5">
-                    <div class="space-y-2">
-                        <Label
-                            for="name"
-                            class="text-sm font-bold text-slate-700 uppercase tracking-tight"
-                            >Cut Off Name</Label
-                        >
-                        <select
-                            id="name"
-                            v-model="form.name"
-                            class="flex h-12 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-brand-blue outline-none"
-                        >
-                            <option value="first_cutoff">First Cut Off</option>
-                            <option value="second_cutoff">
-                                Second Cut Off
-                            </option>
-                        </select>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="space-y-2">
-                            <Label
-                                for="from"
-                                class="text-xs font-bold uppercase"
-                                >From Date</Label
-                            >
-                            <Input
-                                id="from"
-                                type="date"
-                                v-model="form.from_cutoff_date"
-                                required
-                            />
-                        </div>
-                        <div class="space-y-2">
-                            <Label for="to" class="text-xs font-bold uppercase"
-                                >To Date</Label
-                            >
-                            <Input
-                                id="to"
-                                type="date"
-                                v-model="form.to_cutoff_date"
-                                required
-                            />
+                <div v-if="selectedItem?.has_record">
+                    <div
+                        class="grid grid-cols-2 gap-4 py-4 border-y border-slate-100 mb-4"
+                    >
+                        <div class="flex gap-4">
+                            <div>
+                                <p
+                                    class="text-xs font-bold text-slate-400 uppercase"
+                                >
+                                    Dept. Head
+                                </p>
+                                <Badge
+                                    variant="outline"
+                                    :class="
+                                        getStatusClass(
+                                            selectedItem?.leader_status_name,
+                                        )
+                                    "
+                                >
+                                    {{ selectedItem?.leader_status_name }}
+                                </Badge>
+                            </div>
+                            <div>
+                                <p
+                                    class="text-xs font-bold text-slate-400 uppercase"
+                                >
+                                    HR Status
+                                </p>
+                                <Badge
+                                    variant="outline"
+                                    :class="
+                                        getStatusClass(
+                                            selectedItem?.hr_status_name,
+                                        )
+                                    "
+                                >
+                                    {{ selectedItem?.hr_status_name }}
+                                </Badge>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="space-y-2">
-                        <Label for="status" class="text-xs font-bold uppercase"
-                            >Status</Label
-                        >
-                        <select
-                            id="status"
-                            v-model="form.status_id"
-                            class="flex h-12 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
-                        >
-                            <option
-                                v-for="status in statuses"
-                                :key="status.id"
-                                :value="status.id"
-                            >
-                                {{ status.name.toUpperCase() }}
-                            </option>
-                        </select>
+                    <div class="rounded-md border border-slate-200">
+                        <Table>
+                            <TableHeader class="bg-slate-50">
+                                <TableRow>
+                                    <TableHead class="text-xs font-bold"
+                                        >Date</TableHead
+                                    >
+                                    <TableHead class="text-xs font-bold"
+                                        >Time In</TableHead
+                                    >
+                                    <TableHead class="text-xs font-bold"
+                                        >Time Out</TableHead
+                                    >
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                <TableRow
+                                    v-for="log in selectedItem.attendance_list"
+                                    :key="log.id"
+                                >
+                                    <TableCell class="py-2 text-sm">{{
+                                        formatDate(log.attendance_date)
+                                    }}</TableCell>
+                                    <TableCell
+                                        class="py-2 text-sm font-mono text-blue-600"
+                                        >{{ log.time_in || "--:--" }}</TableCell
+                                    >
+                                    <TableCell
+                                        class="py-2 text-sm font-mono text-orange-600"
+                                        >{{
+                                            log.time_out || "--:--"
+                                        }}</TableCell
+                                    >
+                                </TableRow>
+                            </TableBody>
+                        </Table>
                     </div>
+                </div>
 
-                    <DialogFooter>
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            @click="isDialogOpen = false"
-                            >Cancel</Button
-                        >
-                        <Button
-                            type="submit"
-                            class="bg-brand-blue"
-                            :disabled="form.processing"
-                            >Save</Button
-                        >
-                    </DialogFooter>
-                </form>
+                <div
+                    v-else
+                    class="py-12 flex flex-col items-center justify-center text-slate-400 bg-slate-50 rounded-lg border-2 border-dashed border-slate-200"
+                >
+                    <AlertCircle class="w-12 h-12 mb-2 opacity-20" />
+                    <p class="font-medium italic">
+                        No attendance record has been submitted for this period.
+                    </p>
+                </div>
+
+                <DialogFooter>
+                    <Button variant="secondary" @click="isViewOpen = false"
+                        >Close</Button
+                    >
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     </div>

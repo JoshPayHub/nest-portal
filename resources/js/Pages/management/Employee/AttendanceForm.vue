@@ -1,16 +1,26 @@
 <script setup>
-import { useForm, usePage, router } from "@inertiajs/vue3";
-import { watch } from "vue";
+import { useForm, Head, router } from "@inertiajs/vue3";
+import {
+    Save,
+    ArrowLeft,
+    Lock,
+    Clock,
+    CalendarCheck,
+    AlertCircle,
+} from "lucide-vue-next";
+
+// UI Components
+import { Button } from "@/Components/ui/button";
+import { Input } from "@/Components/ui/input";
+import { Label } from "@/Components/ui/label";
 import {
     Card,
     CardHeader,
     CardTitle,
     CardDescription,
     CardContent,
+    CardFooter,
 } from "@/Components/ui/card";
-import { Button } from "@/Components/ui/button";
-import { Input } from "@/Components/ui/input";
-import { Label } from "@/Components/ui/label";
 import {
     Table,
     TableBody,
@@ -20,204 +30,235 @@ import {
     TableRow,
 } from "@/Components/ui/table";
 
-import { toastStore } from "@/stores/toast";
-
-const page = usePage();
-
-// Extract props
-const cutoff = page.props.cutoff;
-const attendanceData = page.props.attendanceData ?? {
-    dates: [],
-    approvals: [],
-};
-const dates = attendanceData.dates ?? [];
-const approvals = attendanceData.approvals ?? [];
-const isEditing = page.props.isEditing ?? false;
-const authUser = page.props.authUser;
-
-// =========================
-// FORM INITIALIZATION
-// =========================
-const form = useForm({
-    payroll_cut_off_id: cutoff.id,
-    name: authUser?.name ?? "",
-    department_position: authUser
-        ? `${authUser.department} / ${authUser.position}`
-        : "",
-    period_from: cutoff.from_cutoff_date,
-    period_to: cutoff.to_cutoff_date,
-    attendances: dates.map((d) => ({
-        date: d.date,
-        time_in: d.time_in ?? "",
-        time_out: d.time_out ?? "",
-    })),
+const props = defineProps({
+    cutoff: Object,
+    attendanceData: Object,
+    isEditing: Boolean,
+    isLocked: Boolean,
+    authUser: Object,
 });
 
-// =========================
-// CLEAR ERRORS ON CHANGE
-// =========================
-watch(
-    () => form.attendances,
-    (rows) => {
-        rows.forEach((_, index) => {
-            form.clearErrors(`attendances.${index}.time_in`);
-            form.clearErrors(`attendances.${index}.time_out`);
-        });
-    },
-    { deep: true },
-);
+const form = useForm({
+    payroll_cut_off_id: props.cutoff.id,
+    attendances: props.attendanceData.dates,
+});
 
-// =========================
-// PERMISSION LOGIC
-// =========================
-const canEdit = () => {
-    const myStatus = approvals.find((s) => s.employee_id === authUser.id);
-
-    // Cannot edit if approved
-    if (myStatus && myStatus.status_id === 7) return false;
-
-    // Can edit if rejected or no status yet
-    return true;
-};
-
-// =========================
-// SUBMIT FORM
-// =========================
 const submit = () => {
-    form.post("/employee/attendance/store", {
+    if (props.isLocked) return;
+
+    form.post(`/employee/attendance/store`, {
         preserveScroll: true,
         onSuccess: () => {
-            toastStore.show("Attendance saved successfully!", "success");
+            // Optional: add toastStore.show call here if available
         },
-        onError: () => {
-            toastStore.show("Please fix the errors.", "error");
-        },
+    });
+};
+
+const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
     });
 };
 </script>
 
 <template>
-    <div class="p-6 space-y-7">
-        <Card class="border-blue-100">
-            <!-- HEADER -->
+    <Head title="Submit Attendance" />
+
+    <div class="p-6 space-y-7 max-w-6xl mx-auto">
+        <div class="flex items-center justify-between">
+            <nav
+                class="flex items-center gap-2 text-xs uppercase tracking-wider text-slate-400"
+            >
+                <span
+                    class="hover:text-brand-blue cursor-pointer transition-colors"
+                    @click="router.get('/employee/payroll-cut-off')"
+                >
+                    Payroll Cut Off
+                </span>
+                <span class="text-slate-300">/</span>
+                <span class="font-bold text-brand-blue">
+                    {{ isEditing ? "Edit Attendance" : "New Submission" }}
+                </span>
+            </nav>
+
+            <div
+                v-if="isLocked"
+                class="flex items-center gap-2 bg-amber-50 text-amber-700 px-4 py-1.5 rounded-full border border-amber-200 text-sm font-semibold shadow-sm"
+            >
+                <Lock class="w-4 h-4" />
+                Record Locked
+            </div>
+        </div>
+
+        <Card class="border-blue-100 overflow-hidden">
             <CardHeader
                 class="space-y-4 bg-slate-50/50 border-b border-blue-50/50 pb-6"
             >
-                <nav
-                    class="flex items-center gap-2 text-xs uppercase tracking-wider text-slate-400"
+                <div
+                    class="flex flex-col md:flex-row md:items-center justify-between gap-4"
                 >
-                    <span
-                        class="hover:text-brand-blue cursor-pointer"
-                        @click="router.get('/employee/payroll-cut-off')"
-                    >
-                        Payroll Cutoff
-                    </span>
-                    <span>/</span>
-                    <span class="font-bold text-brand-blue">{{
-                        isEditing ? "Edit Attendance" : "New Attendance"
-                    }}</span>
-                </nav>
+                    <div class="space-y-1">
+                        <CardTitle
+                            class="text-3xl font-extrabold tracking-tight text-brand-blue"
+                        >
+                            {{
+                                cutoff.name === "first_cutoff"
+                                    ? "First Cut Off"
+                                    : "Second Cut Off"
+                            }}
+                        </CardTitle>
+                        <CardDescription
+                            class="text-slate-500 flex items-center gap-2"
+                        >
+                            <CalendarCheck class="w-4 h-4 text-brand-blue/60" />
+                            Period: {{ formatDate(cutoff.from_cutoff_date) }} —
+                            {{ formatDate(cutoff.to_cutoff_date) }}
+                        </CardDescription>
+                    </div>
 
-                <div>
-                    <CardTitle class="text-3xl font-extrabold text-brand-blue"
-                        >Attendance Form</CardTitle
-                    >
-                    <CardDescription>
-                        Fill in your daily attendance. Leave blank if absent,
-                        holiday, or rest day.
-                    </CardDescription>
+                    <div class="hidden md:block border-l pl-6 border-slate-200">
+                        <p
+                            class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1"
+                        >
+                            Employee Info
+                        </p>
+                        <p class="font-semibold text-slate-800">
+                            {{ authUser.name }}
+                        </p>
+                        <p class="text-xs text-slate-500">
+                            {{ authUser.position }} | {{ authUser.department }}
+                        </p>
+                    </div>
                 </div>
             </CardHeader>
 
-            <!-- INFO -->
-            <CardContent class="grid grid-cols-12 gap-4 mt-6">
-                <div class="col-span-12 md:col-span-6">
-                    <Label class="p-1">Name</Label>
-                    <Input v-model="form.name" disabled />
-                </div>
-                <div class="col-span-12 md:col-span-6">
-                    <Label class="p-1">Department / Position</Label>
-                    <Input v-model="form.department_position" disabled />
-                </div>
-                <div class="col-span-12 md:col-span-6">
-                    <Label class="p-1">Period From</Label>
-                    <Input v-model="form.period_from" disabled />
-                </div>
-                <div class="col-span-12 md:col-span-6">
-                    <Label class="p-1">Period To</Label>
-                    <Input v-model="form.period_to" disabled />
-                </div>
-            </CardContent>
+            <div
+                v-if="isLocked"
+                class="bg-blue-50 border-b border-blue-100 p-4 flex items-center gap-3"
+            >
+                <AlertCircle class="w-5 h-5 text-blue-600" />
+                <p class="text-sm text-blue-700 font-medium">
+                    This attendance record has been finalized. Editing is
+                    disabled.
+                </p>
+            </div>
 
-            <!-- TABLE -->
-            <CardContent>
-                <div class="rounded-md border overflow-hidden">
+            <CardContent class="p-0">
+                <div class="overflow-x-auto">
                     <Table>
-                        <TableHeader class="bg-slate-50">
+                        <TableHeader class="bg-slate-50/50">
                             <TableRow>
-                                <TableHead class="w-[150px]">Date</TableHead>
-                                <TableHead>Time In</TableHead>
-                                <TableHead>Time Out</TableHead>
-                                <TableHead class="text-xs text-gray-400"
-                                    >Note</TableHead
+                                <TableHead
+                                    class="w-1/3 font-bold text-slate-600 uppercase text-xs"
+                                    >Date</TableHead
                                 >
+                                <TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs"
+                                >
+                                    <div class="flex items-center gap-2">
+                                        <Clock
+                                            class="w-3 h-3 text-brand-blue"
+                                        />
+                                        Time In
+                                    </div>
+                                </TableHead>
+                                <TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs"
+                                >
+                                    <div class="flex items-center gap-2">
+                                        <Clock
+                                            class="w-3 h-3 text-orange-400"
+                                        />
+                                        Time Out
+                                    </div>
+                                </TableHead>
                             </TableRow>
                         </TableHeader>
-
                         <TableBody>
                             <TableRow
-                                v-for="(row, index) in form.attendances"
+                                v-for="(day, index) in form.attendances"
                                 :key="index"
+                                class="hover:bg-slate-50/30 transition-colors"
                             >
+                                <TableCell class="py-4">
+                                    <div class="font-semibold text-slate-700">
+                                        {{ formatDate(day.date) }}
+                                    </div>
+                                </TableCell>
                                 <TableCell>
                                     <Input
-                                        type="date"
-                                        v-model="row.date"
-                                        disabled
+                                        type="time"
+                                        v-model="day.time_in"
+                                        :disabled="isLocked"
+                                        class="h-10 border-2 border-gray-200 focus-visible:ring-brand-blue disabled:bg-slate-100 font-mono"
                                     />
                                 </TableCell>
                                 <TableCell>
                                     <Input
                                         type="time"
-                                        v-model="row.time_in"
-                                        :disabled="!canEdit()"
-                                        placeholder="--:--"
+                                        v-model="day.time_out"
+                                        :disabled="isLocked"
+                                        class="h-10 border-2 border-gray-200 focus-visible:ring-brand-blue disabled:bg-slate-100 font-mono"
                                     />
                                 </TableCell>
-                                <TableCell>
-                                    <Input
-                                        type="time"
-                                        v-model="row.time_out"
-                                        :disabled="!canEdit()"
-                                        placeholder="--:--"
-                                    />
-                                </TableCell>
-                                <TableCell class="text-xs text-gray-400"
-                                    >Leave blank if absent/rest day</TableCell
-                                >
                             </TableRow>
                         </TableBody>
                     </Table>
                 </div>
             </CardContent>
 
-            <!-- FOOTER -->
-            <CardContent
-                class="flex justify-end gap-2 border-t bg-slate-50 py-4"
+            <CardFooter
+                class="bg-slate-50/30 border-t p-6 flex items-center justify-between"
             >
-                <Button
-                    variant="ghost"
-                    @click="router.get('/employee/payroll-cut-off')"
-                    >Cancel</Button
-                >
-                <Button
-                    class="bg-brand-blue text-white min-w-[140px]"
-                    :disabled="form.processing || !canEdit()"
-                    @click="submit"
-                >
-                    {{ form.processing ? "Saving..." : "Save Attendance" }}
-                </Button>
-            </CardContent>
+                <div class="text-sm text-slate-500 italic">
+                    <span v-if="!isLocked" class="flex items-center gap-2">
+                        <AlertCircle class="w-4 h-4 text-blue-500" />
+                        Review your logs before submitting.
+                    </span>
+                    <span
+                        v-else
+                        class="flex items-center gap-1 text-slate-400 font-medium"
+                    >
+                        <Lock class="w-3 h-3" /> Read-only mode.
+                    </span>
+                </div>
+
+                <div class="flex gap-3">
+                    <Button
+                        variant="ghost"
+                        type="button"
+                        @click="router.get('/employee/payroll-cut-off')"
+                    >
+                        Cancel
+                    </Button>
+
+                    <Button
+                        v-if="!isLocked"
+                        @click="submit"
+                        :disabled="form.processing"
+                        class="bg-brand-blue hover:bg-brand-blue/90 text-white min-w-[160px] h-11 gap-2 shadow-md font-semibold"
+                    >
+                        <Save v-if="!form.processing" class="w-4 h-4" />
+                        <span v-else class="animate-spin mr-2">...</span>
+                        {{
+                            isEditing
+                                ? "Update Attendance"
+                                : "Submit Attendance"
+                        }}
+                    </Button>
+                </div>
+            </CardFooter>
         </Card>
+
+        <div
+            v-if="form.errors.attendances"
+            class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm flex items-center gap-3"
+        >
+            <AlertCircle class="w-5 h-5" />
+            {{ form.errors.attendances }}
+        </div>
     </div>
 </template>
