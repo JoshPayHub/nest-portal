@@ -8,7 +8,7 @@ import {
     CalendarCheck,
     AlertCircle,
 } from "lucide-vue-next";
-
+import { computed } from "vue";
 // UI Components
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
@@ -76,119 +76,124 @@ const formatDate = (dateString) => {
         year: "numeric",
     });
 };
+
+const formattedFromDate = computed(() => {
+    return props.cutoff?.from_cutoff_date
+        ? formatDate(props.cutoff.from_cutoff_date)
+        : "";
+});
+
+const formattedToDate = computed(() => {
+    return props.cutoff.to_cutoff_date
+        ? formatDate(props.cutoff.to_cutoff_date)
+        : "";
+});
+
+const clearRow = (index) => {
+    if (props.isLocked) return;
+    form.attendances[index].time_in = null;
+    form.attendances[index].time_out = null;
+};
 </script>
 
 <template>
     <Head :title="isEditing ? 'Edit Attendance' : 'Submit Attendance'" />
 
-    <div class="p-6 space-y-7 max-w-6xl mx-auto">
-        <div class="flex items-center justify-between">
-            <nav
-                class="flex items-center gap-2 text-xs uppercase tracking-wider text-slate-400"
-            >
-                <span
-                    class="hover:text-brand-blue cursor-pointer transition-colors flex items-center gap-1"
-                    @click="router.get('/employee/payroll-cut-off')"
-                >
-                    <ArrowLeft class="w-3 h-3" /> Payroll Cut Off
-                </span>
-                <span class="text-slate-300">/</span>
-                <span class="font-bold text-brand-blue">
-                    {{ isEditing ? "Edit Attendance" : "New Submission" }}
-                </span>
-            </nav>
-
-            <div
-                v-if="isLocked"
-                class="flex items-center gap-2 bg-amber-50 text-amber-700 px-4 py-1.5 rounded-full border border-amber-200 text-sm font-semibold shadow-sm"
-            >
-                <Lock class="w-4 h-4" />
-                Record Locked
-            </div>
-        </div>
-
-        <Card class="border-blue-100 overflow-hidden shadow-sm">
+    <div class="p-6 space-y-7">
+        <Card class="border-blue-100 pt-0">
+            <!-- HEADER -->
             <CardHeader
-                class="space-y-4 bg-slate-50/50 border-b border-blue-50/50 pb-6"
+                class="space-y-4 bg-slate-50/50 border-b border-blue-50/50 rounded-t-xl py-6"
             >
-                <div
-                    class="flex flex-col md:flex-row md:items-center justify-between gap-4"
+                <nav
+                    class="flex items-center gap-2 text-xs uppercase tracking-wider text-slate-400"
                 >
-                    <div class="space-y-1">
-                        <CardTitle
-                            class="text-3xl font-extrabold tracking-tight text-brand-blue"
-                        >
-                            {{
-                                cutoff.name === "first_cutoff"
-                                    ? "First Cut Off"
-                                    : "Second Cut Off"
-                            }}
-                        </CardTitle>
-                        <CardDescription
-                            class="text-slate-500 flex items-center gap-2"
-                        >
-                            <CalendarCheck class="w-4 h-4 text-brand-blue/60" />
-                            Period: {{ formatDate(cutoff.from_cutoff_date) }} —
-                            {{ formatDate(cutoff.to_cutoff_date) }}
-                        </CardDescription>
-                    </div>
+                    <span
+                        class="hover:text-brand-blue cursor-pointer"
+                        @click="router.get('/employee/payroll-cut-off')"
+                    >
+                        Payroll Cutoff
+                    </span>
+                    <span>/</span>
+                    <span class="font-bold text-brand-blue">{{
+                        isEditing ? "Edit Attendance" : "New Attendance"
+                    }}</span>
+                </nav>
 
-                    <div class="hidden md:block border-l pl-6 border-slate-200">
-                        <p
-                            class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1"
-                        >
-                            Employee Info
-                        </p>
-                        <p class="font-semibold text-slate-800">
-                            {{ authUser.name }}
-                        </p>
-                        <p class="text-xs text-slate-500">
-                            {{ authUser.position }} | {{ authUser.department }}
-                        </p>
-                    </div>
+                <div>
+                    <CardTitle class="text-3xl font-extrabold text-brand-blue"
+                        >Attendance Form</CardTitle
+                    >
+                    <CardDescription>
+                        Fill in your daily attendance. Leave blank if absent,
+                        holiday, or rest day.
+                    </CardDescription>
                 </div>
             </CardHeader>
 
-            <div
-                v-if="isLocked"
-                class="bg-blue-50 border-b border-blue-100 p-4 flex items-center gap-3"
-            >
-                <AlertCircle class="w-5 h-5 text-blue-600" />
-                <p class="text-sm text-blue-700 font-medium">
-                    This attendance record has been finalized. Editing is
-                    disabled.
-                </p>
-            </div>
+            <CardContent class="grid grid-cols-12 gap-4 mt-3">
+                <div class="col-span-12 md:col-span-6">
+                    <Label class="p-1">Name</Label>
+                    <Input
+                        v-model="authUser.name"
+                        disabled
+                        class="border-2 border-gray-300 bg-slate-50"
+                    />
+                </div>
 
-            <CardContent class="p-0">
-                <div class="overflow-x-auto">
+                <div class="col-span-12 md:col-span-6">
+                    <Label class="p-1">Department / Position</Label>
+                    <Input
+                        v-model="authUser.department_position"
+                        disabled
+                        class="border-2 border-gray-300 bg-slate-50"
+                    />
+                </div>
+
+                <div class="col-span-12 md:col-span-6">
+                    <Label class="p-1">Cut Off Name</Label>
+                    <Input
+                        v-model="cutoff.name"
+                        disabled
+                        class="border-2 border-gray-300 bg-slate-50"
+                    />
+                </div>
+
+                <div class="col-span-12 md:col-span-6">
+                    <Label
+                        class="p-1 text-slate-500 font-semibold uppercase text-xs"
+                        >Period Covered</Label
+                    >
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <Input
+                                v-model="formattedFromDate"
+                                disabled
+                                class="border-2 border-gray-300 bg-slate-50"
+                            />
+                        </div>
+                        <div>
+                            <Input
+                                v-model="formattedToDate"
+                                disabled
+                                class="border-2 border-gray-300 bg-slate-50"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </CardContent>
+
+            <CardContent>
+                <div class="rounded-md border overflow-hidden">
                     <Table>
-                        <TableHeader class="bg-slate-50/50">
+                        <TableHeader class="bg-slate-50">
                             <TableRow>
-                                <TableHead
-                                    class="w-1/3 font-bold text-slate-600 uppercase text-xs"
-                                    >Date</TableHead
+                                <TableHead class="w-[200px]">Date</TableHead>
+                                <TableHead>Time In</TableHead>
+                                <TableHead>Time Out</TableHead>
+                                <TableHead class="w-[150px]"
+                                    >Clear Button</TableHead
                                 >
-                                <TableHead
-                                    class="font-bold text-slate-600 uppercase text-xs"
-                                >
-                                    <div class="flex items-center gap-2">
-                                        <Clock
-                                            class="w-3 h-3 text-brand-blue"
-                                        />
-                                        Time In
-                                    </div>
-                                </TableHead>
-                                <TableHead
-                                    class="font-bold text-slate-600 uppercase text-xs"
-                                >
-                                    <div class="flex items-center gap-2">
-                                        <Clock
-                                            class="w-3 h-3 text-orange-400"
-                                        />
-                                        Time Out
-                                    </div>
-                                </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -218,61 +223,45 @@ const formatDate = (dateString) => {
                                         class="h-10 border-2 border-gray-200 focus-visible:ring-brand-blue disabled:bg-slate-100 font-mono"
                                     />
                                 </TableCell>
+
+                                <TableCell>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        :disabled="isLocked"
+                                        @click="clearRow(index)"
+                                        class="bg-slate-200 text-dark hover:bg-slate-300 h-8 w-full px-2 transition-colors"
+                                    >
+                                        Clear Time
+                                    </Button>
+                                </TableCell>
                             </TableRow>
                         </TableBody>
                     </Table>
                 </div>
             </CardContent>
 
-            <CardFooter
-                class="bg-slate-50/30 border-t p-6 flex items-center justify-between"
+            <CardContent
+                class="flex justify-end gap-2 border-t bg-slate-50/30 py-4"
             >
-                <div class="text-sm text-slate-500 italic">
-                    <span v-if="!isLocked" class="flex items-center gap-2">
-                        <AlertCircle class="w-4 h-4 text-blue-500" />
-                        Review your logs before submitting.
-                    </span>
-                    <span
-                        v-else
-                        class="flex items-center gap-1 text-slate-400 font-medium"
-                    >
-                        <Lock class="w-3 h-3" /> Read-only mode.
-                    </span>
-                </div>
+                <Button
+                    variant="ghost"
+                    type="button"
+                    @click="router.get('/employee/payroll-cut-off')"
+                    >Cancel</Button
+                >
 
-                <div class="flex gap-3">
-                    <Button
-                        variant="ghost"
-                        type="button"
-                        @click="router.get('/employee/payroll-cut-off')"
-                    >
-                        Cancel
-                    </Button>
-
-                    <Button
-                        v-if="!isLocked"
-                        @click="submit"
-                        :disabled="form.processing"
-                        class="bg-brand-blue hover:bg-brand-blue/90 text-white min-w-[160px] h-11 gap-2 shadow-md font-semibold"
-                    >
-                        <Save v-if="!form.processing" class="w-4 h-4" />
-                        <span v-else class="animate-spin mr-2">...</span>
-                        {{
-                            isEditing
-                                ? "Update Attendance"
-                                : "Submit Attendance"
-                        }}
-                    </Button>
-                </div>
-            </CardFooter>
+                <Button
+                    v-if="!isLocked"
+                    @click="submit"
+                    :disabled="form.processing"
+                    class="bg-brand-blue hover:bg-brand-blue/90 text-white min-w-[120px]"
+                >
+                    <Save v-if="!form.processing" class="w-4 h-4" />
+                    <span v-else class="animate-spin mr-2">...</span>
+                    {{ isEditing ? "Update Attendance" : "Submit Attendance" }}
+                </Button>
+            </CardContent>
         </Card>
-
-        <div
-            v-if="form.errors.attendances"
-            class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm flex items-center gap-3"
-        >
-            <AlertCircle class="w-5 h-5" />
-            {{ form.errors.attendances }}
-        </div>
     </div>
 </template>

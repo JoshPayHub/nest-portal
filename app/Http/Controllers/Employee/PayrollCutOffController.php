@@ -52,15 +52,9 @@ class PayrollCutOffController extends Controller
         if ($attendance) {
             $approvals = $attendance->approvalStatuses;
 
-            /**
-             * NEW LOCK LOGIC:
-             * 7 = Approved, 8/9 = Rejected, 4 = Pending
-             */
             $hasApproval = $approvals->contains('status_id', 7);
             $hasRejection = $approvals->contains(fn($a) => in_array($a->status_id, [8, 9]));
 
-            // If someone has approved it AND there are no rejections,
-            // we block access to the form.
             if ($hasApproval && !$hasRejection) {
                 return redirect()->route('employee.payrollcutoff.index')
                     ->with('error', 'Attendance is currently under process or approved. Access denied.');
@@ -94,8 +88,14 @@ class PayrollCutOffController extends Controller
                 'name' => $user->first_name . ' ' . $user->last_name,
                 'department' => $user->department?->name ?? 'N/A',
                 'position' => $user->position?->name ?? 'N/A',
+                'department_position' => $user->department?->name . ' / ' . $user->position?->name ,
             ],
-            'cutoff' => $cutoff,
+            'cutoff' => [
+                'id' => $cutoff->id,
+                'name' => $cutoff->name === 'first_cutoff' ? 'First Cut Off' : 'Second Cut Off',
+                'from_cutoff_date' => $cutoff->from_cutoff_date,
+                'to_cutoff_date' => $cutoff->to_cutoff_date,
+            ],
             'attendanceData' => [
                 'attendance_employee_id' => $attendance?->id ?? null,
                 'dates' => $dates,

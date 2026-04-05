@@ -93,6 +93,21 @@ const getStatusClass = (status) => {
     if (s === "no record") return "bg-slate-100 text-slate-500 italic";
     return "bg-slate-100 text-slate-600";
 };
+
+const formatTime = (timeString) => {
+    if (!timeString) return "--:--";
+
+    // We use a dummy date so we can use the built-in formatter
+    const [hours, minutes] = timeString.split(":");
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes));
+
+    return date.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+    });
+};
 </script>
 
 <template>
@@ -253,99 +268,125 @@ const getStatusClass = (status) => {
         <Dialog v-model:open="isViewOpen">
             <DialogContent class="max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle class="text-2xl font-bold text-brand-blue"
-                        >Attendance Details</DialogTitle
-                    >
-                    <DialogDescription>
-                        Summary for
-                        {{
-                            selectedItem?.name === "first_cutoff"
-                                ? "First Cut Off"
-                                : "Second Cut Off"
-                        }}
-                        ({{ formatDate(selectedItem?.from_cutoff_date) }} -
-                        {{ formatDate(selectedItem?.to_cutoff_date) }})
-                    </DialogDescription>
+                    <div class="pr-6">
+                        <DialogTitle class="text-2xl font-bold text-brand-blue"
+                            >Attendance Details</DialogTitle
+                        >
+                        <DialogDescription
+                            >Submitted on
+                            {{ selectedItem?.report_date }}</DialogDescription
+                        >
+                    </div>
                 </DialogHeader>
 
-                <div v-if="selectedItem?.has_record">
-                    <div
-                        class="grid grid-cols-2 gap-4 py-4 border-y border-slate-100 mb-4"
-                    >
-                        <div class="flex gap-4">
-                            <div>
-                                <p
-                                    class="text-xs font-bold text-slate-400 uppercase"
-                                >
-                                    Dept. Head
-                                </p>
-                                <Badge
-                                    variant="outline"
-                                    :class="
-                                        getStatusClass(
-                                            selectedItem?.leader_status_name,
-                                        )
-                                    "
-                                >
-                                    {{ selectedItem?.leader_status_name }}
-                                </Badge>
-                            </div>
-                            <div>
-                                <p
-                                    class="text-xs font-bold text-slate-400 uppercase"
-                                >
-                                    HR Status
-                                </p>
-                                <Badge
-                                    variant="outline"
-                                    :class="
-                                        getStatusClass(
-                                            selectedItem?.hr_status_name,
-                                        )
-                                    "
-                                >
-                                    {{ selectedItem?.hr_status_name }}
-                                </Badge>
-                            </div>
+                <div
+                    class="grid grid-cols-2 gap-4 py-4 border-y border-slate-100 mt-4"
+                >
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase">
+                            Summary for
+                            {{
+                                selectedItem?.name === "first_cutoff"
+                                    ? "First Cut Off"
+                                    : "Second Cut Off"
+                            }}
+                        </p>
+                        <p class="text-sm font-semibold">
+                            ({{ formatDate(selectedItem?.from_cutoff_date) }} to
+                            {{ formatDate(selectedItem?.to_cutoff_date) }})
+                        </p>
+                    </div>
+                    <div class="flex justify-end gap-4">
+                        <div class="text-right">
+                            <p
+                                class="text-xs font-bold text-slate-400 uppercase"
+                            >
+                                Leader Status
+                            </p>
+                            <p
+                                class="text-sm font-bold uppercase"
+                                :class="
+                                    selectedItem?.leader_status_name?.toLowerCase() ===
+                                    'rejected'
+                                        ? 'text-red-600'
+                                        : 'text-brand-blue'
+                                "
+                            >
+                                {{ selectedItem?.leader_status_name }}
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <p
+                                class="text-xs font-bold text-slate-400 uppercase"
+                            >
+                                HR Status
+                            </p>
+                            <p
+                                class="text-sm font-bold uppercase"
+                                :class="
+                                    selectedItem?.hr_status_name?.toLowerCase() ===
+                                    'rejected'
+                                        ? 'text-red-600'
+                                        : 'text-brand-blue'
+                                "
+                            >
+                                {{ selectedItem?.hr_status_name }}
+                            </p>
                         </div>
                     </div>
+                </div>
 
-                    <div class="rounded-md border border-slate-200">
-                        <Table>
-                            <TableHeader class="bg-slate-50">
-                                <TableRow>
-                                    <TableHead class="text-xs font-bold"
-                                        >Date</TableHead
-                                    >
-                                    <TableHead class="text-xs font-bold"
-                                        >Time In</TableHead
-                                    >
-                                    <TableHead class="text-xs font-bold"
-                                        >Time Out</TableHead
-                                    >
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                <TableRow
-                                    v-for="log in selectedItem.attendance_list"
-                                    :key="log.id"
+                <div v-if="selectedItem?.has_record">
+                    <div class="space-y-3">
+                        <div
+                            v-for="log in selectedItem.attendance_list"
+                            :key="log.id"
+                            class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm"
+                        >
+                            <div
+                                class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-50 pb-3 mb-3"
+                            >
+                                <div
+                                    class="flex items-center gap-1.5 text-sm font-bold text-slate-700"
                                 >
-                                    <TableCell class="py-2 text-sm">{{
-                                        formatDate(log.attendance_date)
-                                    }}</TableCell>
-                                    <TableCell
-                                        class="py-2 text-sm font-mono text-blue-600"
-                                        >{{ log.time_in || "--:--" }}</TableCell
+                                    <Calendar
+                                        class="w-3.5 h-3.5 text-brand-blue"
+                                    />
+                                    {{ formatDate(log.attendance_date) }}
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div
+                                    class="text-sm text-slate-600 leading-relaxed break-words whitespace-pre-wrap"
+                                >
+                                    <p
+                                        class="text-[10px] font-bold uppercase text-slate-400 mb-1"
                                     >
-                                    <TableCell
-                                        class="py-2 text-sm font-mono text-orange-600"
-                                        >{{
-                                            log.time_out || "--:--"
-                                        }}</TableCell
+                                        Time in
+                                    </p>
+                                    {{
+                                        log.time_in
+                                            ? formatTime(log.time_in)
+                                            : "--:--"
+                                    }}
+                                </div>
+                                <div
+                                    class="text-sm text-slate-600 leading-relaxed break-words whitespace-pre-wrap"
+                                >
+                                    <p
+                                        class="text-[10px] font-bold uppercase text-slate-400 mb-1"
                                     >
-                                </TableRow>
-                            </TableBody>
-                        </Table>
+                                        Time out
+                                    </p>
+                                    {{
+                                        log.time_out
+                                            ? formatTime(log.time_out)
+                                            : "--:--"
+                                    }}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
