@@ -46,8 +46,10 @@ Route::middleware(['auth', 'user_type:HR'])->prefix('hr')->name('hr.')->group(fu
     Route::post('/payroll-cut-off/store', [PayrollCutOffController::class, 'store'])->name('payrollcutoff.store');
     Route::post('/payroll-cut-off/update/{id}', [PayrollCutOffController::class, 'update'])->name('payrollcutoff.update');
 
+    Route::get('/payroll-cut-off/{id}/attendance', [PayrollCutOffController::class, 'attendancePage'])->name('payrollcutoff.attendance');
+    Route::post('/payroll-cut-off/{id}/approve', [PayrollCutOffController::class, 'approve'])->name('payrollcutoff.approve');
+
     Route::get('/salary-employee', [SalaryEmployeeController::class, 'index'])->name('payrollcutoff.index');
     Route::post('/salary-employee/store', [SalaryEmployeeController::class, 'store'])->name('payrollcutoff.store');
     Route::post('/salary-employee/update/{id}', [SalaryEmployeeController::class, 'update'])->name('payrollcutoff.update');
-
 });

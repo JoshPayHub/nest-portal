@@ -8,6 +8,7 @@ import {
     Search,
     FileText,
     Calendar,
+    Eye,
 } from "lucide-vue-next";
 import { toastStore } from "@/stores/toast";
 
@@ -39,6 +40,7 @@ import {
     TableRow,
 } from "@/Components/ui/table";
 import Pagination from "@/Components/Pagination/Index.vue";
+import Badge from "@/components/ui/badge/Badge.vue";
 
 const props = defineProps({
     cutoffs: Object,
@@ -81,6 +83,11 @@ const openEditModal = (item) => {
     form.to_cutoff_date = item.to_cutoff_date;
     form.status_id = item.status_id;
     isDialogOpen.value = true;
+};
+
+// Logic for the Eye Icon
+const openView = (item) => {
+    router.get(`/hr/payroll-cut-off/${item.id}/attendance`);
 };
 
 const formatDate = (dateString) => {
@@ -174,6 +181,10 @@ const submit = () => {
                                 >
                                 <TableHead
                                     class="text-center font-bold text-slate-600 uppercase text-xs"
+                                    >Total Fill out</TableHead
+                                >
+                                <TableHead
+                                    class="text-center font-bold text-slate-600 uppercase text-xs"
                                     >Status</TableHead
                                 >
                                 <TableHead
@@ -194,10 +205,9 @@ const submit = () => {
                                     >
                                         <span
                                             v-if="item.name === 'first_cutoff'"
+                                            >First Cut Off</span
                                         >
-                                            First Cut Off
-                                        </span>
-                                        <span v-else> Second Cut Off </span>
+                                        <span v-else>Second Cut Off</span>
                                     </TableCell>
                                     <TableCell>{{
                                         formatDate(item.from_cutoff_date)
@@ -205,6 +215,13 @@ const submit = () => {
                                     <TableCell>{{
                                         formatDate(item.to_cutoff_date)
                                     }}</TableCell>
+
+                                    <TableCell class="text-center">
+                                        <p class="font-medium text-slate-700">
+                                            {{ item.attendances_count }}
+                                        </p>
+                                    </TableCell>
+
                                     <TableCell class="text-center">
                                         <span
                                             :class="[
@@ -217,7 +234,9 @@ const submit = () => {
                                             {{ item.status_name }}
                                         </span>
                                     </TableCell>
-                                    <TableCell class="text-right px-6">
+                                    <TableCell
+                                        class="text-right px-6 space-x-1"
+                                    >
                                         <Button
                                             variant="ghost"
                                             size="sm"
@@ -226,12 +245,21 @@ const submit = () => {
                                         >
                                             <Pencil class="w-4 h-4" />
                                         </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            @click="openView(item)"
+                                            class="h-8 w-8 p-0 text-brand-blue hover:bg-blue-50"
+                                            title="View Details"
+                                        >
+                                            <Eye class="w-4 h-4" />
+                                        </Button>
                                     </TableCell>
                                 </TableRow>
                             </template>
                             <TableRow v-else>
                                 <TableCell
-                                    colspan="5"
+                                    colspan="6"
                                     class="text-center text-slate-500 py-10 italic"
                                     >No records found.</TableCell
                                 >

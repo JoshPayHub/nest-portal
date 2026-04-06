@@ -330,26 +330,24 @@ const formatScheduleSub = (day, time) => {
                                     <Calendar
                                         class="w-3.5 h-3.5 text-brand-blue"
                                     />
-                                   Original Schedule
+                                    Original Schedule
                                 </span>
                             </div>
-                            <p
-                                class="grid gap-1"
-                            >
+                            <div class="grid gap-1">
                                 <div class="text-slate-700">
-                                <span class="text-sm font-bold">{{
-                                    selectedRequest?.original_date
-                                }}</span>
+                                    <span class="text-sm font-bold">{{
+                                        selectedRequest?.original_date
+                                    }}</span>
+                                </div>
+                                <div class="text-slate-500">
+                                    <span class="text-xs">{{
+                                        formatScheduleSub(
+                                            selectedRequest?.original_day,
+                                            selectedRequest?.original_time,
+                                        )
+                                    }}</span>
+                                </div>
                             </div>
-                            <div class="text-slate-500">
-                                <span class="text-xs">{{
-                                    formatScheduleSub(
-                                        selectedRequest?.original_day,
-                                        selectedRequest?.original_time,
-                                    )
-                                }}</span>
-                            </div>
-                            </p>
                         </div>
 
                         <div
@@ -364,25 +362,23 @@ const formatScheduleSub = (day, time) => {
                                     <Calendar
                                         class="w-3.5 h-3.5 text-brand-blue"
                                     />
-                                   Proposed Schedule
+                                    Proposed Schedule
                                 </span>
                             </div>
-                            <div
-                                class="grid gap-1"
-                            >
+                            <div class="grid gap-1">
                                 <div class="ftext-slate-700">
-                                <span class="text-sm font-bold">{{
-                                    selectedRequest?.new_date
-                                }}</span>
-                            </div>
-                            <div class="text-slate-500">
-                                <span class="text-xs">{{
-                                    formatScheduleSub(
-                                        selectedRequest?.new_day,
-                                        selectedRequest?.new_time,
-                                    )
-                                }}</span>
-                            </div>
+                                    <span class="text-sm font-bold">{{
+                                        selectedRequest?.new_date
+                                    }}</span>
+                                </div>
+                                <div class="text-slate-500">
+                                    <span class="text-xs">{{
+                                        formatScheduleSub(
+                                            selectedRequest?.new_day,
+                                            selectedRequest?.new_time,
+                                        )
+                                    }}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
