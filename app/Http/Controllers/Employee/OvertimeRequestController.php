@@ -54,8 +54,8 @@ class OvertimeRequestController extends Controller
                 'leader_status_name' => $leaderEntry?->status?->name ?? 'Pending',
                 'leader_approver_id' => $leaderEntry?->user_id,
 
-                'hr_status_name' => $hrEntry?->status?->name ?? 'Pending',
-                'hr_approver_id' => $hrEntry?->user_id,
+                'hr_status_name'     => $hrEntry?->status?->name ?? 'Pending',
+                'hr_approver_id'     => $hrEntry?->user_id,
 
                 'activities_count' => $ot->activities->count(),
                 'activities' => $ot->activities->map(function ($item) {

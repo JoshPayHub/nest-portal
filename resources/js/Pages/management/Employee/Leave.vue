@@ -209,12 +209,12 @@ const submit = () => {
                             <SelectValue placeholder="Select Leave Type" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="Birthday Leave"
+                            <!-- <SelectItem value="Birthday Leave"
                                 >Birthday Leave</SelectItem
                             >
                             <SelectItem value="Bereavement Leave"
                                 >Bereavement Leave</SelectItem
-                            >
+                            > -->
                             <SelectItem value="Leave with Pay"
                                 >Leave with Pay</SelectItem
                             >

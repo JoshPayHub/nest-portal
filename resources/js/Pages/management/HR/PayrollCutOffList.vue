@@ -187,22 +187,31 @@ const goBack = () => router.get("/hr/payroll-cut-off");
                     >
                 </nav>
 
-                <div>
-                    <CardTitle class="text-3xl font-extrabold text-brand-blue">
-                        HR Approval:
-                        {{
-                            props.cutoff?.name === "first_cutoff"
-                                ? "First"
-                                : "Second"
-                        }}
-                        Period
-                    </CardTitle>
-                    <CardDescription>
-                        Reviewing attendance for
-                        {{ formatDate(props.cutoff?.from_cutoff_date) }}
-                        to
-                        {{ formatDate(props.cutoff?.to_cutoff_date) }}
-                    </CardDescription>
+                <div class="flex justify-between">
+                    <div>
+                        <CardTitle
+                            class="text-3xl font-extrabold text-brand-blue"
+                        >
+                            HR Approval:
+                            {{
+                                props.cutoff?.name === "first_cutoff"
+                                    ? "First"
+                                    : "Second"
+                            }}
+                            Period
+                        </CardTitle>
+                        <CardDescription>
+                            Reviewing attendance for
+                            {{ formatDate(props.cutoff?.from_cutoff_date) }}
+                            to
+                            {{ formatDate(props.cutoff?.to_cutoff_date) }}
+                        </CardDescription>
+                    </div>
+                    <div>
+                        <Button class="bg-brand-blue hover:bg-green-700"
+                            >Export Excel</Button
+                        >
+                    </div>
                 </div>
             </CardHeader>
 
@@ -268,9 +277,37 @@ const goBack = () => router.get("/hr/payroll-cut-off");
                                     class="font-bold text-slate-600 uppercase text-xs tracking-wider"
                                     >Employee & Department</TableHead
                                 >
+
                                 <TableHead
                                     class="text-center font-bold text-slate-600 uppercase text-xs"
-                                    >Total Days</TableHead
+                                    >Lates (hr)</TableHead
+                                >
+                                <TableHead
+                                    class="text-center font-bold text-slate-600 uppercase text-xs"
+                                    >Undertime (hr)</TableHead
+                                >
+                                <TableHead
+                                    class="text-center font-bold text-slate-600 uppercase text-xs"
+                                >
+                                    Paid Absences
+                                </TableHead>
+                                <TableHead
+                                    class="text-center font-bold text-slate-600 uppercase text-xs"
+                                >
+                                    Unpaid Absences
+                                </TableHead>
+                                <TableHead
+                                    class="text-center font-bold text-slate-600 uppercase text-xs"
+                                    >Holiday</TableHead
+                                >
+                                <TableHead
+                                    class="text-center font-bold text-slate-600 uppercase text-xs"
+                                    >Overtime (hr)</TableHead
+                                >
+
+                                <TableHead
+                                    class="text-center font-bold text-slate-600 uppercase text-xs"
+                                    >Total</TableHead
                                 >
                                 <TableHead
                                     class="text-center font-bold text-slate-600 uppercase text-xs"
@@ -317,12 +354,54 @@ const goBack = () => router.get("/hr/payroll-cut-off");
                                             </div>
                                         </div>
                                     </TableCell>
-                                    <TableCell class="text-center font-medium"
-                                        >{{
-                                            report.days_count || 0
-                                        }}
-                                        Days</TableCell
+
+                                    <TableCell class="text-center font-medium">
+                                        <span v-if="report.late_minutes">
+                                            {{
+                                                Math.floor(
+                                                    report.late_minutes / 60,
+                                                )
+                                            }}h {{ report.late_minutes % 60 }}m
+                                        </span>
+                                        <span v-else>0m</span>
+                                    </TableCell>
+
+                                    <TableCell
+                                        class="text-center font-medium text-red-600"
                                     >
+                                        {{ report.undertime_hours.h }}h
+                                        {{ report.undertime_hours.m }}m
+                                    </TableCell>
+
+                                    <TableCell class="text-center font-medium">
+                                        {{ report.paid_leaves || 0 }}
+                                    </TableCell>
+
+                                    <TableCell
+                                        class="text-center font-medium text-red-600"
+                                    >
+                                        {{ report.unpaid_leaves || 0 }}
+                                    </TableCell>
+
+                                    <TableCell class="text-center font-medium">
+                                        {{ report.holiday_count || 0 }}
+                                    </TableCell>
+
+                                    <TableCell
+                                        class="text-center font-medium text-green-600"
+                                    >
+                                        {{ report.overtime_hours.h }}h
+                                        {{ report.overtime_hours.m }}m
+                                    </TableCell>
+
+                                    <TableCell
+                                        class="text-center font-bold bg-slate-50"
+                                    >
+                                        {{ report.total_summary.days }}d
+                                        {{ report.total_summary.hours }}h
+                                        {{ report.total_summary.minutes }}m
+                                    </TableCell>
+
                                     <TableCell class="text-center">
                                         <Badge
                                             variant="outline"

@@ -133,16 +133,11 @@ const formatScheduleSub = (day, time) => {
                                 >
                                 <TableHead
                                     class="font-bold text-slate-600 uppercase text-xs tracking-wider"
-                                    >ORIGINAL SCHEDULE</TableHead
+                                    >ORIGINAL DAY</TableHead
                                 >
                                 <TableHead
                                     class="font-bold text-slate-600 uppercase text-xs tracking-wider"
-                                    >REQUESTED SCHEDULE</TableHead
-                                >
-
-                                <TableHead
-                                    class="font-bold text-slate-600 uppercase text-xs tracking-wider"
-                                    >Category</TableHead
+                                    >REQUESTED DAY</TableHead
                                 >
 
                                 <TableHead
@@ -231,12 +226,6 @@ const formatScheduleSub = (day, time) => {
                                                 }}
                                             </div>
                                         </div>
-                                    </TableCell>
-
-                                    <TableCell
-                                        class="font-bold text-brand-blue capitalize"
-                                    >
-                                        {{ req.request_type }}
                                     </TableCell>
 
                                     <TableCell class="text-center">

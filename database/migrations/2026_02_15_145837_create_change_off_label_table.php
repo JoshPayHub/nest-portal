@@ -22,9 +22,6 @@ return new class extends Migration
                 ->constrained('offs')
                 ->onDelete('restrict');
 
-            $table->date('original_date');
-            $table->date('new_date');
-
 
             $table->foreignId('original_day_id')
                 ->nullable()
@@ -36,8 +33,6 @@ return new class extends Migration
                 ->constrained('offs')
                 ->onDelete('restrict');
 
-            $table->time('original_time')->nullable();
-            $table->time('new_time')->nullable();
         });
     }
 

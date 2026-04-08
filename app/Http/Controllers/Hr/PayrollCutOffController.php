@@ -4,9 +4,16 @@ namespace App\Http\Controllers\Hr;
 
 use App\Http\Controllers\Controller;
 use App\Models\AttendanceEmployee;
+use App\Models\ChangeOff;
+use App\Models\Holiday;
+use App\Models\Leave;
+use App\Models\Overtime;
+use App\Models\OvertimeList;
 use App\Models\PayrollCutOff;
 use App\Models\Status;
+use App\Models\Undertime;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Validation\ValidationException;
@@ -91,75 +98,219 @@ class PayrollCutOffController extends Controller
  public function attendancePage(Request $request, $id)
 {
     $cutoff = PayrollCutOff::findOrFail($id);
-
-    // Get all employees for the dropdown filter
     $employees = User::with(['department', 'position', 'status'])->get();
 
     $reports = AttendanceEmployee::where('payroll_cut_off_id', $id)
         ->join('users', 'attendance_employees.user_id', '=', 'users.id')
-        ->with(['attendances', 'leaderStatus.status', 'hrStatus.status', 'user.department', 'department'])
+        ->with([
+            'attendances',
+            'leaderStatus.status',
+            'hrStatus.status',
+            'user.department',
+            'department'
+        ])
         ->select(
             'attendance_employees.*',
             DB::raw("CONCAT(users.first_name, ' ', users.last_name) as employee_name")
         )
-        // Filter by Search Term (Name)
         ->when($request->search, function ($query, $search) {
             $query->where(function($q) use ($search) {
                 $q->where('users.first_name', 'like', "%{$search}%")
                   ->orWhere('users.last_name', 'like', "%{$search}%");
             });
         })
-        // Filter by Specific Employee ID from dropdown
-        ->when($request->employee_id, function ($query, $empId) {
-            $query->where('attendance_employees.user_id', $empId);
-        })
-        // Filter by Department
-        ->when($request->department, function ($query, $deptId) {
-            $query->where('attendance_employees.department_id', $deptId);
-        })
-        // Filter by HR Status
-        ->when($request->status, function ($query, $statusId) {
-            $query->where('attendance_employees.hr_status_id', $statusId);
-        })
+        ->when($request->employee_id, fn($q, $empId) => $q->where('attendance_employees.user_id', $empId))
+        ->when($request->department, fn($q, $deptId) => $q->where('attendance_employees.department_id', $deptId))
+        ->when($request->status, fn($q, $statusId) => $q->where('attendance_employees.hr_status_id', $statusId))
         ->orderBy('attendance_employees.created_at', 'desc')
         ->paginate(10)
-        ->withQueryString() // Crucial: Keeps your filters when clicking next page
+        ->withQueryString()
         ->through(function ($item) use ($cutoff) {
+
+            // ---------------- Attendance Data ----------------
+            $attendances = $item->attendances->filter(fn($log) =>
+                $log->attendance_date >= $cutoff->from_cutoff_date &&
+                $log->attendance_date <= $cutoff->to_cutoff_date
+            )->values();
+
+            // ---------------- Holiday Setup ----------------
+            $holidays = Holiday::where('status_id', 1)->get();
+            $holidayMap = $holidays->mapWithKeys(fn($h) => [
+                Carbon::parse($h->date)->toDateString() => strtolower($h->type) // assuming 'type' field exists
+            ])->toArray();
+
+            // ---------------- Late calculation (Display Only) ----------------
+            $totalLateMinutes = 0;
+            foreach ($attendances as $log) {
+                if (!$log->time_in) continue;
+                $timeIn = Carbon::parse($log->attendance_date . ' ' . $log->time_in);
+                $expected = Carbon::parse($log->attendance_date . ' 08:00:00');
+                if ($timeIn->greaterThan($expected)) {
+                    $late = $expected->diffInMinutes($timeIn);
+                    if ($late >= 6) $totalLateMinutes += $late;
+                }
+            }
+
+            // ---------------- Leaves ----------------
+            $leaves = Leave::with('approvalStatuses.user')
+                ->where('user_id', $item->user_id)
+                ->where(function ($q) use ($cutoff) {
+                    $q->whereBetween('start_date', [$cutoff->from_cutoff_date, $cutoff->to_cutoff_date])
+                      ->orWhereBetween('end_date', [$cutoff->from_cutoff_date, $cutoff->to_cutoff_date]);
+                })->get();
+
+            $paidLeaveDays = 0;
+            $unpaidLeaveApproved = 0;
+
+            foreach ($leaves as $leave) {
+                $leader = $leave->approvalStatuses->first(fn($a) => $a->user?->user_type_id == 3);
+                $hr = $leave->approvalStatuses->first(fn($a) => $a->user?->user_type_id == 1);
+                if ($leader?->status_id == 7 && $hr?->status_id == 7) {
+                    $start = max(Carbon::parse($leave->start_date), Carbon::parse($cutoff->from_cutoff_date));
+                    $end = min(Carbon::parse($leave->end_date), Carbon::parse($cutoff->to_cutoff_date));
+                    $count = $start->diffInDays($end) + 1;
+                    $leave->with_pay ? $paidLeaveDays += $count : $unpaidLeaveApproved += $count;
+                }
+            }
+
+            // ---------------- Rest Day Logic ----------------
+            $weekDayMap = ['monday'=>3, 'tuesday'=>4, 'wednesday'=>5, 'thursday'=>6, 'friday'=>7, 'saturday'=>8, 'sunday'=>9];
+            $idToNameMap = array_flip($weekDayMap);
+            $restDayName = 'N/A';
+
+            $approvedChanges = ChangeOff::with(['label', 'approvalStatuses.user'])
+                ->where('user_id', $item->user_id)
+                ->whereHas('approvalStatuses', fn($q) => $q->where('status_id', 7)->whereHas('user', fn($u) => $u->where('user_type_id', 1)))
+                ->whereHas('approvalStatuses', fn($q) => $q->where('status_id', 7)->whereHas('user', fn($u) => $u->where('user_type_id', 3)))
+                ->get()
+                ->map(function($co) {
+                    $hrStatus = $co->approvalStatuses->first(fn($s) => $s->status_id == 7 && ($s->user->user_type_id ?? null) == 1);
+                    $co->hr_ref_date = $hrStatus ? Carbon::parse($hrStatus->created_at) : null;
+                    return $co;
+                })->filter(fn($co) => $co->hr_ref_date !== null)->sortByDesc('hr_ref_date');
+
+            if ($approvedChanges->isNotEmpty() && $approvedChanges->first()->label) {
+                $restDayName = ucfirst($idToNameMap[$approvedChanges->first()->label->new_day_id] ?? 'N/A');
+            }
+
+            // ---------------- CALCULATE MINUTES ----------------
+            $dayInMinutes = 8 * 60;
+            $grandTotalMinutes = 0;
+            $absentDays = 0;
+            $presentDaysCount = 0;
+
+            $startDate = Carbon::parse($cutoff->from_cutoff_date);
+            $endDate = Carbon::parse($cutoff->to_cutoff_date);
+
+            for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
+                $dateStr = $date->toDateString();
+                $dayId = $weekDayMap[strtolower($date->format('l'))] ?? null;
+
+                // Attendance check
+                $log = $attendances->first(fn($a) => Carbon::parse($a->attendance_date)->toDateString() === $dateStr);
+                $isPresent = ($log && !is_null($log->time_in));
+                $isHoliday = isset($holidayMap[$dateStr]);
+                $holidayType = $isHoliday ? $holidayMap[$dateStr] : null;
+                $isLeave = $leaves->first(fn($l) => $dateStr >= $l->start_date && $dateStr <= $l->end_date);
+
+                $activeSchedule = $approvedChanges->first(fn($co) => $date->greaterThanOrEqualTo($co->hr_ref_date->startOfDay())) ?: $approvedChanges->last();
+                $isRestDay = ($activeSchedule && $activeSchedule->label && $activeSchedule->label->new_day_id == $dayId);
+
+                if ($isPresent) {
+                    $presentDaysCount++;
+                    if ($isHoliday) {
+                        if ($holidayType === 'regular') {
+                            $grandTotalMinutes += ($dayInMinutes * 2); // Double Day
+                        } else {
+                            $grandTotalMinutes += ($dayInMinutes * 1.3); // Special (130%)
+                        }
+                    } else {
+                        $grandTotalMinutes += $dayInMinutes; // Normal Day
+                    }
+                } else {
+                    // Not Present
+                    if ($isHoliday) {
+                        if ($holidayType === 'regular') {
+                            $grandTotalMinutes += $dayInMinutes; // Regular Holiday Pay even if absent
+                        }
+                        // Special Holiday: 0 pay if absent, so we do nothing
+                    } elseif ($isLeave) {
+                        // Handled later via $paidLeaveDays
+                    } elseif ($isRestDay) {
+                        // No pay, but not an absence
+                    } else {
+                        $absentDays++; // True absence without pay
+                    }
+                }
+            }
+
+            // Add Paid Leaves and OT, Deduct Approved Unpaid and Undertime
+            $grandTotalMinutes += ($paidLeaveDays * $dayInMinutes);
+
+            // ---------------- Overtime (Already minutes in logic below) ----------------
+            $totalOvertimeMinutes = 0;
+            $overtimeLists = OvertimeList::with('overtime.approvalStatuses.user')
+                ->whereHas('overtime', fn($q) => $q->where('user_id', $item->user_id))
+                ->whereBetween('overtime_date', [$cutoff->from_cutoff_date, $cutoff->to_cutoff_date])->get();
+
+            foreach ($overtimeLists as $ot) {
+                $leader = $ot->overtime->approvalStatuses->first(fn($a) => $a->user?->user_type_id == 3);
+                $hr = $ot->overtime->approvalStatuses->first(fn($a) => $a->user?->user_type_id == 1);
+                if ($leader?->status_id == 7 && $hr?->status_id == 7) {
+                    $totalOvertimeMinutes += $ot->additional_hours_worked * 60;
+                }
+            }
+            $grandTotalMinutes += $totalOvertimeMinutes;
+
+            // ---------------- Undertime ----------------
+            $totalUndertimeMinutes = 0;
+            $undertimes = Undertime::with('approvalStatuses.user')
+                ->where('user_id', $item->user_id)
+                ->whereBetween('undertime_date', [$cutoff->from_cutoff_date, $cutoff->to_cutoff_date])->get();
+
+            foreach ($undertimes as $ut) {
+                $leader = $ut->approvalStatuses->first(fn($a) => $a->user?->user_type_id == 3);
+                $hr = $ut->approvalStatuses->first(fn($a) => $a->user?->user_type_id == 1);
+                if ($leader?->status_id == 7 && $hr?->status_id == 7) {
+                    $totalUndertimeMinutes += (int)$ut->total_time;
+                }
+            }
+            $grandTotalMinutes -= $totalUndertimeMinutes;
+            $grandTotalMinutes -= ($unpaidLeaveApproved * $dayInMinutes);
+            // $absentDays was already excluded from grandTotalMinutes calculation, so no need to subtract
+
+            if ($grandTotalMinutes < 0) $grandTotalMinutes = 0;
+
             return [
                 'id' => $item->id,
                 'user_id' => $item->user_id,
                 'employee_name' => $item->employee_name,
-                'days_count' => $item->attendances->count(),
-                'name' => $cutoff->name,
-                'from_cutoff_date' => $cutoff->from_cutoff_date,
-                'to_cutoff_date' => $cutoff->to_cutoff_date,
-                'report_date' => $item->created_at ? $item->created_at->format('Y-m-d') : null,
-                'leader_status_name' => $item->leaderStatus?->status?->name ?? 'Pending',
-                'hr_status_name' => $item->hrStatus?->status?->name ?? 'Pending',
-                'hr_status_id' => $item->hrStatus?->status_id ?? 1,
-                'user' => [
-                    'first_name' => $item->user->first_name ?? '',
-                    'last_name' => $item->user->last_name ?? '',
-                    'department' => [
-                        'id' => $item->department_id,
-                        'name' => $item->department->name ?? 'N/A'
-                    ],
+                'rest_name' => $restDayName,
+                'user' => ['department' => ['id' => $item->department?->id, 'name' => $item->department?->name ?? 'N/A']],
+                'late_minutes' => $totalLateMinutes,
+                'paid_leaves' => $paidLeaveDays,
+                'unpaid_leaves' => ($absentDays + $unpaidLeaveApproved),
+                'days_count' => $presentDaysCount,
+                'holiday_count' => count(array_filter($holidayMap, fn($date) => $date >= $cutoff->from_cutoff_date && $date <= $cutoff->to_cutoff_date, ARRAY_FILTER_USE_KEY)),
+                'overtime_hours' => ['h' => floor($totalOvertimeMinutes / 60), 'm' => $totalOvertimeMinutes % 60],
+                'undertime_hours' => ['h' => floor($totalUndertimeMinutes / 60), 'm' => $totalUndertimeMinutes % 60],
+                'total_summary' => [
+                    'days' => floor($grandTotalMinutes / $dayInMinutes),
+                    'hours' => floor(($grandTotalMinutes % $dayInMinutes) / 60),
+                    'minutes' => $grandTotalMinutes % 60
                 ],
-                'attendances' => $item->attendances->map(function ($log) {
-                    return [
-                        'id' => $log->id,
-                        'attendance_date' => $log->attendance_date,
-                        'time_in' => $log->time_in,
-                        'time_out' => $log->time_out,
-                    ];
-                }),
+                'attendances' => $attendances->map(fn ($log) => [
+                    'attendance_date' => $log->attendance_date,
+                    'time_in' => $log->time_in,
+                    'time_out' => $log->time_out,
+                ]),
             ];
         });
 
     return Inertia::render('management/HR/PayrollCutOffList', [
         'cutoff' => $cutoff,
         'employees' => $employees,
-        'departments' => \App\Models\Department::all(),
+        'departments' => Department::all(),
         'reports' => $reports,
         'filters' => $request->only(['search', 'department', 'status', 'employee_id'])
     ]);

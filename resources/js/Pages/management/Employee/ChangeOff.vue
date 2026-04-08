@@ -31,7 +31,7 @@ const today = page.props.todayDate || new Date().toISOString().split("T")[0];
 
 const STORAGE_KEY = "change_off_form_draft";
 
-// Inside your Vue <script setup>
+// RESTORED: Status logic for HR and Leader checks
 const hasRejected = computed(() => {
     return (report?.approval_statuses || []).some(
         (s) =>
@@ -66,6 +66,7 @@ const savedDraft = !isEditing
     ? JSON.parse(localStorage.getItem(STORAGE_KEY))
     : null;
 
+// UPDATED: Form fields (removed date and time fields to match controller)
 const form = useForm({
     name: authUser?.name ?? "",
     department_position: authUser
@@ -75,31 +76,21 @@ const form = useForm({
         ? new Date(report.created_at).toISOString().split("T")[0]
         : today,
     request_type:
-        report?.label?.off_id?.toString() ?? savedDraft?.request_type ?? "1",
-    original_date:
-        report?.label?.original_date ?? savedDraft?.original_date ?? "",
+        report?.label?.off_id?.toString() ?? savedDraft?.request_type ?? "2", // Default to "Day" (ID 2)
     original_off_id:
         report?.label?.original_day_id?.toString() ??
         savedDraft?.original_off_id ??
         "",
-    original_time:
-        report?.label?.original_time ?? savedDraft?.original_time ?? "08:00",
-    new_date: report?.label?.new_date ?? savedDraft?.new_date ?? "",
     new_off_id:
         report?.label?.new_day_id?.toString() ?? savedDraft?.new_off_id ?? "",
-    new_time: report?.label?.new_time ?? savedDraft?.new_time ?? "08:00",
 });
 
-/**
- * Clear errors when user changes input
- */
+// Clear errors when user changes input
 Object.keys(form.data()).forEach((field) => {
     watch(
         () => form[field],
         () => {
-            if (form.errors[field]) {
-                form.clearErrors(field);
-            }
+            if (form.errors[field]) form.clearErrors(field);
         },
     );
 });
@@ -114,69 +105,37 @@ watch(
     { deep: true },
 );
 
-watch(
-    () => form.request_type,
-    (newType) => {
-        if (newType === "2") {
-            form.original_time = null;
-            form.new_time = null;
-        } else {
-            form.original_off_id = "";
-            form.new_off_id = "";
-            if (!form.original_time) form.original_time = "08:00";
-            if (!form.new_time) form.new_time = "08:00";
-        }
-    },
-);
-
-const isTimeDisabled = computed(() => form.request_type === "2");
-const isDayDisabled = computed(() => form.request_type === "1");
-
 const submit = () => {
-    if (isEditing) {
-        // Constructing URL manually since Ziggy is not used
-        form.put(`/employee/change-off/update/${report.id}`, {
-            preserveScroll: true,
-            onSuccess: () => {
-                toastStore.show("Change Off updated successfully!", "success");
-            },
-            onError: () => {
-                toastStore.show(
-                    "Please fix the errors and try again.",
-                    "error",
-                );
-            },
-        });
-    } else {
-        // Constructing URL manually for store
-        form.post("/employee/change-off/store", {
-            preserveScroll: true,
-            onSuccess: () => {
+    const url = isEditing
+        ? `/employee/change-off/update/${report.id}`
+        : "/employee/change-off/store";
+    const method = isEditing ? "put" : "post";
+
+    form[method](url, {
+        preserveScroll: true,
+        onSuccess: () => {
+            if (!isEditing) {
                 localStorage.removeItem(STORAGE_KEY);
                 form.reset();
-                form.original_date = "";
-                form.new_date = "";
+                form.original_off_id = "";
+                form.new_off_id = "";
                 form.report_date = today;
-                toastStore.show(
-                    "Change Off submitted successfully!",
-                    "success",
-                );
-            },
-            onError: () => {
-                toastStore.show(
-                    "Please fix the errors and try again.",
-                    "error",
-                );
-            },
-        });
-    }
+            }
+            toastStore.show(
+                `Change Off ${isEditing ? "updated" : "submitted"} successfully!`,
+                "success",
+            );
+        },
+        onError: () =>
+            toastStore.show("Please fix the errors and try again.", "error"),
+    });
 };
 
 const dayOfWeekOptions = computed(() =>
     days.filter((d) => !["time", "day"].includes(d.name.toLowerCase())),
 );
 const typeOptions = computed(() =>
-    days.filter((d) => ["time", "day"].includes(d.name.toLowerCase())),
+    days.filter((d) => d.name.toLowerCase() === "day"),
 );
 </script>
 
@@ -218,7 +177,7 @@ const typeOptions = computed(() =>
                         }}
                     </CardTitle>
                     <CardDescription class="text-slate-500"
-                        >Request to swap your scheduled time or day
+                        >Request to swap your scheduled day
                         off.</CardDescription
                     >
                 </div>
@@ -251,23 +210,26 @@ const typeOptions = computed(() =>
                     />
                 </div>
                 <div class="col-span-12 md:col-span-6">
-                    <Label class="p-1">Change Category</Label>
+                    <Label class="p-1 font-semibold text-slate-700"
+                        >Change Category</Label
+                    >
                     <Select v-model="form.request_type">
                         <SelectTrigger
                             :class="{
                                 'border-red-500': form.errors.request_type,
                             }"
-                            class="border-2 border-brand-blue"
+                            class="bg-white"
                         >
-                            <SelectValue placeholder="Select Type" />
+                            <SelectValue placeholder="Select Category" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem
                                 v-for="type in typeOptions"
                                 :key="type.id"
                                 :value="type.id.toString()"
-                                >{{ type.name.toUpperCase() }}</SelectItem
                             >
+                                {{ type.name.toUpperCase() }}
+                            </SelectItem>
                         </SelectContent>
                     </Select>
                     <p
@@ -290,31 +252,8 @@ const typeOptions = computed(() =>
                             Original Schedule
                         </h3>
                         <div>
-                            <Label>Date</Label>
-                            <Input
-                                type="date"
-                                v-model="form.original_date"
-                                :class="{
-                                    'border-red-500': form.errors.original_date,
-                                }"
-                            />
-                            <p
-                                v-if="form.errors.original_date"
-                                class="text-red-500 text-xs mt-1"
-                            >
-                                {{ form.errors.original_date }}
-                            </p>
-                        </div>
-                        <div
-                            :class="{
-                                'opacity-50 pointer-events-none': isDayDisabled,
-                            }"
-                        >
-                            <Label>Day of Week</Label>
-                            <Select
-                                v-model="form.original_off_id"
-                                :disabled="isDayDisabled"
-                            >
+                            <Label class="p-1">Day of Week</Label>
+                            <Select v-model="form.original_off_id">
                                 <SelectTrigger
                                     :class="{
                                         'border-red-500':
@@ -328,10 +267,9 @@ const typeOptions = computed(() =>
                                         v-for="day in dayOfWeekOptions"
                                         :key="day.id"
                                         :value="day.id.toString()"
-                                        >{{
-                                            day.name.toUpperCase()
-                                        }}</SelectItem
                                     >
+                                        {{ day.name.toUpperCase() }}
+                                    </SelectItem>
                                 </SelectContent>
                             </Select>
                             <p
@@ -339,28 +277,6 @@ const typeOptions = computed(() =>
                                 class="text-red-500 text-xs mt-1"
                             >
                                 {{ form.errors.original_off_id }}
-                            </p>
-                        </div>
-                        <div
-                            :class="{
-                                'opacity-50 pointer-events-none':
-                                    isTimeDisabled,
-                            }"
-                        >
-                            <Label>Time</Label>
-                            <Input
-                                type="time"
-                                v-model="form.original_time"
-                                :disabled="isTimeDisabled"
-                                :class="{
-                                    'border-red-500': form.errors.original_time,
-                                }"
-                            />
-                            <p
-                                v-if="form.errors.original_time"
-                                class="text-red-500 text-xs mt-1"
-                            >
-                                {{ form.errors.original_time }}
                             </p>
                         </div>
                     </div>
@@ -374,31 +290,8 @@ const typeOptions = computed(() =>
                             New Schedule
                         </h3>
                         <div>
-                            <Label>Date</Label>
-                            <Input
-                                type="date"
-                                v-model="form.new_date"
-                                :class="{
-                                    'border-red-500': form.errors.new_date,
-                                }"
-                            />
-                            <p
-                                v-if="form.errors.new_date"
-                                class="text-red-500 text-xs mt-1"
-                            >
-                                {{ form.errors.new_date }}
-                            </p>
-                        </div>
-                        <div
-                            :class="{
-                                'opacity-50 pointer-events-none': isDayDisabled,
-                            }"
-                        >
-                            <Label>Day of Week</Label>
-                            <Select
-                                v-model="form.new_off_id"
-                                :disabled="isDayDisabled"
-                            >
+                            <Label class="p-1">Day of Week</Label>
+                            <Select v-model="form.new_off_id">
                                 <SelectTrigger
                                     :class="{
                                         'border-red-500':
@@ -412,10 +305,9 @@ const typeOptions = computed(() =>
                                         v-for="day in dayOfWeekOptions"
                                         :key="day.id"
                                         :value="day.id.toString()"
-                                        >{{
-                                            day.name.toUpperCase()
-                                        }}</SelectItem
                                     >
+                                        {{ day.name.toUpperCase() }}
+                                    </SelectItem>
                                 </SelectContent>
                             </Select>
                             <p
@@ -423,28 +315,6 @@ const typeOptions = computed(() =>
                                 class="text-red-500 text-xs mt-1"
                             >
                                 {{ form.errors.new_off_id }}
-                            </p>
-                        </div>
-                        <div
-                            :class="{
-                                'opacity-50 pointer-events-none':
-                                    isTimeDisabled,
-                            }"
-                        >
-                            <Label>Time</Label>
-                            <Input
-                                type="time"
-                                v-model="form.new_time"
-                                :disabled="isTimeDisabled"
-                                :class="{
-                                    'border-red-500': form.errors.new_time,
-                                }"
-                            />
-                            <p
-                                v-if="form.errors.new_time"
-                                class="text-red-500 text-xs mt-1"
-                            >
-                                {{ form.errors.new_time }}
                             </p>
                         </div>
                     </div>
