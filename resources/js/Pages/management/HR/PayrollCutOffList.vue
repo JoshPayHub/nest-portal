@@ -108,9 +108,9 @@ const filteredReports = computed(() => {
     });
 });
 
-const formatDate = (dateStr) => {
-    if (!dateStr) return "--";
-    return new Date(dateStr).toLocaleDateString("en-US", {
+const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+        weekday: "short",
         month: "short",
         day: "numeric",
         year: "numeric",
@@ -153,6 +153,17 @@ const handleAction = (reportId, statusId) => {
             },
         },
     );
+};
+
+const isExporting = ref(false);
+const exportExcel = () => {
+    if (isExporting.value) return;
+
+    isExporting.value = true;
+    window.location.href = `/hr/payroll-cutoff/${props.cutoff.id}/export${window.location.search}`;
+    setTimeout(() => {
+        isExporting.value = false;
+    }, 3000);
 };
 
 const getStatusClass = (status) => {
@@ -208,9 +219,14 @@ const goBack = () => router.get("/hr/payroll-cut-off");
                         </CardDescription>
                     </div>
                     <div>
-                        <Button class="bg-brand-blue hover:bg-green-700"
-                            >Export Excel</Button
+                        <Button
+                            @click="exportExcel"
+                            :disabled="isExporting"
+                            class="bg-brand-blue hover:bg-green-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
                         >
+                            <span v-if="isExporting">Processing...</span>
+                            <span v-else>Export Excel</span>
+                        </Button>
                     </div>
                 </div>
             </CardHeader>
@@ -355,51 +371,133 @@ const goBack = () => router.get("/hr/payroll-cut-off");
                                         </div>
                                     </TableCell>
 
-                                    <TableCell class="text-center font-medium">
-                                        <span v-if="report.late_minutes">
-                                            {{
-                                                Math.floor(
-                                                    report.late_minutes / 60,
-                                                )
-                                            }}h {{ report.late_minutes % 60 }}m
+                                    <TableCell
+                                        class="font-semibold text-center text-slate-800"
+                                    >
+                                        <span v-if="report.late_minutes > 0">
+                                            <template
+                                                v-if="report.late_minutes >= 60"
+                                            >
+                                                {{
+                                                    Math.floor(
+                                                        report.late_minutes /
+                                                            60,
+                                                    )
+                                                }}h
+                                            </template>
+                                            <template
+                                                v-if="
+                                                    report.late_minutes % 60 !==
+                                                    0
+                                                "
+                                            >
+                                                {{ report.late_minutes % 60 }}m
+                                            </template>
                                         </span>
-                                        <span v-else>0m</span>
+                                        <span v-else>0</span>
                                     </TableCell>
 
                                     <TableCell
-                                        class="text-center font-medium text-red-600"
+                                        class="font-semibold text-center text-slate-800"
                                     >
-                                        {{ report.undertime_hours.h }}h
-                                        {{ report.undertime_hours.m }}m
+                                        <span
+                                            v-if="report.undertime_hours.h > 0"
+                                            >{{
+                                                report.undertime_hours.h
+                                            }}h</span
+                                        >
+                                        <span
+                                            v-if="report.undertime_hours.m > 0"
+                                            >{{
+                                                report.undertime_hours.m
+                                            }}m</span
+                                        >
+                                        <span
+                                            v-if="
+                                                report.undertime_hours.h ===
+                                                    0 &&
+                                                report.undertime_hours.m === 0
+                                            "
+                                            >0</span
+                                        >
                                     </TableCell>
 
-                                    <TableCell class="text-center font-medium">
+                                    <TableCell
+                                        class="font-semibold text-center text-slate-800"
+                                    >
                                         {{ report.paid_leaves || 0 }}
                                     </TableCell>
 
                                     <TableCell
-                                        class="text-center font-medium text-red-600"
+                                        class="font-semibold text-center text-slate-800"
                                     >
                                         {{ report.unpaid_leaves || 0 }}
                                     </TableCell>
 
-                                    <TableCell class="text-center font-medium">
+                                    <TableCell
+                                        class="font-semibold text-center text-slate-800"
+                                    >
                                         {{ report.holiday_count || 0 }}
                                     </TableCell>
 
                                     <TableCell
-                                        class="text-center font-medium text-green-600"
+                                        class="font-semibold text-center text-slate-800"
                                     >
-                                        {{ report.overtime_hours.h }}h
-                                        {{ report.overtime_hours.m }}m
+                                        <span v-if="report.overtime_hours.h > 0"
+                                            >{{
+                                                report.overtime_hours.h
+                                            }}h</span
+                                        >
+                                        <span v-if="report.overtime_hours.m > 0"
+                                            >{{
+                                                report.overtime_hours.m
+                                            }}m</span
+                                        >
+                                        <span
+                                            v-if="
+                                                report.overtime_hours.h === 0 &&
+                                                report.overtime_hours.m === 0
+                                            "
+                                            >0</span
+                                        >
                                     </TableCell>
 
                                     <TableCell
-                                        class="text-center font-bold bg-slate-50"
+                                        class="font-semibold text-center text-slate-800"
                                     >
-                                        {{ report.total_summary.days }}d
-                                        {{ report.total_summary.hours }}h
-                                        {{ report.total_summary.minutes }}m
+                                        <span
+                                            v-if="report.total_summary.days > 0"
+                                            >{{
+                                                report.total_summary.days
+                                            }}d</span
+                                        >
+                                        <span
+                                            v-if="
+                                                report.total_summary.hours > 0
+                                            "
+                                            >{{
+                                                report.total_summary.hours
+                                            }}h</span
+                                        >
+                                        <span
+                                            v-if="
+                                                report.total_summary.minutes > 0
+                                            "
+                                            >{{
+                                                report.total_summary.minutes
+                                            }}m</span
+                                        >
+                                        <span
+                                            v-if="
+                                                report.total_summary.days ===
+                                                    0 &&
+                                                report.total_summary.hours ===
+                                                    0 &&
+                                                report.total_summary.minutes ===
+                                                    0
+                                            "
+                                            >0m</span
+                                        >
                                     </TableCell>
 
                                     <TableCell class="text-center">
@@ -446,7 +544,7 @@ const goBack = () => router.get("/hr/payroll-cut-off");
                             </template>
                             <TableRow v-else>
                                 <TableCell
-                                    colspan="5"
+                                    colspan="12"
                                     class="text-center text-slate-500 py-10 italic"
                                     >No records found.</TableCell
                                 >
@@ -491,11 +589,9 @@ const goBack = () => router.get("/hr/payroll-cut-off");
                                 }}
                             </p>
                             <p class="text-sm font-semibold">
-                                ({{
-                                    formatDate(selectedItem?.from_cutoff_date)
-                                }}
-                                to
-                                {{ formatDate(selectedItem?.to_cutoff_date) }})
+                                {{ formatDate(props.cutoff?.from_cutoff_date) }}
+                                to <br />
+                                {{ formatDate(props.cutoff?.to_cutoff_date) }}
                             </p>
                         </div>
                         <div class="flex justify-end gap-4">
