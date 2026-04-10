@@ -62,10 +62,10 @@ const viewAttendance = (id) => {
 };
 
 const formatDate = (dateString) => {
-    if (!dateString) return "";
     return new Date(dateString).toLocaleDateString("en-US", {
+        weekday: "short",
         month: "short",
-        day: "2-digit",
+        day: "numeric",
         year: "numeric",
     });
 };

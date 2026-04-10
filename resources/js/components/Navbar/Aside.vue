@@ -288,16 +288,11 @@ const menuItems = {
                     href: "/head/change-off",
                     icon: "fa-solid fa-right-left",
                 },
-                {
-                    label: "Leave Form",
-                    href: "/head/leave",
-                    icon: "fa-solid fa-calendar-plus",
-                },
-                {
-                    label: "Leave of Absence Report",
-                    href: "/head/leave-of-absence",
-                    icon: "fa-solid fa-calendar-xmark",
-                },
+                // {
+                //     label: "Leave Form",
+                //     href: "/head/leave",
+                //     icon: "fa-solid fa-calendar-plus",
+                // },
                 {
                     label: "Manpower Requisition Form",
                     href: "/head/manpower",
@@ -307,6 +302,22 @@ const menuItems = {
                     label: "Official Business Notification",
                     href: "/head/business-notification",
                     icon: "fa-solid fa-briefcase",
+                },
+            ],
+        },
+        {
+            category: "Staff Payroll",
+            icon: "fa-solid fa-file-invoice-dollar",
+            children: [
+                {
+                    label: "Payroll Cut-off",
+                    href: "/head/payroll-cut-off",
+                    icon: "fa-solid fa-calendar-days",
+                },
+                {
+                    label: "Leave of Absence Report",
+                    href: "/head/leave",
+                    icon: "fa-solid fa-calendar-xmark",
                 },
                 {
                     label: "Overtime Request Form",

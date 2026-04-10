@@ -9,6 +9,7 @@ use App\Http\Controllers\Head\LeaveAbsenceController;
 use App\Http\Controllers\Head\LeaveController;
 use App\Http\Controllers\Head\ManpowerController;
 use App\Http\Controllers\Head\OvertimeRequestController;
+use App\Http\Controllers\Head\PayrollCutOffController;
 use App\Http\Controllers\Head\ProfileController;
 use App\Http\Controllers\Head\UndertimeFormController;
 use Illuminate\Support\Facades\Route;
@@ -48,6 +49,14 @@ Route::middleware(['auth', 'user_type:Head'])->prefix('head')->name('head.')->gr
     // Undertime Form
     Route::get('/undertime-form', [UndertimeFormController::class, 'index'])->name('undertimeform.index');
     Route::post('/undertime-form/{id}/approve', [UndertimeFormController::class, 'approve'])->name('undertimeform.approve');
+
+    // Payroll Form
+    Route::get('/payroll-cut-off', [PayrollCutOffController::class, 'index'])->name('payrollcutoff.index');
+    Route::post('/payroll-cut-off/store', [PayrollCutOffController::class, 'store'])->name('payrollcutoff.store');
+    Route::post('/payroll-cut-off/update/{id}', [PayrollCutOffController::class, 'update'])->name('payrollcutoff.update');
+    Route::get('/payroll-cut-off/{id}/attendance', [PayrollCutOffController::class, 'attendancePage'])->name('payrollcutoff.attendance');
+    Route::post('/payroll-cut-off/{id}/approve', [PayrollCutOffController::class, 'approve'])->name('payrollcutoff.approve');
+    Route::get('/payroll-cutoff/{id}/export', [PayrollCutOffController::class, 'exportAttendance'])->name('attendance.export');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
