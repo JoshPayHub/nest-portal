@@ -10,17 +10,24 @@ class DeductionSettingSeeder extends Seeder
     public function run(): void
     {
         $settings = [
-            // Cutoff 1: SSS at Tax
-            ['name' => 'SSS', 'type' => 'table_based', 'cutoff_assignment' => 1],
-            ['name' => 'Withholding Tax', 'type' => 'train_law', 'cutoff_assignment' => 1],
+            // PhilHealth (5% split 50/50)
+            ['key' => 'philhealth_rate', 'value' => 0.05, 'description' => 'PhilHealth total premium rate'],
+            ['key' => 'philhealth_min_salary', 'value' => 10000, 'description' => 'Floor salary for contribution'],
+            ['key' => 'philhealth_max_salary', 'value' => 100000, 'description' => 'Ceiling salary for contribution'],
 
-            // Cutoff 2: PhilHealth at Pag-IBIG
-            ['name' => 'PhilHealth', 'type' => 'percentage', 'amount_or_rate' => 0.05, 'cutoff_assignment' => 2],
-            ['name' => 'Pag-IBIG', 'type' => 'fixed', 'amount_or_rate' => 200.00, 'cutoff_assignment' => 2],
+            // Pag-IBIG (HDMF)
+            ['key' => 'pagibig_rate_low', 'value' => 0.01, 'description' => 'EE rate if salary <= 1500'],
+            ['key' => 'pagibig_rate_high', 'value' => 0.02, 'description' => 'EE rate if salary > 1500'],
+            ['key' => 'pagibig_er_rate', 'value' => 0.02, 'description' => 'Employer fixed rate'],
+            ['key' => 'pagibig_salary_cap', 'value' => 10000, 'description' => 'Max Monthly Fund Salary (MFS)'],
+            ['key' => 'pagibig_max_contribution', 'value' => 200, 'description' => 'Max contribution amount per side'],
+
+            // General Payroll
+            ['key' => 'days_per_month', 'value' => 26, 'description' => 'Standard working days for monthly rate calculation'],
         ];
 
         foreach ($settings as $setting) {
-            DeductionSetting::create($setting);
+            DeductionSetting::updateOrCreate(['key' => $setting['key']], $setting);
         }
     }
 }

@@ -10,6 +10,7 @@ class SalaryEmployee extends Model
     protected $fillable = [
         'user_id',
         'salary_amount',
+        'de_minimis',
         'type',
         'status_id',
     ];
@@ -24,4 +25,3 @@ class SalaryEmployee extends Model
         return $this->belongsTo(User::class);
     }
 }
-

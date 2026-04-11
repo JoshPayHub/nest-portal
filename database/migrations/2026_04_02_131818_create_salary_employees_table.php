@@ -16,8 +16,17 @@ return new class extends Migration
             $table->foreignId('user_id')
                 ->constrained('users')
                 ->onDelete('restrict');
-            $table->string('salary_amount');
-            $table->enum('type', ['monthly', 'daily'])->nullable();
+
+            // Changed to decimal for accurate math (10 digits total, 2 after decimal)
+            $table->decimal('salary_amount', 10, 2)->default(0.00);
+
+            // Added De Minimis (Tax-exempt benefits)
+            $table->decimal('de_minimis', 10, 2)->default(0.00);
+
+            // Optional: Helper column for the total agreed package
+            $table->decimal('gross_salary', 10, 2)->virtualAs('salary_amount + de_minimis');
+
+            $table->enum('type', ['monthly', 'daily'])->default('monthly');
             $table->foreignId('status_id')->constrained('statuses')->onDelete('restrict');
             $table->timestamps();
         });

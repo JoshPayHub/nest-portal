@@ -81,7 +81,7 @@ class PayrollCutOffController extends Controller
         })
         ->when($request->employee_id, fn($q, $empId) => $q->where('attendance_employees.user_id', $empId))
         // Department filter is removed as it is now hard-coded to the head's department
-        ->when($request->status, fn($q, $statusId) => $q->where('attendance_employees.hr_status_id', $statusId))
+        ->when($request->status, fn($q, $statusId) => $q->where('attendance_employees.head_status_id', $statusId))
         ->orderBy('attendance_employees.created_at', 'desc')
         ->paginate(10)
         ->withQueryString()
@@ -257,6 +257,7 @@ class PayrollCutOffController extends Controller
             return [
                 'id' => $item->id,
                 'user_id' => $item->user_id,
+                'head_status_id' => $item->head_status_id,
                 'employee_name' => $item->employee_name,
                 'rest_name' => $restDayName,
                 'user' => ['department' => ['id' => $item->department?->id, 'name' => $item->department?->name ?? 'N/A']],

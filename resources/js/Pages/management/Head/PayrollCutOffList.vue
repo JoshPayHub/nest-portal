@@ -80,9 +80,10 @@ const filteredReports = computed(() => {
         const matchesSearch =
             !term || item.employee_name?.toLowerCase().includes(term);
 
-        // Status Filter
+        // Change this line in your computed property:
         const matchesStatus =
-            !selectedStatus.value || item.hr_status_id == selectedStatus.value;
+            !selectedStatus.value ||
+            String(item.head_status_id) === String(selectedStatus.value);
 
         // Specific Employee Filter
         const matchesSpecificEmp =

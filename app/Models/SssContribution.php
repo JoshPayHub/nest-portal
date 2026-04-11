@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +11,11 @@ class SssContribution extends Model
     protected $fillable = [
         'min_salary',
         'max_salary',
-        'employee_share',
-        'wisp_employee'
+        'msc',        // Added
+        'ee_share',
+        'er_share',   // Added
+        'wisp_ee',    // Matches migration name wisp_ee
+        'wisp_er',
+        'ec_er'       // Added
     ];
 }

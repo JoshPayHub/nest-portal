@@ -13,11 +13,11 @@ return new class extends Migration
     {
         Schema::create('tax_brackets', function (Blueprint $table) {
             $table->id();
-            $table->decimal('min_income', 15, 2);
-            $table->decimal('max_income', 15, 2)->nullable();
-            $table->decimal('base_tax', 15, 2)->default(0);
-            $table->decimal('excess_rate', 5, 2);
-            $table->decimal('subtract_from_excess', 15, 2);
+            $table->decimal('min_salary', 10, 2);
+            $table->decimal('max_salary', 10, 2)->nullable();
+            $table->decimal('base_tax', 10, 2);
+            $table->decimal('excess_rate', 10, 4);
+            $table->decimal('over_amount', 10, 2);
             $table->timestamps();
         });
     }

@@ -13,10 +13,14 @@ return new class extends Migration
     {
         Schema::create('sss_contributions', function (Blueprint $table) {
             $table->id();
-            $table->decimal('min_salary', 15, 2);
-            $table->decimal('max_salary', 15, 2);
-            $table->decimal('employee_share', 15, 2);
-            $table->decimal('wisp_employee', 15, 2)->default(0);
+            $table->decimal('min_salary', 10, 2);
+            $table->decimal('max_salary', 10, 2);
+            $table->decimal('msc', 10, 2);
+            $table->decimal('ee_share', 10, 2);
+            $table->decimal('er_share', 10, 2);
+            $table->decimal('wisp_ee', 10, 2)->default(0);
+            $table->decimal('wisp_er', 10, 2)->default(0);
+            $table->decimal('ec_er', 10, 2)->default(10);
             $table->timestamps();
         });
     }

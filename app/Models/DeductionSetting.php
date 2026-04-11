@@ -10,10 +10,8 @@ class DeductionSetting extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name',
-        'type',
-        'amount_or_rate',
-        'cutoff_assignment',
-        'is_active'
+        'key',
+        'value',
+        'description'
     ];
 }

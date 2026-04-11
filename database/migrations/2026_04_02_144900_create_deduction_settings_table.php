@@ -13,11 +13,9 @@ return new class extends Migration
     {
         Schema::create('deduction_settings', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->enum('type', ['fixed', 'percentage', 'table_based', 'train_law']);
-            $table->decimal('amount_or_rate', 15, 4)->default(0);
-            $table->integer('cutoff_assignment');
-            $table->boolean('is_active')->default(true);
+            $table->string('key')->unique();
+            $table->decimal('value', 10, 4);
+            $table->string('description')->nullable();
             $table->timestamps();
         });
     }
