@@ -11,7 +11,7 @@ class DeductionSettingSeeder extends Seeder
     {
         $settings = [
             // PhilHealth (5% split 50/50)
-            ['key' => 'philhealth_rate', 'value' => 0.05, 'description' => 'PhilHealth total premium rate'],
+            ['key' => 'philhealth_rate', 'value' => 0.055, 'description' => 'PhilHealth total premium rate'],
             ['key' => 'philhealth_min_salary', 'value' => 10000, 'description' => 'Floor salary for contribution'],
             ['key' => 'philhealth_max_salary', 'value' => 100000, 'description' => 'Ceiling salary for contribution'],
 

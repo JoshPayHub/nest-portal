@@ -9,6 +9,7 @@ import {
     Banknote,
     Calculator,
     Trash2,
+    Eye,
 } from "lucide-vue-next";
 import { toastStore } from "@/stores/toast";
 import { Button } from "@/Components/ui/button";
@@ -54,6 +55,7 @@ const props = defineProps({
 
 const isDialogOpen = ref(false);
 const isEditing = ref(false);
+const isReadOnly = ref(false);
 const currentEditId = ref(null);
 const selectedEmployeeName = ref("");
 const search = ref(props.filters.search || "");
@@ -67,86 +69,66 @@ const form = useForm({
     status_id: 1,
 });
 
-/**
- * ✅ FIX: missing helper (THIS WAS CAUSING YOUR ERROR)
- */
 const getSetting = (key) => {
     return Number(props.deductionSettings?.[key] ?? 0);
 };
 
 /**
- * ✅ Payroll Preview (SAFE)
+ * ✅ Payroll Preview - Handles Daily (x26) and Monthly
  */
 const payrollPreview = computed(() => {
-    const basicPay = Number(form.salary_amount) || 0;
-    const deMinimis = Number(form.de_minimis) || 0;
+    let rawBasic = Number(form.salary_amount) || 0;
+    let rawDeMinimis = Number(form.de_minimis) || 0;
+
+    const basicPay = form.type === "daily" ? rawBasic * 26 : rawBasic;
+    const deMinimis = form.type === "daily" ? rawDeMinimis * 26 : rawDeMinimis;
 
     const gross = basicPay + deMinimis;
 
-    // ======================
-    // SSS
-    // ======================
     const sssRow = props.sssTable?.find(
         (row) =>
             gross >= Number(row.min_salary) && gross <= Number(row.max_salary),
     );
-
     const sssEE = sssRow ? Number(sssRow.ee_share) + Number(sssRow.wisp_ee) : 0;
 
-    // ======================
-    // PHILHEALTH
-    // ======================
     const PH_RATE = getSetting("philhealth_rate");
     const PH_MIN = getSetting("philhealth_min_salary");
     const PH_MAX = getSetting("philhealth_max_salary");
-
     let phBase = Math.min(Math.max(gross, PH_MIN), PH_MAX);
-    const philhealthEE = (phBase * PH_RATE) / 2;
+    const philhealthEE = basicPay > 0 ? (phBase * PH_RATE) / 2 : 0;
 
-    // ======================
-    // PAG-IBIG
-    // ======================
     const PI_LOW = getSetting("pagibig_rate_low");
     const PI_HIGH = getSetting("pagibig_rate_high");
     const PI_CAP = getSetting("pagibig_max_contribution");
     const PI_SALARY_CAP = getSetting("pagibig_salary_cap");
-
     let piBase = Math.min(basicPay, PI_SALARY_CAP);
-
     let pagibigEE = piBase <= 1500 ? piBase * PI_LOW : piBase * PI_HIGH;
+    pagibigEE = basicPay > 0 ? Math.min(pagibigEE, PI_CAP) : 0;
 
-    pagibigEE = Math.min(pagibigEE, PI_CAP);
-
-    // ======================
-    // TAX
-    // ======================
     const statutory = sssEE + philhealthEE + pagibigEE;
     const taxableAmount = Math.max(0, basicPay - statutory);
-
     const taxRow = props.taxTable
         ?.slice()
         .reverse()
         .find((row) => taxableAmount >= Number(row.min_salary));
 
     let tax = 0;
-    if (taxRow) {
+    if (taxRow && basicPay > 0) {
         tax =
             Number(taxRow.base_tax) +
             (taxableAmount - Number(taxRow.over_amount)) *
                 Number(taxRow.excess_rate);
     }
 
-    // ======================
-    // NET
-    // ======================
-    const net = basicPay - statutory - tax;
+    const net = basicPay > 0 ? basicPay - statutory - tax : 0;
 
     return {
+        estimatedMonthlyBasic: basicPay,
+        estimatedMonthlyDeMinimis: deMinimis,
         gross,
         sss: sssEE,
         philhealth: philhealthEE,
         pagibig: pagibigEE,
-        taxableAmount,
         tax,
         net,
     };
@@ -162,25 +144,40 @@ watch([search, selectedDept], ([s, d]) => {
 
 const openCreateModal = () => {
     isEditing.value = false;
+    isReadOnly.value = false;
     form.reset();
+    isDialogOpen.value = true;
+};
+
+const openViewModal = (record) => {
+    isEditing.value = false;
+    isReadOnly.value = true;
+    populateForm(record);
     isDialogOpen.value = true;
 };
 
 const openEditModal = (record) => {
     isEditing.value = true;
-    currentEditId.value = record.id;
-    selectedEmployeeName.value = `${record.user.first_name} ${record.user.last_name}`;
+    isReadOnly.value = false;
+    populateForm(record);
+    isDialogOpen.value = true;
+};
 
+const populateForm = (record) => {
+    currentEditId.value = record.id;
+    selectedEmployeeName.value = record.user
+        ? `${record.user.first_name} ${record.user.last_name}`
+        : "Unknown";
     form.user_id = record.user_id;
     form.salary_amount = record.salary_amount;
     form.de_minimis = record.de_minimis || 0;
     form.type = record.type;
     form.status_id = record.status_id;
-
-    isDialogOpen.value = true;
 };
 
 const submit = () => {
+    if (isReadOnly.value) return;
+
     const url = isEditing.value
         ? `/hr/salary-employee/update/${currentEditId.value}`
         : "/hr/salary-employee/store";
@@ -197,14 +194,6 @@ const submit = () => {
         },
         onError: (e) => toastStore.show(Object.values(e)[0], "danger"),
     });
-};
-
-const deleteRecord = (id) => {
-    if (confirm("Are you sure you want to remove this salary record?")) {
-        router.delete(`/hr/salary-employee/destroy/${id}`, {
-            onSuccess: () => toastStore.show("Record deleted", "success"),
-        });
-    }
 };
 
 const formatCurrency = (v) =>
@@ -280,7 +269,11 @@ const formatCurrency = (v) =>
                                 >
                                 <TableHead
                                     class="font-bold text-slate-600 uppercase text-xs"
-                                    >Basic Pay</TableHead
+                                    >Rate</TableHead
+                                >
+                                <TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs"
+                                    >Type</TableHead
                                 >
                                 <TableHead
                                     class="font-bold text-slate-600 uppercase text-xs"
@@ -288,10 +281,6 @@ const formatCurrency = (v) =>
                                 >
                                 <TableHead
                                     class="font-bold text-slate-600 uppercase text-xs"
-                                    >Gross</TableHead
-                                >
-                                <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs"
                                     >Status</TableHead
                                 >
                                 <TableHead
@@ -311,9 +300,11 @@ const formatCurrency = (v) =>
                                         class="font-semibold text-slate-800"
                                     >
                                         <div class="flex items-center gap-3">
-                                            <UserCircle
-                                                class="w-8 h-8 text-slate-300"
-                                            />
+                                            <div
+                                                class="p-2 bg-blue-50 rounded text-brand-blue"
+                                            >
+                                                <UserCircle class="w-4 h-4" />
+                                            </div>
                                             <div>
                                                 <p>
                                                     {{ record.user.first_name }}
@@ -333,21 +324,16 @@ const formatCurrency = (v) =>
                                     <TableCell>{{
                                         formatCurrency(record.salary_amount)
                                     }}</TableCell>
+                                    <TableCell>
+                                        <span
+                                            class="capitalize text-xs font-medium px-2 py-1 bg-slate-100 rounded"
+                                        >
+                                            {{ record.type }}
+                                        </span>
+                                    </TableCell>
                                     <TableCell>{{
                                         formatCurrency(record.de_minimis || 0)
                                     }}</TableCell>
-                                    <TableCell
-                                        class="font-bold text-brand-blue"
-                                    >
-                                        {{
-                                            formatCurrency(
-                                                Number(record.salary_amount) +
-                                                    Number(
-                                                        record.de_minimis || 0,
-                                                    ),
-                                            )
-                                        }}
-                                    </TableCell>
                                     <TableCell class="text-center">
                                         <span
                                             :class="[
@@ -361,7 +347,7 @@ const formatCurrency = (v) =>
                                         </span>
                                     </TableCell>
                                     <TableCell
-                                        class="text-right px-6 space-x-2"
+                                        class="text-right px-6 space-x-1"
                                     >
                                         <Button
                                             variant="ghost"
@@ -374,10 +360,10 @@ const formatCurrency = (v) =>
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            @click="deleteRecord(record.id)"
-                                            class="text-red-600 hover:bg-red-50"
+                                            @click="openViewModal(record)"
+                                            class="text-brand-blue hover:bg-green-50"
                                         >
-                                            <Trash2 class="w-4 h-4" />
+                                            <Eye class="w-4 h-4" />
                                         </Button>
                                     </TableCell>
                                 </TableRow>
@@ -401,9 +387,11 @@ const formatCurrency = (v) =>
                 <DialogHeader>
                     <DialogTitle class="text-2xl font-bold text-brand-blue">
                         {{
-                            isEditing
-                                ? "Update Salary Profile"
-                                : "New Salary Entry"
+                            isReadOnly
+                                ? "View Salary Details"
+                                : isEditing
+                                  ? "Update Salary Profile"
+                                  : "New Salary Entry"
                         }}
                     </DialogTitle>
                 </DialogHeader>
@@ -417,8 +405,8 @@ const formatCurrency = (v) =>
                                     >Employee</Label
                                 >
                                 <Input
-                                    v-if="isEditing"
-                                    :value="selectedEmployeeName"
+                                    v-if="isEditing || isReadOnly"
+                                    v-model="selectedEmployeeName"
                                     disabled
                                     class="bg-slate-100 cursor-not-allowed"
                                 />
@@ -444,8 +432,13 @@ const formatCurrency = (v) =>
                             <div class="space-y-1">
                                 <Label
                                     class="text-xs font-bold uppercase text-slate-500"
-                                    >Basic Monthly Pay</Label
                                 >
+                                    {{
+                                        form.type === "daily"
+                                            ? "Daily Rate"
+                                            : "Basic Monthly Pay"
+                                    }}
+                                </Label>
                                 <div class="relative">
                                     <Banknote
                                         class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
@@ -454,7 +447,13 @@ const formatCurrency = (v) =>
                                         type="number"
                                         step="0.01"
                                         v-model="form.salary_amount"
+                                        :disabled="isReadOnly"
                                         class="pl-10 h-11"
+                                        :class="
+                                            isReadOnly
+                                                ? 'bg-slate-50 cursor-default'
+                                                : ''
+                                        "
                                         placeholder="0.00"
                                         required
                                     />
@@ -464,13 +463,25 @@ const formatCurrency = (v) =>
                             <div class="space-y-1">
                                 <Label
                                     class="text-xs font-bold uppercase text-slate-500"
-                                    >De Minimis Allowance</Label
                                 >
+                                    Allowance
+                                    {{
+                                        form.type === "daily"
+                                            ? "(Daily)"
+                                            : "(Monthly)"
+                                    }}
+                                </Label>
                                 <Input
                                     type="number"
                                     step="0.01"
                                     v-model="form.de_minimis"
+                                    :disabled="isReadOnly"
                                     class="h-11"
+                                    :class="
+                                        isReadOnly
+                                            ? 'bg-slate-50 cursor-default'
+                                            : ''
+                                    "
                                     placeholder="0.00"
                                 />
                             </div>
@@ -483,7 +494,13 @@ const formatCurrency = (v) =>
                                     >
                                     <select
                                         v-model="form.type"
+                                        :disabled="isReadOnly"
                                         class="w-full h-11 border border-slate-200 rounded-md px-2 text-sm outline-none"
+                                        :class="
+                                            isReadOnly
+                                                ? 'bg-slate-50 cursor-default opacity-100'
+                                                : ''
+                                        "
                                     >
                                         <option value="monthly">Monthly</option>
                                         <option value="daily">Daily</option>
@@ -496,7 +513,13 @@ const formatCurrency = (v) =>
                                     >
                                     <select
                                         v-model="form.status_id"
+                                        :disabled="isReadOnly"
                                         class="w-full h-11 border border-slate-200 rounded-md px-2 text-sm outline-none"
+                                        :class="
+                                            isReadOnly
+                                                ? 'bg-slate-50 cursor-default opacity-100'
+                                                : ''
+                                        "
                                     >
                                         <option
                                             v-for="s in statuses"
@@ -514,12 +537,21 @@ const formatCurrency = (v) =>
                             class="bg-slate-50 p-6 rounded-xl border border-slate-200 space-y-4"
                         >
                             <div
-                                class="flex items-center gap-2 border-b border-slate-200 pb-2"
+                                class="flex items-center justify-between border-b border-slate-200 pb-2"
                             >
-                                <Calculator class="w-5 h-5 text-brand-blue" />
+                                <div class="flex items-center gap-2">
+                                    <Calculator
+                                        class="w-5 h-5 text-brand-blue"
+                                    />
+                                    <span
+                                        class="font-bold text-sm uppercase text-slate-700"
+                                        >Estimated Monthly</span
+                                    >
+                                </div>
                                 <span
-                                    class="font-bold text-sm uppercase text-slate-700"
-                                    >Live Breakdown</span
+                                    v-if="form.type === 'daily'"
+                                    class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold"
+                                    >RATE x 26</span
                                 >
                             </div>
 
@@ -527,18 +559,22 @@ const formatCurrency = (v) =>
                                 <div
                                     class="flex justify-between text-xs text-slate-500"
                                 >
-                                    <span>Basic Salary:</span>
+                                    <span>Est. Basic Salary:</span>
                                     <span>{{
-                                        formatCurrency(form.salary_amount || 0)
+                                        formatCurrency(
+                                            payrollPreview.estimatedMonthlyBasic,
+                                        )
                                     }}</span>
                                 </div>
                                 <div
                                     class="flex justify-between text-xs text-green-600"
                                 >
-                                    <span>De Minimis:</span>
+                                    <span>Est. De Minimis:</span>
                                     <span
                                         >+{{
-                                            formatCurrency(form.de_minimis || 0)
+                                            formatCurrency(
+                                                payrollPreview.estimatedMonthlyDeMinimis,
+                                            )
                                         }}</span
                                     >
                                 </div>
@@ -553,7 +589,9 @@ const formatCurrency = (v) =>
                                     }}</span>
                                 </div>
 
-                                <div class="pt-3 space-y-2">
+                                <div
+                                    class="pt-3 space-y-2 border-t border-dashed border-slate-200"
+                                >
                                     <div
                                         class="flex justify-between text-xs text-slate-500"
                                     >
@@ -614,9 +652,10 @@ const formatCurrency = (v) =>
                                 >
                                 <span
                                     class="text-2xl font-black text-brand-blue"
+                                    >{{
+                                        formatCurrency(payrollPreview.net)
+                                    }}</span
                                 >
-                                    {{ formatCurrency(payrollPreview.net) }}
-                                </span>
                             </div>
                         </div>
                     </div>
@@ -628,9 +667,10 @@ const formatCurrency = (v) =>
                             @click="isDialogOpen = false"
                             class="px-8 h-11 font-bold"
                         >
-                            Cancel
+                            {{ isReadOnly ? "Close" : "Cancel" }}
                         </Button>
                         <Button
+                            v-if="!isReadOnly"
                             type="submit"
                             class="bg-brand-blue hover:bg-brand-blue/90 px-10 h-11 font-bold text-white"
                             :disabled="form.processing"

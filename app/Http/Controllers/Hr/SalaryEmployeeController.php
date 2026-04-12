@@ -12,6 +12,7 @@ use App\Models\TaxBracket;
 use App\Models\DeductionSetting;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Validation\Rule;
 
 class SalaryEmployeeController extends Controller
 {
@@ -70,7 +71,7 @@ class SalaryEmployeeController extends Controller
 
         SalaryEmployee::create([
             'user_id' => $validated['user_id'],
-            'basic_pay' => $validated['salary_amount'], // ✅ map here
+            'salary_amount' => $validated['salary_amount'],
             'de_minimis' => $validated['de_minimis'] ?? 0,
             'type' => $validated['type'],
             'status_id' => $validated['status_id'],
@@ -91,7 +92,7 @@ class SalaryEmployeeController extends Controller
         ]);
 
         $salary->update([
-            'basic_pay' => $validated['salary_amount'], // ✅ map here
+            'salary_amount' => $validated['salary_amount'],
             'de_minimis' => $validated['de_minimis'] ?? 0,
             'type' => $validated['type'],
             'status_id' => $validated['status_id'],

@@ -9,7 +9,7 @@ use App\Http\Controllers\Hr\HolidayController;
 use App\Http\Controllers\Hr\PayrollCutOffController;
 use App\Http\Controllers\Hr\PositionController;
 use App\Http\Controllers\Hr\SalaryEmployeeController;
-use Inertia\Inertia;
+use App\Http\Controllers\Hr\SalaryPayrollController;
 use Illuminate\Support\Facades\Route;
 
 // hr.php
@@ -52,6 +52,8 @@ Route::middleware(['auth', 'user_type:HR'])->prefix('hr')->name('hr.')->group(fu
     Route::get('/salary-employee', [SalaryEmployeeController::class, 'index'])->name('payrollcutoff.index');
     Route::post('/salary-employee/store', [SalaryEmployeeController::class, 'store'])->name('payrollcutoff.store');
     Route::post('/salary-employee/update/{id}', [SalaryEmployeeController::class, 'update'])->name('payrollcutoff.update');
+
+    Route::get('/salary-payroll', [SalaryPayrollController::class, 'index'])->name('salarypayroll.index');
 
 
 });

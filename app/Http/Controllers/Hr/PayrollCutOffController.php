@@ -134,19 +134,25 @@ class PayrollCutOffController extends Controller
             $leaderEntry = $item->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 3);
             $hrEntry     = $item->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 1);
 
-            // ---------------- Attendance Data ----------------
+            // ---------------- Attendance ----------------
             $attendances = $item->attendances->filter(fn($log) =>
                 $log->attendance_date >= $cutoff->from_cutoff_date &&
                 $log->attendance_date <= $cutoff->to_cutoff_date
             )->values();
 
-            // ---------------- Holiday Setup ----------------
+            // ---------------- Holidays ----------------
             $holidays = Holiday::where('status_id', 1)->get();
             $holidayMap = $holidays->mapWithKeys(fn($h) => [
-                Carbon::parse($h->date)->toDateString() => strtolower($h->type) // assuming 'type' field exists
+                Carbon::parse($h->date)->toDateString() => strtolower($h->type)
             ])->toArray();
 
-           // ---------------- Late calculation (Split Windows) ----------------
+            // ---------------- Counters (SAFE INIT) ----------------
+            $regularHolidayCount = 0;
+            $specialHolidayCount = 0;
+            $rdSpecialHolidayCount = 0;
+            $rdRegularHolidayCount = 0;
+
+            // ---------------- Late ----------------
             $totalLateMinutes = 0;
 
             foreach ($attendances as $log) {
@@ -155,26 +161,18 @@ class PayrollCutOffController extends Controller
                 $attendanceDate = $log->attendance_date;
                 $timeIn = Carbon::parse($attendanceDate . ' ' . $log->time_in);
 
-                // Define the boundaries
-                $morningStart   = Carbon::parse($attendanceDate . ' 08:00:00');
-                $morningGrace   = Carbon::parse($attendanceDate . ' 08:05:59');
-                $morningEnd     = Carbon::parse($attendanceDate . ' 12:00:00');
+                $morningStart = Carbon::parse($attendanceDate . ' 08:00:00');
+                $morningGrace = Carbon::parse($attendanceDate . ' 08:05:59');
+                $morningEnd   = Carbon::parse($attendanceDate . ' 12:00:00');
 
                 $afternoonStart = Carbon::parse($attendanceDate . ' 13:00:00');
                 $afternoonGrace = Carbon::parse($attendanceDate . ' 13:05:59');
                 $afternoonEnd   = Carbon::parse($attendanceDate . ' 17:00:00');
 
-                // Case 1: Morning Late (8:06 AM to 12:00 PM)
                 if ($timeIn->greaterThan($morningGrace) && $timeIn->lessThanOrEqualTo($morningEnd)) {
-                    $late = $morningStart->diffInMinutes($timeIn);
-                    $totalLateMinutes += $late;
-                }
-
-                // Case 2: Afternoon Late (1:06 PM to 5:00 PM)
-                // If they time in after 1:05:59 PM but before/at 5:00 PM
-                elseif ($timeIn->greaterThan($afternoonGrace) && $timeIn->lessThanOrEqualTo($afternoonEnd)) {
-                    $late = $afternoonStart->diffInMinutes($timeIn);
-                    $totalLateMinutes += $late;
+                    $totalLateMinutes += $morningStart->diffInMinutes($timeIn);
+                } elseif ($timeIn->greaterThan($afternoonGrace) && $timeIn->lessThanOrEqualTo($afternoonEnd)) {
+                    $totalLateMinutes += $afternoonStart->diffInMinutes($timeIn);
                 }
             }
 
@@ -192,35 +190,28 @@ class PayrollCutOffController extends Controller
             foreach ($leaves as $leave) {
                 $leader = $leave->approvalStatuses->first(fn($a) => $a->user?->user_type_id == 3);
                 $hr = $leave->approvalStatuses->first(fn($a) => $a->user?->user_type_id == 1);
+
                 if ($leader?->status_id == 7 && $hr?->status_id == 7) {
                     $start = max(Carbon::parse($leave->start_date), Carbon::parse($cutoff->from_cutoff_date));
                     $end = min(Carbon::parse($leave->end_date), Carbon::parse($cutoff->to_cutoff_date));
                     $count = $start->diffInDays($end) + 1;
-                    $leave->with_pay ? $paidLeaveDays += $count : $unpaidLeaveApproved += $count;
+
+                    $leave->with_pay
+                        ? $paidLeaveDays += $count
+                        : $unpaidLeaveApproved += $count;
                 }
             }
 
-            // ---------------- Rest Day Logic ----------------
-            $weekDayMap = ['monday'=>3, 'tuesday'=>4, 'wednesday'=>5, 'thursday'=>6, 'friday'=>7, 'saturday'=>8, 'sunday'=>9];
-            $idToNameMap = array_flip($weekDayMap);
-            $restDayName = 'N/A';
+            // ---------------- Rest Day ----------------
+            $weekDayMap = ['monday'=>3,'tuesday'=>4,'wednesday'=>5,'thursday'=>6,'friday'=>7,'saturday'=>8,'sunday'=>9];
 
             $approvedChanges = ChangeOff::with(['label', 'approvalStatuses.user'])
                 ->where('user_id', $item->user_id)
-                ->whereHas('approvalStatuses', fn($q) => $q->where('status_id', 7)->whereHas('user', fn($u) => $u->where('user_type_id', 1)))
-                ->whereHas('approvalStatuses', fn($q) => $q->where('status_id', 7)->whereHas('user', fn($u) => $u->where('user_type_id', 3)))
-                ->get()
-                ->map(function($co) {
-                    $hrStatus = $co->approvalStatuses->first(fn($s) => $s->status_id == 7 && ($s->user->user_type_id ?? null) == 1);
-                    $co->hr_ref_date = $hrStatus ? Carbon::parse($hrStatus->created_at) : null;
-                    return $co;
-                })->filter(fn($co) => $co->hr_ref_date !== null)->sortByDesc('hr_ref_date');
+                ->get();
 
-            if ($approvedChanges->isNotEmpty() && $approvedChanges->first()->label) {
-                $restDayName = ucfirst($idToNameMap[$approvedChanges->first()->label->new_day_id] ?? 'N/A');
-            }
+            $restDayId = $approvedChanges->first()?->label?->new_day_id;
 
-            // ---------------- CALCULATE MINUTES ----------------
+            // ---------------- Payroll Loop ----------------
             $dayInMinutes = 8 * 60;
             $grandTotalMinutes = 0;
             $absentDays = 0;
@@ -230,81 +221,78 @@ class PayrollCutOffController extends Controller
             $endDate = Carbon::parse($cutoff->to_cutoff_date);
 
             for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
+
                 $dateStr = $date->toDateString();
                 $dayId = $weekDayMap[strtolower($date->format('l'))] ?? null;
 
-                // Attendance check
-                $log = $attendances->first(fn($a) => Carbon::parse($a->attendance_date)->toDateString() === $dateStr);
+                $log = $attendances->first(fn($a) =>
+                    Carbon::parse($a->attendance_date)->toDateString() === $dateStr
+                );
+
                 $isPresent = ($log && !is_null($log->time_in));
                 $isHoliday = isset($holidayMap[$dateStr]);
-                $holidayType = $isHoliday ? $holidayMap[$dateStr] : null;
+                $holidayType = $holidayMap[$dateStr] ?? null;
+
+                $isRestDay = ($restDayId == $dayId);
                 $isLeave = $leaves->first(fn($l) => $dateStr >= $l->start_date && $dateStr <= $l->end_date);
 
-                $activeSchedule = $approvedChanges->first(fn($co) => $date->greaterThanOrEqualTo($co->hr_ref_date->startOfDay())) ?: $approvedChanges->last();
-                $isRestDay = ($activeSchedule && $activeSchedule->label && $activeSchedule->label->new_day_id == $dayId);
+                // ---------------- HOLIDAY RULES FIXED ----------------
+                if ($isHoliday) {
 
+                    // REGULAR HOLIDAY
+                    if ($holidayType === 'regular') {
+
+                        if ($isPresent) {
+                            if ($isRestDay) {
+                                $rdRegularHolidayCount++;
+                            } else {
+                                $regularHolidayCount++;
+                            }
+                        } else {
+                            if (!$isRestDay) {
+                                $regularHolidayCount++;
+                            }
+                        }
+                    }
+
+                    // SPECIAL HOLIDAY
+                    else {
+                        if ($isPresent) {
+                            if ($isRestDay) {
+                                $rdSpecialHolidayCount++;
+                            } else {
+                                $specialHolidayCount++;
+                            }
+                        }
+                    }
+                }
+
+                // ---------------- ATTENDANCE ----------------
                 if ($isPresent) {
                     $presentDaysCount++;
-                    if ($isHoliday) {
-                        if ($holidayType === 'regular') {
-                            $grandTotalMinutes += ($dayInMinutes * 2); // Double Day
-                        } else {
-                            $grandTotalMinutes += ($dayInMinutes * 1.3); // Special (130%)
-                        }
-                    } else {
-                        $grandTotalMinutes += $dayInMinutes; // Normal Day
-                    }
+                    $grandTotalMinutes += $dayInMinutes;
                 } else {
-                    // Not Present
-                    if ($isHoliday) {
-                        if ($holidayType === 'regular') {
-                            $grandTotalMinutes += $dayInMinutes; // Regular Holiday Pay even if absent
-                        }
-                        // Special Holiday: 0 pay if absent, so we do nothing
-                    } elseif ($isLeave) {
-                        // Handled later via $paidLeaveDays
-                    } elseif ($isRestDay) {
-                        // No pay, but not an absence
-                    } else {
-                        $absentDays++; // True absence without pay
+                    if (!$isHoliday && !$isLeave && !$isRestDay) {
+                        $absentDays++;
                     }
                 }
             }
 
-            // Add Paid Leaves and OT, Deduct Approved Unpaid and Undertime
-            $grandTotalMinutes += ($paidLeaveDays * $dayInMinutes);
-
-            // ---------------- Overtime (Already minutes in logic below) ----------------
-            $totalOvertimeMinutes = 0;
-            $overtimeLists = OvertimeList::with('overtime.approvalStatuses.user')
-                ->whereHas('overtime', fn($q) => $q->where('user_id', $item->user_id))
-                ->whereBetween('overtime_date', [$cutoff->from_cutoff_date, $cutoff->to_cutoff_date])->get();
-
-            foreach ($overtimeLists as $ot) {
-                $leader = $ot->overtime->approvalStatuses->first(fn($a) => $a->user?->user_type_id == 3);
-                $hr = $ot->overtime->approvalStatuses->first(fn($a) => $a->user?->user_type_id == 1);
-                if ($leader?->status_id == 7 && $hr?->status_id == 7) {
-                    $totalOvertimeMinutes += $ot->additional_hours_worked * 60;
-                }
-            }
-            $grandTotalMinutes += $totalOvertimeMinutes;
+            // ---------------- OT ----------------
+            $totalOvertimeMinutes = OvertimeList::whereHas('overtime', fn($q) =>
+                    $q->where('user_id', $item->user_id)
+                )
+                ->whereBetween('overtime_date', [$cutoff->from_cutoff_date, $cutoff->to_cutoff_date])
+                ->sum(DB::raw('additional_hours_worked * 60'));
 
             // ---------------- Undertime ----------------
-            $totalUndertimeMinutes = 0;
-            $undertimes = Undertime::with('approvalStatuses.user')
-                ->where('user_id', $item->user_id)
-                ->whereBetween('undertime_date', [$cutoff->from_cutoff_date, $cutoff->to_cutoff_date])->get();
+            $totalUndertimeMinutes = Undertime::where('user_id', $item->user_id)
+                ->whereBetween('undertime_date', [$cutoff->from_cutoff_date, $cutoff->to_cutoff_date])
+                ->sum('total_time');
 
-            foreach ($undertimes as $ut) {
-                $leader = $ut->approvalStatuses->first(fn($a) => $a->user?->user_type_id == 3);
-                $hr = $ut->approvalStatuses->first(fn($a) => $a->user?->user_type_id == 1);
-                if ($leader?->status_id == 7 && $hr?->status_id == 7) {
-                    $totalUndertimeMinutes += (int)$ut->total_time;
-                }
-            }
+            $grandTotalMinutes += $totalOvertimeMinutes;
             $grandTotalMinutes -= $totalUndertimeMinutes;
             $grandTotalMinutes -= ($unpaidLeaveApproved * $dayInMinutes);
-            // $absentDays was already excluded from grandTotalMinutes calculation, so no need to subtract
 
             if ($grandTotalMinutes < 0) $grandTotalMinutes = 0;
 
@@ -313,23 +301,37 @@ class PayrollCutOffController extends Controller
                 'user_id' => $item->user_id,
                 'employee_name' => $item->employee_name,
                 'hr_status_id' => $item->hr_status_id,
-                'rest_name' => $restDayName,
-                'user' => ['department' => ['id' => $item->department?->id, 'name' => $item->department?->name ?? 'N/A']],
+                'rest_name' => $restDayId ?? 'N/A',
+
                 'late_minutes' => $totalLateMinutes,
                 'paid_leaves' => $paidLeaveDays,
                 'unpaid_leaves' => ($absentDays + $unpaidLeaveApproved),
                 'days_count' => $presentDaysCount,
-                'holiday_count' => count(array_filter($holidayMap, fn($date) => $date >= $cutoff->from_cutoff_date && $date <= $cutoff->to_cutoff_date, ARRAY_FILTER_USE_KEY)),
-                'overtime_hours' => ['h' => floor($totalOvertimeMinutes / 60), 'm' => $totalOvertimeMinutes % 60],
-                'undertime_hours' => ['h' => floor($totalUndertimeMinutes / 60), 'm' => $totalUndertimeMinutes % 60],
+
+                'regular_holiday_count' => $regularHolidayCount,
+                'special_holiday_count' => $specialHolidayCount,
+                'rd_special_holiday_count' => $rdSpecialHolidayCount,
+                'rd_regular_holiday_count' => $rdRegularHolidayCount,
+
+                'overtime_hours' => [
+                    'h' => floor($totalOvertimeMinutes / 60),
+                    'm' => $totalOvertimeMinutes % 60
+                ],
+
+                'undertime_hours' => [
+                    'h' => floor($totalUndertimeMinutes / 60),
+                    'm' => $totalUndertimeMinutes % 60
+                ],
+
                 'leader_status_name' => $leaderEntry?->status?->name ?? 'Pending',
-                'hr_status_name'     => $hrEntry?->status?->name ?? 'Pending',
+                'hr_status_name' => $hrEntry?->status?->name ?? 'Pending',
 
                 'total_summary' => [
                     'days' => floor($grandTotalMinutes / $dayInMinutes),
                     'hours' => floor(($grandTotalMinutes % $dayInMinutes) / 60),
                     'minutes' => $grandTotalMinutes % 60
                 ],
+
                 'attendances' => $attendances->map(fn ($log) => [
                     'attendance_date' => $log->attendance_date,
                     'time_in' => $log->time_in,
