@@ -176,29 +176,42 @@ public function attendancePage(Request $request, $id)
                 }
             }
 
-            // ---------------- Leaves ----------------
+            // ---------------- Leaves (FIXED LOGIC) ----------------
             $leaves = Leave::with('approvalStatuses.user')
                 ->where('user_id', $item->user_id)
                 ->where(function ($q) use ($cutoff) {
                     $q->whereBetween('start_date', [$cutoff->from_cutoff_date, $cutoff->to_cutoff_date])
-                      ->orWhereBetween('end_date', [$cutoff->from_cutoff_date, $cutoff->to_cutoff_date]);
+                      ->orWhereBetween('end_date', [$cutoff->from_cutoff_date, $cutoff->to_cutoff_date])
+                      // Also cover leaves that start before and end after the cutoff
+                      ->orWhere(function($sub) use ($cutoff) {
+                          $sub->where('start_date', '<=', $cutoff->from_cutoff_date)
+                              ->where('end_date', '>=', $cutoff->to_cutoff_date);
+                      });
                 })->get();
 
             $paidLeaveDays = 0;
             $unpaidLeaveApproved = 0;
+            $approvedLeaveDates = []; // Track dates that are officially approved leave
 
             foreach ($leaves as $leave) {
                 $leader = $leave->approvalStatuses->first(fn($a) => $a->user?->user_type_id == 3);
                 $hr = $leave->approvalStatuses->first(fn($a) => $a->user?->user_type_id == 1);
 
+                // ONLY count if BOTH approved
                 if ($leader?->status_id == 7 && $hr?->status_id == 7) {
                     $start = max(Carbon::parse($leave->start_date), Carbon::parse($cutoff->from_cutoff_date));
                     $end = min(Carbon::parse($leave->end_date), Carbon::parse($cutoff->to_cutoff_date));
-                    $count = $start->diffInDays($end) + 1;
 
-                    $leave->with_pay
-                        ? $paidLeaveDays += $count
-                        : $unpaidLeaveApproved += $count;
+                    for ($d = $start->copy(); $d->lte($end); $d->addDay()) {
+                        $dateStr = $d->toDateString();
+                        $approvedLeaveDates[] = $dateStr;
+
+                        if ($leave->with_pay) {
+                            $paidLeaveDays++;
+                        } else {
+                            $unpaidLeaveApproved++;
+                        }
+                    }
                 }
             }
 
@@ -249,7 +262,8 @@ public function attendancePage(Request $request, $id)
                 $holidayType = $holidayMap[$dateStr] ?? null;
 
                 $isRestDay = ($restDayId == $dayId);
-                $isLeave = $leaves->first(fn($l) => $dateStr >= $l->start_date && $dateStr <= $l->end_date);
+                // Check if this specific date was in our approved list
+                $isApprovedLeave = in_array($dateStr, $approvedLeaveDates);
 
                 if ($isHoliday) {
                     if ($holidayType === 'regular') {
@@ -269,7 +283,8 @@ public function attendancePage(Request $request, $id)
                     $presentDaysCount++;
                     $grandTotalMinutes += $dayInMinutes;
                 } else {
-                    if (!$isHoliday && !$isLeave && !$isRestDay) {
+                    // If no attendance, not a holiday, not a rest day, AND NOT an approved leave, it's an ABSENCE
+                    if (!$isHoliday && !$isRestDay && !$isApprovedLeave) {
                         $absentDays++;
                     }
                 }
@@ -346,7 +361,8 @@ public function attendancePage(Request $request, $id)
 
             $grandTotalMinutes += $totalOvertimeMinutes;
             $grandTotalMinutes -= $totalUndertimeMinutes;
-            $grandTotalMinutes -= ($unpaidLeaveApproved * $dayInMinutes);
+            // Add paid leave minutes to the total
+            $grandTotalMinutes += ($paidLeaveDays * $dayInMinutes);
 
             if ($grandTotalMinutes < 0) $grandTotalMinutes = 0;
 
@@ -368,7 +384,6 @@ public function attendancePage(Request $request, $id)
                 'rd_special_holiday_count' => $rdSpecialHolidayCount,
                 'rd_regular_holiday_count' => $rdRegularHolidayCount,
 
-                // ✅ ALL OT TYPES
                 'regular_overtime_hours' => ['h'=>floor($regularOT/60),'m'=>$regularOT%60],
                 'rd_overtime_hours' => ['h'=>floor($rdOT/60),'m'=>$rdOT%60],
                 'regular_holiday_overtime_hours' => ['h'=>floor($regularHolidayOT/60),'m'=>$regularHolidayOT%60],
