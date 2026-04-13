@@ -97,7 +97,7 @@ class PayrollCutOffController extends Controller
         }
     }
 
- public function attendancePage(Request $request, $id)
+public function attendancePage(Request $request, $id)
 {
     $cutoff = PayrollCutOff::findOrFail($id);
     $employees = User::with(['department', 'position', 'status'])->get();
@@ -141,12 +141,12 @@ class PayrollCutOffController extends Controller
             )->values();
 
             // ---------------- Holidays ----------------
-            $holidays = Holiday::where('status_id', 1)->get();
-            $holidayMap = $holidays->mapWithKeys(fn($h) => [
-                Carbon::parse($h->date)->toDateString() => strtolower($h->type)
-            ])->toArray();
+            $holidayMap = Holiday::where('status_id', 1)->get()
+                ->mapWithKeys(fn($h) => [
+                    Carbon::parse($h->date)->toDateString() => strtolower($h->type)
+                ])->toArray();
 
-            // ---------------- Counters (SAFE INIT) ----------------
+            // ---------------- Counters ----------------
             $regularHolidayCount = 0;
             $specialHolidayCount = 0;
             $rdSpecialHolidayCount = 0;
@@ -176,7 +176,7 @@ class PayrollCutOffController extends Controller
                 }
             }
 
-            // ---------------- Leaves ----------------
+            // ---------------- Leaves (APPROVED ONLY) ----------------
             $leaves = Leave::with('approvalStatuses.user')
                 ->where('user_id', $item->user_id)
                 ->where(function ($q) use ($cutoff) {
@@ -202,12 +202,29 @@ class PayrollCutOffController extends Controller
                 }
             }
 
-            // ---------------- Rest Day ----------------
+            // ✅ ---------------- Rest Day (APPROVED ONLY FIXED) ----------------
             $weekDayMap = ['monday'=>3,'tuesday'=>4,'wednesday'=>5,'thursday'=>6,'friday'=>7,'saturday'=>8,'sunday'=>9];
 
             $approvedChanges = ChangeOff::with(['label', 'approvalStatuses.user'])
                 ->where('user_id', $item->user_id)
-                ->get();
+                ->whereHas('approvalStatuses', fn($q) =>
+                    $q->where('status_id', 7)
+                      ->whereHas('user', fn($u) => $u->where('user_type_id', 1))
+                )
+                ->whereHas('approvalStatuses', fn($q) =>
+                    $q->where('status_id', 7)
+                      ->whereHas('user', fn($u) => $u->where('user_type_id', 3))
+                )
+                ->get()
+                ->map(function($co) {
+                    $hrStatus = $co->approvalStatuses
+                        ->first(fn($s) => $s->status_id == 7 && ($s->user->user_type_id ?? null) == 1);
+
+                    $co->hr_ref_date = $hrStatus ? Carbon::parse($hrStatus->created_at) : null;
+                    return $co;
+                })
+                ->filter(fn($co) => $co->hr_ref_date !== null)
+                ->sortByDesc('hr_ref_date');
 
             $restDayId = $approvedChanges->first()?->label?->new_day_id;
 
@@ -236,38 +253,20 @@ class PayrollCutOffController extends Controller
                 $isRestDay = ($restDayId == $dayId);
                 $isLeave = $leaves->first(fn($l) => $dateStr >= $l->start_date && $dateStr <= $l->end_date);
 
-                // ---------------- HOLIDAY RULES FIXED ----------------
                 if ($isHoliday) {
-
-                    // REGULAR HOLIDAY
                     if ($holidayType === 'regular') {
-
                         if ($isPresent) {
-                            if ($isRestDay) {
-                                $rdRegularHolidayCount++;
-                            } else {
-                                $regularHolidayCount++;
-                            }
-                        } else {
-                            if (!$isRestDay) {
-                                $regularHolidayCount++;
-                            }
+                            $isRestDay ? $rdRegularHolidayCount++ : $regularHolidayCount++;
+                        } elseif (!$isRestDay) {
+                            $regularHolidayCount++;
                         }
-                    }
-
-                    // SPECIAL HOLIDAY
-                    else {
+                    } else {
                         if ($isPresent) {
-                            if ($isRestDay) {
-                                $rdSpecialHolidayCount++;
-                            } else {
-                                $specialHolidayCount++;
-                            }
+                            $isRestDay ? $rdSpecialHolidayCount++ : $specialHolidayCount++;
                         }
                     }
                 }
 
-                // ---------------- ATTENDANCE ----------------
                 if ($isPresent) {
                     $presentDaysCount++;
                     $grandTotalMinutes += $dayInMinutes;
@@ -278,17 +277,38 @@ class PayrollCutOffController extends Controller
                 }
             }
 
-            // ---------------- OT ----------------
-            $totalOvertimeMinutes = OvertimeList::whereHas('overtime', fn($q) =>
-                    $q->where('user_id', $item->user_id)
-                )
-                ->whereBetween('overtime_date', [$cutoff->from_cutoff_date, $cutoff->to_cutoff_date])
-                ->sum(DB::raw('additional_hours_worked * 60'));
+            // ---------------- OT + UT (UNCHANGED APPROVED ONLY) ----------------
+            $totalOvertimeMinutes = 0;
 
-            // ---------------- Undertime ----------------
-            $totalUndertimeMinutes = Undertime::where('user_id', $item->user_id)
+            $overtimeLists = OvertimeList::with('overtime.approvalStatuses.user')
+                ->whereHas('overtime', fn($q) => $q->where('user_id', $item->user_id))
+                ->whereBetween('overtime_date', [$cutoff->from_cutoff_date, $cutoff->to_cutoff_date])
+                ->get();
+
+            foreach ($overtimeLists as $ot) {
+                $l = $ot->overtime->approvalStatuses->first(fn($a) => $a->user?->user_type_id == 3);
+                $h = $ot->overtime->approvalStatuses->first(fn($a) => $a->user?->user_type_id == 1);
+
+                if ($l?->status_id == 7 && $h?->status_id == 7) {
+                    $totalOvertimeMinutes += $ot->additional_hours_worked * 60;
+                }
+            }
+
+            $totalUndertimeMinutes = 0;
+
+            $undertimes = Undertime::with('approvalStatuses.user')
+                ->where('user_id', $item->user_id)
                 ->whereBetween('undertime_date', [$cutoff->from_cutoff_date, $cutoff->to_cutoff_date])
-                ->sum('total_time');
+                ->get();
+
+            foreach ($undertimes as $ut) {
+                $l = $ut->approvalStatuses->first(fn($a) => $a->user?->user_type_id == 3);
+                $h = $ut->approvalStatuses->first(fn($a) => $a->user?->user_type_id == 1);
+
+                if ($l?->status_id == 7 && $h?->status_id == 7) {
+                    $totalUndertimeMinutes += (int)$ut->total_time;
+                }
+            }
 
             $grandTotalMinutes += $totalOvertimeMinutes;
             $grandTotalMinutes -= $totalUndertimeMinutes;
@@ -300,6 +320,7 @@ class PayrollCutOffController extends Controller
                 'id' => $item->id,
                 'user_id' => $item->user_id,
                 'employee_name' => $item->employee_name,
+                'department_name' => $item->user->department->name ?? 'N/A',
                 'hr_status_id' => $item->hr_status_id,
                 'rest_name' => $restDayId ?? 'N/A',
 
@@ -331,12 +352,6 @@ class PayrollCutOffController extends Controller
                     'hours' => floor(($grandTotalMinutes % $dayInMinutes) / 60),
                     'minutes' => $grandTotalMinutes % 60
                 ],
-
-                'attendances' => $attendances->map(fn ($log) => [
-                    'attendance_date' => $log->attendance_date,
-                    'time_in' => $log->time_in,
-                    'time_out' => $log->time_out,
-                ]),
             ];
         });
 
@@ -348,7 +363,6 @@ class PayrollCutOffController extends Controller
         'filters' => $request->only(['search', 'department', 'status', 'employee_id'])
     ]);
 }
-
     public function exportAttendance(Request $request, $id)
 {
     $cutoff = PayrollCutOff::findOrFail($id);

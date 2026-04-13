@@ -332,22 +332,7 @@ const goBack = () => router.get("/hr/payroll-cut-off");
                                 >
                                 <TableHead
                                     class="text-center font-bold text-slate-600 uppercase text-xs"
-                                    >Regular Overtime (hr)</TableHead
-                                >
-
-                                <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs"
-                                    >RD Overtime (hr)</TableHead
-                                >
-
-                                <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs"
-                                    >RD Regular Overtime (hr)</TableHead
-                                >
-
-                                <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs"
-                                    >RD Special Overtime (hr)</TableHead
+                                    >Overtime (hr)</TableHead
                                 >
 
                                 <TableHead
@@ -430,25 +415,37 @@ const goBack = () => router.get("/hr/payroll-cut-off");
                                         class="font-semibold text-center text-slate-800"
                                     >
                                         <span
-                                            v-if="report.undertime_hours.h > 0"
-                                            >{{
-                                                report.undertime_hours.h
-                                            }}h</span
+                                            v-if="
+                                                (report.undertime_hours?.h ??
+                                                    0) > 0
+                                            "
                                         >
-                                        <span
-                                            v-if="report.undertime_hours.m > 0"
-                                            >{{
-                                                report.undertime_hours.m
-                                            }}m</span
-                                        >
+                                            {{
+                                                report.undertime_hours?.h ?? 0
+                                            }}h
+                                        </span>
+
                                         <span
                                             v-if="
-                                                report.undertime_hours.h ===
-                                                    0 &&
-                                                report.undertime_hours.m === 0
+                                                (report.undertime_hours?.m ??
+                                                    0) > 0
                                             "
-                                            >0</span
                                         >
+                                            {{
+                                                report.undertime_hours?.m ?? 0
+                                            }}m
+                                        </span>
+
+                                        <span
+                                            v-if="
+                                                (report.undertime_hours?.h ??
+                                                    0) === 0 &&
+                                                (report.undertime_hours?.m ??
+                                                    0) === 0
+                                            "
+                                        >
+                                            0
+                                        </span>
                                     </TableCell>
 
                                     <TableCell
@@ -496,128 +493,32 @@ const goBack = () => router.get("/hr/payroll-cut-off");
                                     >
                                         <span
                                             v-if="
-                                                report.regular_overtime_hours
-                                                    .h > 0
+                                                (report.overtime_hours?.h ??
+                                                    0) > 0
                                             "
-                                            >{{
-                                                report.regular_overtime_hours.h
-                                            }}h</span
                                         >
-                                        <span
-                                            v-if="
-                                                report.regular_overtime_hours
-                                                    .m > 0
-                                            "
-                                            >{{
-                                                report.regular_overtime_hours.m
-                                            }}m</span
-                                        >
-                                        <span
-                                            v-if="
-                                                report.regular_overtime_hours
-                                                    .h === 0 &&
-                                                report.regular_overtime_hours
-                                                    .m === 0
-                                            "
-                                            >0</span
-                                        >
-                                    </TableCell>
+                                            {{ report.overtime_hours?.h ?? 0 }}h
+                                        </span>
 
-                                    <TableCell
-                                        class="font-semibold text-center text-slate-800"
-                                    >
                                         <span
                                             v-if="
-                                                report.rd_overtime_hours.h > 0
+                                                (report.overtime_hours?.m ??
+                                                    0) > 0
                                             "
-                                            >{{
-                                                report.rd_overtime_hours.h
-                                            }}h</span
                                         >
-                                        <span
-                                            v-if="
-                                                report.rd_overtime_hours.m > 0
-                                            "
-                                            >{{
-                                                report.rd_overtime_hours.m
-                                            }}m</span
-                                        >
-                                        <span
-                                            v-if="
-                                                report.rd_overtime_hours.h ===
-                                                    0 &&
-                                                report.rd_overtime_hours.m === 0
-                                            "
-                                            >0</span
-                                        >
-                                    </TableCell>
+                                            {{ report.overtime_hours?.m ?? 0 }}m
+                                        </span>
 
-                                    <TableCell
-                                        class="font-semibold text-center text-slate-800"
-                                    >
                                         <span
                                             v-if="
-                                                report.rd_regular_overtime_hours
-                                                    .h > 0
+                                                (report.overtime_hours?.h ??
+                                                    0) === 0 &&
+                                                (report.overtime_hours?.m ??
+                                                    0) === 0
                                             "
-                                            >{{
-                                                report.rd_regular_overtime_hours
-                                                    .h
-                                            }}h</span
                                         >
-                                        <span
-                                            v-if="
-                                                report.rd_regular_overtime_hours
-                                                    .m > 0
-                                            "
-                                            >{{
-                                                report.rd_regular_overtime_hours
-                                                    .m
-                                            }}m</span
-                                        >
-                                        <span
-                                            v-if="
-                                                report.rd_regular_overtime_hours
-                                                    .h === 0 &&
-                                                report.rd_regular_overtime_hours
-                                                    .m === 0
-                                            "
-                                            >0</span
-                                        >
-                                    </TableCell>
-
-                                    <TableCell
-                                        class="font-semibold text-center text-slate-800"
-                                    >
-                                        <span
-                                            v-if="
-                                                report.rd_special_overtime_hours
-                                                    .h > 0
-                                            "
-                                            >{{
-                                                report.rd_special_overtime_hours
-                                                    .h
-                                            }}h</span
-                                        >
-                                        <span
-                                            v-if="
-                                                report.rd_special_overtime_hours
-                                                    .m > 0
-                                            "
-                                            >{{
-                                                report.rd_special_overtime_hours
-                                                    .m
-                                            }}m</span
-                                        >
-                                        <span
-                                            v-if="
-                                                report.rd_special_overtime_hours
-                                                    .h === 0 &&
-                                                report.rd_special_overtime_hours
-                                                    .m === 0
-                                            "
-                                            >0</span
-                                        >
+                                            0
+                                        </span>
                                     </TableCell>
 
                                     <TableCell
