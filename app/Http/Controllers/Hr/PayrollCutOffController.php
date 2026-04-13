@@ -381,6 +381,12 @@ public function attendancePage(Request $request, $id)
                     'm' => $totalUndertimeMinutes % 60
                 ],
 
+                'attendances' => $attendances->map(fn ($log) => [
+                    'attendance_date' => $log->attendance_date,
+                    'time_in' => $log->time_in,
+                    'time_out' => $log->time_out,
+                ]),
+
                 'leader_status_name' => $leaderEntry?->status?->name ?? 'Pending',
                 'hr_status_name' => $hrEntry?->status?->name ?? 'Pending',
 
