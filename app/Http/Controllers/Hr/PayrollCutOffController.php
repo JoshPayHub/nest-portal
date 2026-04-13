@@ -176,7 +176,7 @@ public function attendancePage(Request $request, $id)
                 }
             }
 
-            // ---------------- Leaves (APPROVED ONLY) ----------------
+            // ---------------- Leaves ----------------
             $leaves = Leave::with('approvalStatuses.user')
                 ->where('user_id', $item->user_id)
                 ->where(function ($q) use ($cutoff) {
@@ -202,18 +202,16 @@ public function attendancePage(Request $request, $id)
                 }
             }
 
-            // ✅ ---------------- Rest Day (APPROVED ONLY FIXED) ----------------
+            // ---------------- Rest Day (APPROVED ONLY) ----------------
             $weekDayMap = ['monday'=>3,'tuesday'=>4,'wednesday'=>5,'thursday'=>6,'friday'=>7,'saturday'=>8,'sunday'=>9];
 
             $approvedChanges = ChangeOff::with(['label', 'approvalStatuses.user'])
                 ->where('user_id', $item->user_id)
                 ->whereHas('approvalStatuses', fn($q) =>
-                    $q->where('status_id', 7)
-                      ->whereHas('user', fn($u) => $u->where('user_type_id', 1))
+                    $q->where('status_id', 7)->whereHas('user', fn($u) => $u->where('user_type_id', 1))
                 )
                 ->whereHas('approvalStatuses', fn($q) =>
-                    $q->where('status_id', 7)
-                      ->whereHas('user', fn($u) => $u->where('user_type_id', 3))
+                    $q->where('status_id', 7)->whereHas('user', fn($u) => $u->where('user_type_id', 3))
                 )
                 ->get()
                 ->map(function($co) {
@@ -277,8 +275,13 @@ public function attendancePage(Request $request, $id)
                 }
             }
 
-            // ---------------- OT + UT (UNCHANGED APPROVED ONLY) ----------------
-            $totalOvertimeMinutes = 0;
+            // ---------------- OVERTIME BREAKDOWN ----------------
+            $regularOT = 0;
+            $rdOT = 0;
+            $regularHolidayOT = 0;
+            $specialHolidayOT = 0;
+            $rdRegularHolidayOT = 0;
+            $rdSpecialHolidayOT = 0;
 
             $overtimeLists = OvertimeList::with('overtime.approvalStatuses.user')
                 ->whereHas('overtime', fn($q) => $q->where('user_id', $item->user_id))
@@ -286,14 +289,41 @@ public function attendancePage(Request $request, $id)
                 ->get();
 
             foreach ($overtimeLists as $ot) {
+
                 $l = $ot->overtime->approvalStatuses->first(fn($a) => $a->user?->user_type_id == 3);
                 $h = $ot->overtime->approvalStatuses->first(fn($a) => $a->user?->user_type_id == 1);
 
-                if ($l?->status_id == 7 && $h?->status_id == 7) {
-                    $totalOvertimeMinutes += $ot->additional_hours_worked * 60;
+                if (!($l?->status_id == 7 && $h?->status_id == 7)) continue;
+
+                $dateStr = Carbon::parse($ot->overtime_date)->toDateString();
+                $dayId = $weekDayMap[strtolower(Carbon::parse($dateStr)->format('l'))] ?? null;
+
+                $isRestDay = ($restDayId == $dayId);
+                $isHoliday = isset($holidayMap[$dateStr]);
+                $holidayType = $holidayMap[$dateStr] ?? null;
+
+                $minutes = $ot->additional_hours_worked * 60;
+
+                if (!$isHoliday && !$isRestDay) {
+                    $regularOT += $minutes;
+                } elseif (!$isHoliday && $isRestDay) {
+                    $rdOT += $minutes;
+                } elseif ($isHoliday && !$isRestDay) {
+                    if ($holidayType === 'regular') {
+                        $regularHolidayOT += $minutes;
+                    } else {
+                        $specialHolidayOT += $minutes;
+                    }
+                } elseif ($isHoliday && $isRestDay) {
+                    if ($holidayType === 'regular') {
+                        $rdRegularHolidayOT += $minutes;
+                    } else {
+                        $rdSpecialHolidayOT += $minutes;
+                    }
                 }
             }
 
+            // ---------------- UNDERTIME ----------------
             $totalUndertimeMinutes = 0;
 
             $undertimes = Undertime::with('approvalStatuses.user')
@@ -310,6 +340,10 @@ public function attendancePage(Request $request, $id)
                 }
             }
 
+            $totalOvertimeMinutes =
+                $regularOT + $rdOT + $regularHolidayOT +
+                $specialHolidayOT + $rdRegularHolidayOT + $rdSpecialHolidayOT;
+
             $grandTotalMinutes += $totalOvertimeMinutes;
             $grandTotalMinutes -= $totalUndertimeMinutes;
             $grandTotalMinutes -= ($unpaidLeaveApproved * $dayInMinutes);
@@ -320,7 +354,7 @@ public function attendancePage(Request $request, $id)
                 'id' => $item->id,
                 'user_id' => $item->user_id,
                 'employee_name' => $item->employee_name,
-                'department_name' => $item->user->department->name ?? 'N/A',
+                'department_name' => $item->department?->name ?? 'N/A',
                 'hr_status_id' => $item->hr_status_id,
                 'rest_name' => $restDayId ?? 'N/A',
 
@@ -334,10 +368,13 @@ public function attendancePage(Request $request, $id)
                 'rd_special_holiday_count' => $rdSpecialHolidayCount,
                 'rd_regular_holiday_count' => $rdRegularHolidayCount,
 
-                'overtime_hours' => [
-                    'h' => floor($totalOvertimeMinutes / 60),
-                    'm' => $totalOvertimeMinutes % 60
-                ],
+                // ✅ ALL OT TYPES
+                'regular_overtime_hours' => ['h'=>floor($regularOT/60),'m'=>$regularOT%60],
+                'rd_overtime_hours' => ['h'=>floor($rdOT/60),'m'=>$rdOT%60],
+                'regular_holiday_overtime_hours' => ['h'=>floor($regularHolidayOT/60),'m'=>$regularHolidayOT%60],
+                'special_overtime_hours' => ['h'=>floor($specialHolidayOT/60),'m'=>$specialHolidayOT%60],
+                'rd_regular_overtime_hours' => ['h'=>floor($rdRegularHolidayOT/60),'m'=>$rdRegularHolidayOT%60],
+                'rd_special_overtime_hours' => ['h'=>floor($rdSpecialHolidayOT/60),'m'=>$rdSpecialHolidayOT%60],
 
                 'undertime_hours' => [
                     'h' => floor($totalUndertimeMinutes / 60),
