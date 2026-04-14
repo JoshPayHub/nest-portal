@@ -27,6 +27,11 @@ return new class extends Migration
                 ->constrained('positions')
                 ->onDelete('restrict');
 
+            $table->foreignId('status_id')
+                ->default(4)
+                ->constrained('statuses')
+                ->onDelete('restrict');
+
             // this is earning category
             $table->decimal('regular_pay', 10, 2)->default(0.00);
             $table->decimal('absence_with_pay', 10, 2)->default(0.00);
