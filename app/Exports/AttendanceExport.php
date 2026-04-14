@@ -29,110 +29,114 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Sho
     }
 
     /**
-     * Define headings as an array of arrays to occupy specific rows.
+     * Updated Headings to match your requested format exactly.
      */
     public function headings(): array
     {
         return [
-            ['ATTENDANCE REPORT'],               // Row 1
-            ['Date Range: ' . $this->dateRange], // Row 2
-            [                                    // Row 3
+            ['ATTENDANCE REPORT'],
+            ['Date Range: ' . $this->dateRange],
+            [
                 'Employee Name',
                 'Department',
-                'Lates',
-                'Undertime',
+                'Lates (hr)',
+                'Undertime (hr)',
                 'Paid Absences',
                 'Unpaid Absences',
-                'Holiday',
-                'Overtime',
+                'Regular Hol.',
+                'Special Hol.',
+                'RD Regular Hol.',
+                'RD Special Hol.',
+                'Regular OT',
+                'RD OT',
+                'Regular Holiday OT',
+                'Special Holiday OT',
+                'RD Regular Holiday OT',
+                'RD Special Holiday OT',
                 'Total Worked Time'
             ]
         ];
     }
 
+    /**
+     * Updated Mapping to match the column order.
+     */
     public function map($report): array
     {
         return [
             $report['employee_name'],
-            $report['department_name'] ?? 'N/A',
-            $report['late_minutes'] > 0
-                ? $this->formatTime(floor($report['late_minutes'] / 60), $report['late_minutes'] % 60)
-                : '0',
-            ($report['undertime_hours']['h'] > 0 || $report['undertime_hours']['m'] > 0)
-                ? $this->formatTime($report['undertime_hours']['h'], $report['undertime_hours']['m'])
-                : '0',
+            $report['department_name'],
+            $this->formatMins($report['late_minutes']),
+            $this->formatMins($report['undertime_minutes']),
             $report['paid_leaves'] ?: '0',
             $report['unpaid_leaves'] ?: '0',
-            $report['holiday_count'] ?: '0',
-            ($report['overtime_hours']['h'] > 0 || $report['overtime_hours']['m'] > 0)
-                ? $this->formatTime($report['overtime_hours']['h'], $report['overtime_hours']['m'])
-                : '0',
+
+            // Holiday Counts
+            $report['reg_hol'] ?: '0',
+            $report['spec_hol'] ?: '0',
+            $report['rd_reg_hol'] ?: '0',
+            $report['rd_spec_hol'] ?: '0',
+
+            // OT Breakdown
+            $this->formatMins($report['ot_reg']),
+            $this->formatMins($report['ot_rd']),
+            $this->formatMins($report['ot_hol_reg']),
+            $this->formatMins($report['ot_spec']),
+            $this->formatMins($report['ot_rd_reg']),
+            $this->formatMins($report['ot_rd_spec']),
             $this->formatTotalTime($report['total_summary'])
         ];
     }
 
     public function styles(Worksheet $sheet)
     {
-        // Merge Title and Date Range across all 9 columns (A to I)
-        $sheet->mergeCells('A1:I1');
-        $sheet->mergeCells('A2:I2');
+        // A to Q covers 17 columns
+        $sheet->mergeCells('A1:Q1');
+        $sheet->mergeCells('A2:Q2');
 
-        $lastRow = count($this->reports) + 3; // +3 for the 3 heading rows
+        $lastRow = count($this->reports) + 3;
         $brandGreen = '52a447';
 
         return [
-            // Row 1: Main Title
             1 => [
                 'font' => ['bold' => true, 'size' => 16, 'color' => ['rgb' => 'FFFFFF']],
-                'fill' => [
-                    'fillType' => Fill::FILL_SOLID,
-                    'startColor' => ['rgb' => '2E7D32'] // Darker green for depth
-                ],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '2E7D32']],
                 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
             ],
-            // Row 2: Date Range
             2 => [
                 'font' => ['italic' => true, 'size' => 12, 'color' => ['rgb' => 'FFFFFF']],
-                'fill' => [
-                    'fillType' => Fill::FILL_SOLID,
-                    'startColor' => ['rgb' => $brandGreen]
-                ],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $brandGreen]],
                 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
             ],
-            // Row 3: Column Headings
             3 => [
                 'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
-                'fill' => [
-                    'fillType' => Fill::FILL_SOLID,
-                    'startColor' => ['rgb' => $brandGreen]
-                ],
-                'alignment' => [
-                    'horizontal' => Alignment::HORIZONTAL_CENTER,
-                    'vertical' => Alignment::VERTICAL_CENTER,
-                ],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $brandGreen]],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
             ],
-            // Applied to the table area: Green Borders and Centered Text
-            'A3:I' . $lastRow => [
+            'A3:Q' . $lastRow => [
                 'borders' => [
                     'allBorders' => [
                         'borderStyle' => Border::BORDER_THIN,
-                        'color' => ['rgb' => $brandGreen], // GREEN BORDERS
+                        'color' => ['rgb' => $brandGreen],
                     ],
                 ],
                 'alignment' => [
                     'horizontal' => Alignment::HORIZONTAL_CENTER,
-                    'vertical' => Alignment::VERTICAL_CENTER,
+                    'vertical' => Alignment::VERTICAL_CENTER
                 ],
             ],
         ];
     }
 
-    private function formatTime($h, $m)
+    private function formatMins($minutes)
     {
+        if (!$minutes || $minutes <= 0) return '0';
+        $h = floor($minutes / 60);
+        $m = $minutes % 60;
         $res = [];
         if ($h > 0) $res[] = $h . 'h';
         if ($m > 0) $res[] = $m . 'm';
-        return count($res) > 0 ? implode(' ', $res) : '0';
+        return implode(' ', $res);
     }
 
     private function formatTotalTime($total)
