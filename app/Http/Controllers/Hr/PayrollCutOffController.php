@@ -633,27 +633,271 @@ class PayrollCutOffController extends Controller
 }
 
 
-    public function approve(Request $request, $id)
-    {
-        $request->validate([
-            'status_id' => 'required|in:7,8', // 7=Approved, 8=Rejected
-        ]);
+  public function approve(Request $request, $id)
+{
+    $request->validate([
+        'status_id' => 'required|in:7,8',
+    ]);
 
-        $report = AttendanceEmployee::findOrFail($id);
+    $report = AttendanceEmployee::with(['user.salaryEmployee', 'attendances', 'department'])->findOrFail($id);
 
-        // Update or Create the approval status for this Head/HR
+    DB::transaction(function () use ($request, $report) {
+        // 1. Update or Create the approval status
         DB::table('attendance_statuses')->updateOrInsert(
-            [
-                'attendance_employee_id' => $report->id,
-                'user_id' => $request->user()->id,
-            ],
-            [
-                'status_id' => $request->status_id,
-                'updated_at' => now(),
-                'created_at' => now(),
-            ]
+            ['attendance_employee_id' => $report->id, 'user_id' => $request->user()->id],
+            ['status_id' => $request->status_id, 'updated_at' => now(), 'created_at' => now()]
         );
 
-        return redirect()->back();
+        // 2. Handle Payroll Insertion vs. Removal
+        if ($request->status_id == 7) {
+            $approvals = DB::table('attendance_statuses')
+                ->join('users', 'attendance_statuses.user_id', '=', 'users.id')
+                ->where('attendance_employee_id', $report->id)
+                ->where('attendance_statuses.status_id', 7)
+                ->pluck('users.user_type_id')
+                ->toArray();
+
+            // Only insert if BOTH HR (1) and Head (3) have approved
+            if (in_array(1, $approvals) && in_array(3, $approvals)) {
+                $this->calculateAndInsertPayroll($report);
+            }
+        } else {
+            // Remove payroll record if rejected
+            DB::table('salary_payroll')->where('attendance_employee_id', $report->id)->delete();
+        }
+    });
+
+    return redirect()->back();
+}
+
+private function calculateAndInsertPayroll($report)
+{
+    $user = $report->user;
+    $salaryRecord = $user->salaryEmployee;
+    if (!$salaryRecord) return;
+
+    $cutoff = PayrollCutOff::findOrFail($report->payroll_cut_off_id);
+    $metrics = $this->getPayrollMetrics($report, $cutoff);
+
+    // --- 1. Monthly Constants (EXACT FRONTEND CLONE) ---
+    $rawBasic = (float)$salaryRecord->salary_amount;
+    $rawDeMinimis = (float)($salaryRecord->de_minimis ?? 0);
+
+    // const basicPay = form.type === "daily" ? rawBasic * 26 : rawBasic;
+    $monthlyBasic = $salaryRecord->type === "daily" ? $rawBasic * 26 : $rawBasic;
+    // const deMinimis = form.type === "daily" ? rawDeMinimis * 26 : rawDeMinimis;
+    $monthlyDeMinimis = $salaryRecord->type === "daily" ? $rawDeMinimis * 26 : $rawDeMinimis;
+    // const gross = basicPay + deMinimis;
+    $monthlyGross = $monthlyBasic + $monthlyDeMinimis;
+
+    // --- 2. Semi-Monthly Earnings (Current Cutoff) ---
+    if ($salaryRecord->type === 'daily') {
+        $dailyRate = $rawBasic;
+        $workDaysCount = $metrics['present_days'] + $metrics['paid_leave_days'] + $metrics['reg_h_count'];
+        $semiMonthlyBasic = $workDaysCount * $dailyRate;
+        $semiMonthlyDeMinimis = $monthlyDeMinimis / 2;
+    } else {
+        $dailyRate = $monthlyBasic / 26;
+        $semiMonthlyBasic = $monthlyBasic / 2;
+        $semiMonthlyDeMinimis = $monthlyDeMinimis / 2;
     }
+    $hourlyRate = $dailyRate / 8;
+
+    $earnings = [
+        'regular_pay'           => $semiMonthlyBasic + $semiMonthlyDeMinimis,
+        'absence_with_pay'      => $metrics['paid_leave_days'] * $dailyRate,
+        'regular_ot'            => ($metrics['regular_ot_min'] / 60) * $hourlyRate * 1.25,
+        'rdot'                  => ($metrics['rd_ot_min'] / 60) * $hourlyRate * 1.30,
+        'regular_holiday_ot'    => ($metrics['reg_h_ot_min'] / 60) * $hourlyRate * 2.60,
+        'special_holiday_ot'    => ($metrics['spe_h_ot_min'] / 60) * $hourlyRate * 1.69,
+        'rd_regular_holiday_ot' => ($metrics['rd_reg_h_ot_min'] / 60) * $hourlyRate * 3.38,
+        'rd_special_holiday_ot' => ($metrics['rd_spe_h_ot_min'] / 60) * $hourlyRate * 1.95,
+        'regular_holiday'       => $metrics['reg_h_count'] * $dailyRate,
+        'special_holiday'       => $metrics['spe_h_count'] * $dailyRate * 0.30,
+        'rd_regular_holiday'    => $metrics['rd_reg_h_count'] * $dailyRate * 0.60,
+        'rd_special_holiday'    => $metrics['rd_spe_h_count'] * $dailyRate * 0.50,
+    ];
+    $grossEarnings = array_sum($earnings);
+
+    // --- 3. Monthly Statutory (EXACT FRONTEND CLONE) ---
+
+    // SSS (Based on Gross: Basic + De Minimis)
+    $sssRow = DB::table('sss_contributions')
+        ->where('min_salary', '<=', $monthlyGross)
+        ->where('max_salary', '>=', $monthlyGross)
+        ->first();
+    $sssEE = $sssRow ? ((float)$sssRow->ee_share + (float)$sssRow->wisp_ee) : 0;
+
+    // PhilHealth (Based on Gross: Basic + De Minimis)
+    $phRate = (float)DB::table('deduction_settings')->where('key', 'philhealth_rate')->value('value') ?: 0.05;
+    $phMin = (float)DB::table('deduction_settings')->where('key', 'philhealth_min_salary')->value('value') ?: 10000;
+    $phMax = (float)DB::table('deduction_settings')->where('key', 'philhealth_max_salary')->value('value') ?: 100000;
+    $phBase = min(max($monthlyGross, $phMin), $phMax);
+    $philhealthEE = ($phBase * $phRate) / 2;
+
+    // Pag-IBIG (Based on Basic Pay)
+    $piLow = (float)DB::table('deduction_settings')->where('key', 'pagibig_rate_low')->value('value') ?: 0.01;
+    $piHigh = (float)DB::table('deduction_settings')->where('key', 'pagibig_rate_high')->value('value') ?: 0.02;
+    $piCap = (float)DB::table('deduction_settings')->where('key', 'pagibig_max_contribution')->value('value') ?: 200;
+    $piSalaryCap = (float)DB::table('deduction_settings')->where('key', 'pagibig_salary_cap')->value('value') ?: 5000;
+
+    $piBase = min($monthlyBasic, $piSalaryCap);
+    $pagibigEE = $piBase <= 1500 ? ($piBase * $piLow) : ($piBase * $piHigh);
+    $pagibigEE = min($pagibigEE, $piCap);
+
+    // --- 4. Monthly Tax (EXACT FRONTEND CLONE) ---
+    // const statutory = sssEE + philhealthEE + pagibigEE;
+    $statutory = $sssEE + $philhealthEE + $pagibigEE;
+    // const taxableAmount = Math.max(0, basicPay - statutory);
+    $taxableAmount = max(0, $monthlyBasic - $statutory);
+
+    $taxRow = DB::table('tax_brackets')
+        ->where('min_salary', '<=', $taxableAmount)
+        ->orderBy('min_salary', 'desc')
+        ->first();
+
+    $tax = 0;
+    if ($taxRow && $monthlyBasic > 0) {
+        $tax = (float)$taxRow->base_tax +
+               ($taxableAmount - (float)$taxRow->over_amount) * (float)$taxRow->excess_rate;
+    }
+
+    // --- 5. Final Mapping ---
+    $isFirstCutoff = preg_match('/(1st|first)/i', $cutoff->name);
+
+    $deductions = [
+        'undertime' => ($metrics['undertime_min'] / 60) * $hourlyRate,
+        'absence_without_pay' => $metrics['absent_days'] * $dailyRate,
+        'sss' => $isFirstCutoff ? $sssEE : 0,
+        'tax' => $isFirstCutoff ? $tax : 0,
+        'philhealth' => !$isFirstCutoff ? $philhealthEE : 0,
+        'pag_ibig' => !$isFirstCutoff ? $pagibigEE : 0,
+    ];
+
+    $totalDeduction = array_sum($deductions);
+
+    DB::table('salary_payroll')->updateOrInsert(
+        ['attendance_employee_id' => $report->id],
+        array_merge($earnings, $deductions, [
+            'user_id' => $user->id,
+            'department_id' => $user->department_id,
+            'position_id' => $user->position_id,
+            'status_id' => 4,
+            'total_earning' => $grossEarnings,
+            'total_deduction' => $totalDeduction,
+            'total_home_pay' => $grossEarnings - $totalDeduction,
+            'updated_at' => now(),
+            'created_at' => now(),
+        ])
+    );
+}
+
+private function getPayrollMetrics($report, $cutoff)
+{
+    $weekDayMap = ['monday'=>3,'tuesday'=>4,'wednesday'=>5,'thursday'=>6,'friday'=>7,'saturday'=>8,'sunday'=>9];
+
+    $holidayMap = Holiday::where('status_id', 1)->get()
+        ->mapWithKeys(fn($h) => [Carbon::parse($h->date)->toDateString() => strtolower($h->type)])->toArray();
+
+    // MATCHED Rest Day Logic from attendancePage
+    $approvedChanges = ChangeOff::with(['label', 'approvalStatuses.user'])
+        ->where('user_id', $report->user_id)
+        ->whereHas('approvalStatuses', fn($q) => $q->where('status_id', 7)->whereHas('user', fn($u) => $u->where('user_type_id', 1)))
+        ->whereHas('approvalStatuses', fn($q) => $q->where('status_id', 7)->whereHas('user', fn($u) => $u->where('user_type_id', 3)))
+        ->get()
+        ->sortByDesc(function($co) {
+            return $co->approvalStatuses->where('status_id', 7)->where('user.user_type_id', 1)->first()?->created_at;
+        });
+
+    $restDayId = $approvedChanges->first()?->label?->new_day_id;
+
+    // Approved Leaves
+    $approvedLeaveDates = [];
+    $paidLeaveDays = 0;
+    $leaves = Leave::with('approvalStatuses.user')->where('user_id', $report->user_id)->get();
+    foreach ($leaves as $leave) {
+        $leader = $leave->approvalStatuses->first(fn($a) => ($a->user->user_type_id ?? null) == 3);
+        $hr = $leave->approvalStatuses->first(fn($a) => ($a->user->user_type_id ?? null) == 1);
+
+        if ($leader?->status_id == 7 && $hr?->status_id == 7) {
+            $start = max(Carbon::parse($leave->start_date), Carbon::parse($cutoff->from_cutoff_date));
+            $end = min(Carbon::parse($leave->end_date), Carbon::parse($cutoff->to_cutoff_date));
+            for ($d = $start->copy(); $d->lte($end); $d->addDay()) {
+                $approvedLeaveDates[] = $d->toDateString();
+                if ($leave->with_pay) $paidLeaveDays++;
+            }
+        }
+    }
+
+    $metrics = [
+        'present_days' => 0, 'paid_leave_days' => $paidLeaveDays, 'absent_days' => 0, 'undertime_min' => 0,
+        'reg_h_count' => 0, 'spe_h_count' => 0, 'rd_reg_h_count' => 0, 'rd_spe_h_count' => 0,
+        'regular_ot_min' => 0, 'rd_ot_min' => 0, 'reg_h_ot_min' => 0, 'spe_h_ot_min' => 0,
+        'rd_reg_h_ot_min' => 0, 'rd_spe_h_ot_min' => 0
+    ];
+
+    $startDate = Carbon::parse($cutoff->from_cutoff_date);
+    $endDate = Carbon::parse($cutoff->to_cutoff_date);
+
+    for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
+        $dateStr = $date->toDateString();
+        $dayId = $weekDayMap[strtolower($date->format('l'))] ?? null;
+
+        $isRestDay = ($restDayId == $dayId);
+        $holidayType = $holidayMap[$dateStr] ?? null;
+        $log = $report->attendances->first(fn($a) => $a->attendance_date === $dateStr);
+        $isPresent = ($log && $log->time_in);
+        $isApprovedLeave = in_array($dateStr, $approvedLeaveDates);
+
+        if ($isPresent) {
+            $metrics['present_days']++;
+        }
+
+        if ($holidayType === 'regular') {
+            if ($isPresent) {
+                $isRestDay ? $metrics['rd_reg_h_count']++ : $metrics['reg_h_count']++;
+            } elseif (!$isRestDay) {
+                $metrics['reg_h_count']++;
+            }
+        } elseif ($holidayType === 'special' && $isPresent) {
+            $isRestDay ? $metrics['rd_spe_h_count']++ : $metrics['spe_h_count']++;
+        }
+
+        // ABSENCE: Not present, Not Rest Day, Not Holiday, Not Approved Leave
+        if (!$isPresent && !$isRestDay && !$holidayType && !$isApprovedLeave) {
+            $metrics['absent_days']++;
+        }
+    }
+
+    // Overtime
+    $ots = OvertimeList::whereHas('overtime', fn($q) => $q->where('user_id', $report->user_id))
+        ->whereBetween('overtime_date', [$cutoff->from_cutoff_date, $cutoff->to_cutoff_date])->get();
+    foreach ($ots as $ot) {
+        $l = $ot->overtime->approvalStatuses->first(fn($a) => $a->status_id == 7 && ($a->user->user_type_id ?? null) == 3);
+        $h = $ot->overtime->approvalStatuses->first(fn($a) => $a->status_id == 7 && ($a->user->user_type_id ?? null) == 1);
+        if ($l && $h) {
+            $otDate = Carbon::parse($ot->overtime_date);
+            $isRD = ($restDayId == ($weekDayMap[strtolower($otDate->format('l'))] ?? null));
+            $hType = $holidayMap[$otDate->toDateString()] ?? null;
+            $m = $ot->additional_hours_worked * 60;
+
+            if (!$hType && !$isRD) $metrics['regular_ot_min'] += $m;
+            elseif (!$hType && $isRD) $metrics['rd_ot_min'] += $m;
+            elseif ($hType === 'regular') $isRD ? $metrics['rd_reg_h_ot_min'] += $m : $metrics['reg_h_ot_min'] += $m;
+            elseif ($hType === 'special') $isRD ? $metrics['rd_spe_h_ot_min'] += $m : $metrics['spe_h_ot_min'] += $m;
+        }
+    }
+
+    // Undertime
+    $metrics['undertime_min'] = Undertime::where('user_id', $report->user_id)
+        ->whereBetween('undertime_date', [$cutoff->from_cutoff_date, $cutoff->to_cutoff_date])
+        ->get()->filter(function($u) {
+            $approvals = $u->approvalStatuses->where('status_id', 7);
+            $hasHR = $approvals->contains(fn($a) => ($a->user->user_type_id ?? null) == 1);
+            $hasHead = $approvals->contains(fn($a) => ($a->user->user_type_id ?? null) == 3);
+            return $hasHR && $hasHead;
+        })->sum('total_time');
+
+    return $metrics;
+}
 }
