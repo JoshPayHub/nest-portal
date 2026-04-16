@@ -683,40 +683,54 @@ private function calculateAndInsertPayroll($report)
     $rawBasic = (float)$salaryRecord->salary_amount;
     $rawDeMinimis = (float)($salaryRecord->de_minimis ?? 0);
 
-    // const basicPay = form.type === "daily" ? rawBasic * 26 : rawBasic;
     $monthlyBasic = $salaryRecord->type === "daily" ? $rawBasic * 26 : $rawBasic;
-    // const deMinimis = form.type === "daily" ? rawDeMinimis * 26 : rawDeMinimis;
     $monthlyDeMinimis = $salaryRecord->type === "daily" ? $rawDeMinimis * 26 : $rawDeMinimis;
-    // const gross = basicPay + deMinimis;
     $monthlyGross = $monthlyBasic + $monthlyDeMinimis;
 
-    // --- 2. Semi-Monthly Earnings (Current Cutoff) ---
+    // --- 2. Semi-Monthly Earnings (Rates include De Minimis for OT/Holidays) ---
     if ($salaryRecord->type === 'daily') {
-        $dailyRate = $rawBasic;
+        // Daily: 500 (Basic) + 200 (De Minimis) = 700 Daily Rate
+        $dailyRate = $rawBasic + $rawDeMinimis;
+
         $workDaysCount = $metrics['present_days'] + $metrics['paid_leave_days'] + $metrics['reg_h_count'];
-        $semiMonthlyBasic = $workDaysCount * $dailyRate;
-        $semiMonthlyDeMinimis = $monthlyDeMinimis / 2;
+
+        // Split components for reporting, but based on days worked
+        $semiMonthlyBasic = $workDaysCount * $rawBasic;
+        $semiMonthlyDeMinimis = $workDaysCount * $rawDeMinimis;
     } else {
-        $dailyRate = $monthlyBasic / 26;
+        // Monthly: (30,000 Basic + 5,000 De Minimis) / 26 = Daily Rate
+        $dailyRate = ($monthlyBasic + $monthlyDeMinimis) / 26;
+
         $semiMonthlyBasic = $monthlyBasic / 2;
         $semiMonthlyDeMinimis = $monthlyDeMinimis / 2;
+
+        $absenceWithPayAmount = 0;
     }
+
+    // Hourly rate now reflects the combined Basic + Allowance
     $hourlyRate = $dailyRate / 8;
 
     $earnings = [
+        // Total base pay for the cutoff
         'regular_pay'           => $semiMonthlyBasic + $semiMonthlyDeMinimis,
-        'absence_with_pay'      => $metrics['paid_leave_days'] * $dailyRate,
+        'absence_with_pay'      => $absenceWithPayAmount,
+
+        // OT and Holiday computations now use the combined $hourlyRate / $dailyRate
         'regular_ot'            => ($metrics['regular_ot_min'] / 60) * $hourlyRate * 1.25,
         'rdot'                  => ($metrics['rd_ot_min'] / 60) * $hourlyRate * 1.30,
         'regular_holiday_ot'    => ($metrics['reg_h_ot_min'] / 60) * $hourlyRate * 2.60,
         'special_holiday_ot'    => ($metrics['spe_h_ot_min'] / 60) * $hourlyRate * 1.69,
         'rd_regular_holiday_ot' => ($metrics['rd_reg_h_ot_min'] / 60) * $hourlyRate * 3.38,
         'rd_special_holiday_ot' => ($metrics['rd_spe_h_ot_min'] / 60) * $hourlyRate * 1.95,
+
         'regular_holiday'       => $metrics['reg_h_count'] * $dailyRate,
         'special_holiday'       => $metrics['spe_h_count'] * $dailyRate * 0.30,
-        'rd_regular_holiday'    => $metrics['rd_reg_h_count'] * $dailyRate * 0.60,
+        'rd_regular_holiday'    => $metrics['rd_reg_h_count'] > 0
+                                    ? ($metrics['rd_reg_h_count'] * $dailyRate * 0.60) + ($metrics['rd_reg_h_count'] * $dailyRate)
+                                    : 0,
         'rd_special_holiday'    => $metrics['rd_spe_h_count'] * $dailyRate * 0.50,
     ];
+
     $grossEarnings = array_sum($earnings);
 
     // --- 3. Monthly Statutory (EXACT FRONTEND CLONE) ---
@@ -766,7 +780,8 @@ private function calculateAndInsertPayroll($report)
     $isFirstCutoff = preg_match('/(1st|first)/i', $cutoff->name);
 
     $deductions = [
-        'undertime' => ($metrics['undertime_min'] / 60) * $hourlyRate,
+        // 'undertime' => ($metrics['undertime_min'] / 60) * $hourlyRate,
+        'undertime' => 0,
         'absence_without_pay' => $metrics['absent_days'] * $dailyRate,
         'sss' => $isFirstCutoff ? $sssEE : 0,
         'tax' => $isFirstCutoff ? $tax : 0,
