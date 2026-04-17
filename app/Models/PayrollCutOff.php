@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough; // Add this
 
 class PayrollCutOff extends Model
 {
@@ -20,9 +21,21 @@ class PayrollCutOff extends Model
         return $this->belongsTo(Status::class);
     }
 
-    // ✅ ADD THIS (VERY IMPORTANT)
     public function attendanceEmployees(): HasMany
     {
         return $this->hasMany(AttendanceEmployee::class, 'payroll_cut_off_id');
+    }
+
+    // Add this to link to the salary_payroll table
+    public function salaryPayrolls(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            SalaryPayroll::class,
+            AttendanceEmployee::class,
+            'payroll_cut_off_id',
+            'attendance_employee_id',
+            'id',
+            'id'
+        );
     }
 }
