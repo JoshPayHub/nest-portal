@@ -55,6 +55,7 @@ Route::middleware(['auth', 'user_type:HR'])->prefix('hr')->name('hr.')->group(fu
 
     Route::get('/salary-payroll', [SalaryPayrollController::class, 'index'])->name('salarypayroll.index');
     Route::get('/salary-payroll/{id}/list', [SalaryPayrollController::class, 'list'])->name('salarypayrolllist.list');
-    Route::get('/salary-payroll/{id}/update', [SalaryPayrollController::class, 'update'])->name('salarypayrolllist.update');
-    Route::get('/salary-payroll/{id}/approve', [SalaryPayrollController::class, 'approve'])->name('salarypayrolllist.approve');
+    Route::post('/salary-payroll/{id}/update', [SalaryPayrollController::class, 'update'])->name('salarypayrolllist.update');
+    Route::post('/salary-payroll/{id}/export', [SalaryPayrollController::class, 'export'])->name('salarypayrollexport.export');
+
 });
