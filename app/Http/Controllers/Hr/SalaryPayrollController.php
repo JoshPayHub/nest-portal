@@ -47,11 +47,11 @@ class SalaryPayrollController extends Controller
             $query->where('payroll_cut_off_id', $id);
         })
         ->whereHas('user', fn($q) => $q->where('status_id', 1))
-        
+
         // 1. Search Filter
         ->when($request->search, function ($query, $search) {
             $query->whereHas('user', function ($q) use ($search) {
-                $q->where(fn($sub) => 
+                $q->where(fn($sub) =>
                     $sub->where('first_name', 'like', "%{$search}%")
                         ->orWhere('last_name', 'like', "%{$search}%")
                 );
@@ -137,19 +137,20 @@ class SalaryPayrollController extends Controller
         return back()->with('success', 'Payroll status and values updated.');
     }
 
-    /* =========================
-       EXPORT APPROVED PAYROLL (PDF)
-       ONLY STATUS = 7
-    ========================= */
-    public function export(Request $request, $id)
+   public function export(Request $request, $id)
     {
+        ini_set('memory_limit', '256M');
+        set_time_limit(120);
+
         $cutoff = PayrollCutOff::findOrFail($id);
 
-        $approvedPayrolls = SalaryPayroll::whereHas('attendanceEmployee', function ($query) use ($id) {
+        // Fetch approved payrolls
+        // We ensure we get the user and all columns from the salary_payrolls table
+        $approvedPayrolls = SalaryPayroll::with(['user.department', 'status'])
+            ->whereHas('attendanceEmployee', function ($query) use ($id) {
                 $query->where('payroll_cut_off_id', $id);
             })
-            ->with(['user', 'status'])
-            ->where('status_id', 7)
+            ->where('status_id', 7) // Only approved
             ->get();
 
         if ($approvedPayrolls->isEmpty()) {
@@ -159,10 +160,8 @@ class SalaryPayrollController extends Controller
         $pdf = Pdf::loadView('pdf.salary-payroll-approved', [
             'cutoff' => $cutoff,
             'payrolls' => $approvedPayrolls
-        ]);
+        ])->setPaper('a4', 'portrait');
 
-        return $pdf->download(
-            'approved-payroll-' . $cutoff->id . '.pdf'
-        );
+        return $pdf->download('approved-payroll-' . $cutoff->name . '.pdf');
     }
 }

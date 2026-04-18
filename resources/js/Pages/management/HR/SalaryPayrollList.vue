@@ -91,18 +91,21 @@ watch(
 ========================= */
 const isExporting = ref(false);
 
-const exportPdf = (item) => {
-    if (item.status_id !== 7) return;
-    isExporting.value = true;
-    router.post(
-        `/hr/salary-payroll/${item.id}/export`,
-        {},
-        {
-            onFinish: () => (isExporting.value = false),
-        },
-    );
-};
+const exportPdf = () => {
+    // Remove 'item' parameter
+    // Check if the overall cutoff status allows export (adjust status_id logic if needed)
+    // If the cutoff itself has a status, use props.cutoff.status_id
+    if (isExporting.value) return;
 
+    isExporting.value = true;
+
+    // Use props.cutoff.id just like your Excel function does
+    window.location.href = `/hr/salary-payroll/${props.cutoff.id}/export`;
+
+    setTimeout(() => {
+        isExporting.value = false;
+    }, 3000);
+};
 /* =========================
    MODE
 ========================= */
@@ -323,9 +326,9 @@ const goBack = () => router.get("/hr/salary-payroll");
                     </div>
                     <div>
                         <Button
-                            @click="exportPdf"
+                            @click="exportPdf(item)"
                             :disabled="isExporting"
-                            class="bg-brand-blue hover:bg-green-700 text-white flex items-center gap-2"
+                            class="bg-brand-blue hover:bg-green-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
                         >
                             <span v-if="isExporting">Processing...</span>
                             <span v-else>Export PDF</span>
@@ -483,6 +486,22 @@ const goBack = () => router.get("/hr/salary-payroll");
                         Payroll: {{ form.user_name }}
                     </DialogTitle>
 
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase">
+                            Summary for
+                            {{
+                                selectedItem?.name === "first_cutoff"
+                                    ? "First Cut Off"
+                                    : "Second Cut Off"
+                            }}
+                        </p>
+                        <p class="text-sm font-semibold">
+                            {{ formatDate(props.cutoff?.from_cutoff_date) }}
+                            to
+                            {{ formatDate(props.cutoff?.to_cutoff_date) }}
+                        </p>
+                    </div>
+
                     <!-- MODE SWITCH (minimal, needed for functionality) -->
                     <div v-if="form.status_id === 4 || form.status_id === 8">
                         <span class="text-sm">Filter</span>
@@ -577,10 +596,20 @@ const goBack = () => router.get("/hr/salary-payroll");
                                     </td>
                                     <td class="px-4 py-2">
                                         <Input
+                                            v-if="
+                                                form.status_id === 4 ||
+                                                form.status_id === 8
+                                            "
                                             v-model="form[field]"
                                             type="number"
                                             class="h-9"
-                                            :disabled="isLocked"
+                                        />
+                                        <Input
+                                            v-else
+                                            v-model="form[field]"
+                                            type="number"
+                                            class="h-9"
+                                            disabled
                                         />
                                     </td>
                                 </tr>
@@ -620,10 +649,20 @@ const goBack = () => router.get("/hr/salary-payroll");
                                     </td>
                                     <td class="px-4 py-2">
                                         <Input
+                                            v-if="
+                                                form.status_id === 4 ||
+                                                form.status_id === 8
+                                            "
                                             v-model="form[field]"
                                             type="number"
                                             class="h-9"
-                                            :disabled="isLocked"
+                                        />
+                                        <Input
+                                            v-else
+                                            v-model="form[field]"
+                                            type="number"
+                                            class="h-9"
+                                            disabled
                                         />
                                     </td>
                                 </tr>
