@@ -1,8 +1,7 @@
 <script setup>
 import { ref, watch } from "vue";
-import { router, Link } from "@inertiajs/vue3";
+import { router } from "@inertiajs/vue3";
 import {
-    Plus,
     Search,
     Eye,
     Check,
@@ -10,8 +9,9 @@ import {
     User,
     FileText,
     Clock,
-    ClipboardList,
     FileTextIcon,
+    Building2,
+    UserCircle,
 } from "lucide-vue-next";
 import { toastStore } from "@/stores/toast";
 
@@ -47,22 +47,26 @@ import {
 const props = defineProps({
     items: Object,
     employeeOptions: Array,
+    departments: Array, // Added departments prop
     filters: Object,
+    auth_user_type: Number, // Added user type prop
 });
 
 const search = ref(props.filters.search || "");
 const selectedEmployee = ref(props.filters.employee_id || "");
+const selectedDepartment = ref(props.filters.department_id || ""); // Added department filter
 const isViewOpen = ref(false);
 const selectedItem = ref(null);
 const processingId = ref(null);
 
-// FILTER (same as leave)
-watch([search, selectedEmployee], ([s, emp]) => {
+// Updated Filter Watcher
+watch([search, selectedEmployee, selectedDepartment], ([s, emp, dept]) => {
     router.get(
         window.location.pathname,
         {
             search: s,
             employee_id: emp,
+            department_id: dept,
         },
         {
             preserveState: true,
@@ -109,12 +113,23 @@ const getStatusClass = (status) => {
     if (s === "rejected") return "bg-red-100 text-red-700 border-red-200";
     return "bg-amber-100 text-amber-700 border-amber-200";
 };
+
+// Utility to determine if the current user can act on the specific status
+const canUserApprove = (item) => {
+    if (!item) return false;
+    const isHR = props.auth_user_type === 1;
+    const isHead = props.auth_user_type === 3;
+
+    if (isHR) return item.hr_status_name?.toLowerCase() === "pending";
+    if (isHead) return item.leader_status_name?.toLowerCase() === "pending";
+
+    return false;
+};
 </script>
 
 <template>
     <div class="p-6">
         <Card class="shadow-sm border-blue-100 max-w-7xl mx-auto">
-            <!-- HEADER -->
             <CardHeader class="border-b border-slate-100">
                 <div>
                     <CardTitle
@@ -128,13 +143,11 @@ const getStatusClass = (status) => {
                 </div>
             </CardHeader>
 
-            <!-- CONTENT -->
             <CardContent class="mt-3">
-                <!-- FILTER -->
                 <div
-                    class="flex flex-col md:flex-row justify-between gap-3 mb-6 items-center"
+                    class="flex flex-col lg:flex-row justify-between gap-3 mb-6 items-center"
                 >
-                    <div class="relative w-full md:w-1/3">
+                    <div class="relative w-full lg:w-1/3">
                         <Search
                             class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
                         />
@@ -145,47 +158,66 @@ const getStatusClass = (status) => {
                         />
                     </div>
 
-                    <select
-                        v-model="selectedEmployee"
-                        class="h-12 w-full md:w-1/4 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
+                    <div
+                        class="flex flex-col md:flex-row gap-3 w-full lg:w-auto flex-1 justify-end"
                     >
-                        <option value="">All Employees</option>
-                        <option
-                            v-for="emp in employeeOptions"
-                            :key="emp.id"
-                            :value="emp.id"
+                        <select
+                            v-if="auth_user_type === 1"
+                            v-model="selectedDepartment"
+                            class="h-12 w-full md:w-48 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
                         >
-                            {{ emp.first_name }} {{ emp.last_name }}
-                        </option>
-                    </select>
+                            <option value="">All Departments</option>
+                            <option
+                                v-for="dept in departments"
+                                :key="dept.id"
+                                :value="dept.id"
+                            >
+                                {{ dept.name }}
+                            </option>
+                        </select>
+
+                        <select
+                            v-model="selectedEmployee"
+                            class="h-12 w-full md:w-48 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
+                        >
+                            <option value="">All Employees</option>
+                            <option
+                                v-for="emp in employeeOptions"
+                                :key="emp.id"
+                                :value="emp.id"
+                            >
+                                {{ emp.first_name }} {{ emp.last_name }}
+                            </option>
+                        </select>
+                    </div>
                 </div>
 
-                <!-- TABLE -->
                 <div class="rounded-md border border-slate-200 overflow-hidden">
                     <Table>
                         <TableHeader class="bg-slate-50/50">
                             <TableRow>
-                                <TableHead class="font-bold text-xs uppercase">
+                                <TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs"
+                                >
                                     Employee
                                 </TableHead>
-                                <TableHead class="font-bold text-xs uppercase">
+                                <TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs"
+                                >
                                     Position Details
                                 </TableHead>
-                                <TableHead class="font-bold text-xs uppercase">
-                                    Date Required
-                                </TableHead>
                                 <TableHead
-                                    class="text-center font-bold text-xs uppercase"
+                                    class="text-center font-bold text-slate-600 uppercase text-xs"
                                 >
-                                    Your Status
+                                    Dept. Status
                                 </TableHead>
                                 <TableHead
-                                    class="text-center font-bold text-xs uppercase"
+                                    class="text-center font-bold text-slate-600 uppercase text-xs"
                                 >
                                     HR Status
                                 </TableHead>
                                 <TableHead
-                                    class="text-right font-bold text-xs uppercase px-6"
+                                    class="text-right font-bold text-slate-600 uppercase text-xs px-6"
                                 >
                                     Actions
                                 </TableHead>
@@ -199,25 +231,28 @@ const getStatusClass = (status) => {
                                     :key="item.id"
                                     class="hover:bg-blue-50/30 transition-colors group"
                                 >
-                                    <!-- EMPLOYEE -->
-                                    <TableCell>
+                                    <TableCell
+                                        class="font-semibold text-slate-800"
+                                    >
                                         <div class="flex items-center gap-3">
                                             <div
-                                                class="p-2 bg-slate-100 rounded-full text-slate-500"
+                                                class="p-2 bg-blue-50 rounded text-brand-blue"
                                             >
-                                                <User class="w-4 h-4" />
+                                                <UserCircle class="w-4 h-4" />
                                             </div>
                                             <div>
-                                                <p
-                                                    class="font-semibold text-slate-700"
-                                                >
+                                                <p>
                                                     {{ item.employee_name }}
+                                                </p>
+                                                <p
+                                                    class="text-xs text-slate-500 font-normal"
+                                                >
+                                                    {{ item.department_name }}
                                                 </p>
                                             </div>
                                         </div>
                                     </TableCell>
 
-                                    <!-- POSITION -->
                                     <TableCell>
                                         <div class="flex flex-col">
                                             <span
@@ -225,33 +260,9 @@ const getStatusClass = (status) => {
                                             >
                                                 {{ item.position_type }}
                                             </span>
-                                            <Badge
-                                                variant="secondary"
-                                                class="w-fit text-[10px] mt-1"
-                                            >
-                                                {{ item.payment_type }}
-                                            </Badge>
                                         </div>
                                     </TableCell>
 
-                                    <!-- DATE -->
-                                    <TableCell>
-                                        <div class="flex flex-col">
-                                            <span
-                                                class="text-sm text-slate-600 font-medium"
-                                            >
-                                                {{ item.date_required }}
-                                            </span>
-                                            <span
-                                                class="text-[11px] text-slate-400 flex items-center gap-1"
-                                            >
-                                                <Clock class="w-3 h-3" />
-                                                Filed {{ item.date_filed }}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-
-                                    <!-- STATUS -->
                                     <TableCell class="text-center">
                                         <Badge
                                             variant="outline"
@@ -278,7 +289,6 @@ const getStatusClass = (status) => {
                                         </Badge>
                                     </TableCell>
 
-                                    <!-- ACTION -->
                                     <TableCell class="text-right px-6">
                                         <Button
                                             variant="ghost"
@@ -292,10 +302,9 @@ const getStatusClass = (status) => {
                                 </TableRow>
                             </template>
 
-                            <!-- EMPTY -->
                             <TableRow v-else>
                                 <TableCell
-                                    colspan="6"
+                                    colspan="7"
                                     class="text-center text-slate-500 py-10"
                                 >
                                     <FileText
@@ -312,12 +321,11 @@ const getStatusClass = (status) => {
             </CardContent>
         </Card>
 
-        <!-- MODAL -->
         <Dialog v-model:open="isViewOpen">
             <DialogContent class="max-w-2xl max-h-[90vh] flex flex-col p-0">
                 <DialogHeader class="p-6 pb-0">
                     <DialogTitle class="text-2xl font-bold text-brand-blue">
-                        Report Details: {{ selectedItem.employee_name }}
+                        Report Details: {{ selectedItem?.employee_name }}
                     </DialogTitle>
                     <DialogDescription>
                         Submitted on {{ selectedItem?.date_filed }}
@@ -426,7 +434,6 @@ const getStatusClass = (status) => {
                     </div>
                 </div>
 
-                <!-- FOOTER -->
                 <DialogFooter
                     class="p-6 border-t bg-slate-50/50 flex justify-between"
                 >
@@ -434,13 +441,7 @@ const getStatusClass = (status) => {
                         Close
                     </Button>
 
-                    <div
-                        v-if="
-                            selectedItem?.leader_status_name?.toLowerCase() ===
-                            'pending'
-                        "
-                        class="flex gap-2"
-                    >
+                    <div v-if="canUserApprove(selectedItem)" class="flex gap-2">
                         <Button
                             variant="outline"
                             class="border-red-200 text-red-600 hover:bg-red-50"
@@ -461,6 +462,7 @@ const getStatusClass = (status) => {
 
                     <div
                         v-else-if="
+                            auth_user_type === 3 &&
                             selectedItem?.leader_status_name?.toLowerCase() ===
                                 'rejected' &&
                             selectedItem?.hr_status_name?.toLowerCase() ===

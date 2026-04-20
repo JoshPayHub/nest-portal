@@ -52,14 +52,17 @@ const props = defineProps({
 const search = ref(props.filters.search || "");
 const selectedEmployee = ref(props.filters.employee_id || "");
 const isViewOpen = ref(false);
-const selectedItem = ref(null);
+const selectedAbsent = ref(null);
 const processingId = ref(null);
 
-// ✅ SAME FILTER SYSTEM AS MANPOWER
+// ✅ FILTER (same as manpower)
 watch([search, selectedEmployee], ([s, emp]) => {
     router.get(
         window.location.pathname,
-        { search: s, employee_id: emp },
+        {
+            search: s,
+            employee_id: emp,
+        },
         {
             preserveState: true,
             replace: true,
@@ -69,11 +72,11 @@ watch([search, selectedEmployee], ([s, emp]) => {
 });
 
 const openView = (item) => {
-    selectedItem.value = item;
+    selectedAbsent.value = item;
     isViewOpen.value = true;
 };
 
-// ✅ APPROVAL LOGIC
+// ✅ APPROVAL
 const handleAction = (id, statusId) => {
     processingId.value = id;
 
@@ -89,7 +92,7 @@ const handleAction = (id, statusId) => {
             onError: (errors) => {
                 const firstError = Object.values(errors)[0];
                 toastStore.show(
-                    firstError || "Error updating notification",
+                    firstError || "Error updating absence",
                     "danger",
                 );
             },
@@ -116,10 +119,10 @@ const getStatusClass = (status) => {
                     <CardTitle
                         class="text-3xl font-extrabold text-brand-blue tracking-tight"
                     >
-                        Business Notification Approvals
+                        Leave Absence Approvals
                     </CardTitle>
                     <CardDescription class="text-base mt-1 text-slate-500">
-                        Review and manage business trip requests.
+                        Review and manage absence requests for your department.
                     </CardDescription>
                 </div>
             </CardHeader>
@@ -136,7 +139,7 @@ const getStatusClass = (status) => {
                         />
                         <Input
                             v-model="search"
-                            placeholder="Search by purpose..."
+                            placeholder="Search absence..."
                             class="h-12 pl-10 w-full"
                         />
                     </div>
@@ -165,10 +168,10 @@ const getStatusClass = (status) => {
                                     Employee
                                 </TableHead>
                                 <TableHead class="font-bold text-xs uppercase">
-                                    Purpose
+                                    Absence Details
                                 </TableHead>
                                 <TableHead class="font-bold text-xs uppercase">
-                                    Trip Date
+                                    Date
                                 </TableHead>
                                 <TableHead
                                     class="text-center font-bold text-xs uppercase"
@@ -203,30 +206,23 @@ const getStatusClass = (status) => {
                                             >
                                                 <User class="w-4 h-4" />
                                             </div>
-                                            <p
-                                                class="font-semibold text-slate-700"
-                                            >
-                                                {{ item.employee_name }}
-                                            </p>
+                                            <div>
+                                                <p
+                                                    class="font-semibold text-slate-700"
+                                                >
+                                                    {{ item.employee_name }}
+                                                </p>
+                                            </div>
                                         </div>
                                     </TableCell>
 
-                                    <!-- PURPOSE -->
-                                    <TableCell>
-                                        <span
-                                            class="text-sm font-medium text-slate-700"
-                                        >
-                                            {{ item.purposes }}
-                                        </span>
-                                    </TableCell>
-
-                                    <!-- DATE -->
+                                    <!-- DETAILS -->
                                     <TableCell>
                                         <div class="flex flex-col">
                                             <span
-                                                class="text-sm text-slate-600 font-medium"
+                                                class="text-sm font-medium text-slate-700"
                                             >
-                                                {{ item.exact_date }}
+                                                {{ item.type_absence }}
                                             </span>
                                             <span
                                                 class="text-[11px] text-slate-400 flex items-center gap-1"
@@ -235,6 +231,15 @@ const getStatusClass = (status) => {
                                                 Filed {{ item.date_filed }}
                                             </span>
                                         </div>
+                                    </TableCell>
+
+                                    <!-- DATE -->
+                                    <TableCell>
+                                        <span
+                                            class="text-sm text-slate-600 font-medium"
+                                        >
+                                            {{ item.date_absence }}
+                                        </span>
                                     </TableCell>
 
                                     <!-- STATUS -->
@@ -287,7 +292,7 @@ const getStatusClass = (status) => {
                                     <FileText
                                         class="w-10 h-10 mx-auto mb-2 opacity-20"
                                     />
-                                    <p>No business notifications found.</p>
+                                    <p>No absence requests found.</p>
                                 </TableCell>
                             </TableRow>
                         </TableBody>
@@ -303,10 +308,10 @@ const getStatusClass = (status) => {
             <DialogContent class="max-w-2xl max-h-[90vh] flex flex-col p-0">
                 <DialogHeader class="p-6 pb-0">
                     <DialogTitle class="text-2xl font-bold text-brand-blue">
-                        Report Details: {{ selectedItem.employee_name }}
+                        Report Details: {{ selectedAbsent.employee_name }}
                     </DialogTitle>
                     <DialogDescription>
-                        Submitted on {{ selectedItem?.date_filed }}
+                        Submitted on {{ selectedAbsent?.date_filed }}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -318,20 +323,10 @@ const getStatusClass = (status) => {
                             <p
                                 class="text-xs font-bold text-slate-400 uppercase"
                             >
-                                Location
+                                Absence Type
                             </p>
                             <p class="text-sm font-semibold text-slate-700">
-                                {{ selectedItem?.location }}
-                            </p>
-                        </div>
-                        <div>
-                            <p
-                                class="text-xs font-bold text-slate-400 uppercase"
-                            >
-                                Trip Date
-                            </p>
-                            <p class="text-sm font-semibold text-slate-700">
-                                {{ selectedItem?.exact_date }}
+                                {{ selectedAbsent?.type_absence }}
                             </p>
                         </div>
 
@@ -339,26 +334,15 @@ const getStatusClass = (status) => {
                             <p
                                 class="text-xs font-bold text-slate-400 uppercase"
                             >
-                                Departure Time
+                                Absence Date
                             </p>
                             <p class="text-sm font-semibold text-slate-700">
-                                {{ selectedItem?.business_time }}
-                            </p>
-                        </div>
-
-                        <div>
-                            <p
-                                class="text-xs font-bold text-slate-400 uppercase"
-                            >
-                                Expected Return Time
-                            </p>
-                            <p class="text-sm font-semibold text-slate-700">
-                                {{ selectedItem?.returned_time }}
+                                {{ selectedAbsent?.date_absence }}
                             </p>
                         </div>
                     </div>
 
-                    <div class="space-y-3 mt-4">
+                    <div class="mt-4">
                         <div
                             class="bg-white border border-slate-200 rounded-xl p-4"
                         >
@@ -369,33 +353,13 @@ const getStatusClass = (status) => {
                                     <FileTextIcon
                                         class="w-3.5 h-3.5 text-brand-blue"
                                     />
-                                    Purpose of Trip
+                                    Reason for Leave/Explanation:
                                 </span>
                             </div>
                             <p
                                 class="text-sm text-slate-600 whitespace-pre-wrap"
                             >
-                                {{ selectedItem?.purposes }}
-                            </p>
-                        </div>
-
-                        <div
-                            class="bg-white border border-slate-200 rounded-xl p-4"
-                        >
-                            <div class="border-b pb-2 mb-2">
-                                <span
-                                    class="text-sm font-bold text-slate-700 flex items-center gap-1"
-                                >
-                                    <FileTextIcon
-                                        class="w-3.5 h-3.5 text-brand-blue"
-                                    />
-                                    Detailed Reason
-                                </span>
-                            </div>
-                            <p
-                                class="text-sm text-slate-600 whitespace-pre-wrap"
-                            >
-                                {{ selectedItem?.reason }}
+                                {{ selectedAbsent?.reason }}
                             </p>
                         </div>
                     </div>
@@ -411,7 +375,7 @@ const getStatusClass = (status) => {
 
                     <div
                         v-if="
-                            selectedItem?.leader_status_name?.toLowerCase() ===
+                            selectedAbsent?.leader_status_name?.toLowerCase() ===
                             'pending'
                         "
                         class="flex gap-2"
@@ -419,16 +383,16 @@ const getStatusClass = (status) => {
                         <Button
                             variant="outline"
                             class="border-red-200 text-red-600 hover:bg-red-50"
-                            :disabled="processingId === selectedItem?.id"
-                            @click="handleAction(selectedItem.id, 8)"
+                            :disabled="processingId === selectedAbsent?.id"
+                            @click="handleAction(selectedAbsent.id, 8)"
                         >
                             <X class="w-4 h-4 mr-1" /> Reject
                         </Button>
 
                         <Button
                             class="bg-emerald-600 hover:bg-emerald-700 text-white"
-                            :disabled="processingId === selectedItem?.id"
-                            @click="handleAction(selectedItem.id, 7)"
+                            :disabled="processingId === selectedAbsent?.id"
+                            @click="handleAction(selectedAbsent.id, 7)"
                         >
                             <Check class="w-4 h-4 mr-1" /> Approve
                         </Button>
@@ -436,15 +400,15 @@ const getStatusClass = (status) => {
 
                     <div
                         v-else-if="
-                            selectedItem?.leader_status_name?.toLowerCase() ===
+                            selectedAbsent?.leader_status_name?.toLowerCase() ===
                                 'rejected' &&
-                            selectedItem?.hr_status_name?.toLowerCase() ===
+                            selectedAbsent?.hr_status_name?.toLowerCase() ===
                                 'pending'
                         "
                     >
                         <Button
                             class="bg-emerald-600 hover:bg-emerald-700 text-white"
-                            @click="handleAction(selectedItem.id, 7)"
+                            @click="handleAction(selectedAbsent.id, 7)"
                         >
                             <Check class="w-4 h-4 mr-1" /> Re-Approve
                         </Button>

@@ -55,73 +55,43 @@ const menuItems = {
             href: "/hr/list-employee",
             icon: "fa-solid fa-id-card",
         },
-        // {
-        //     label: "Recruitment & Onboarding",
-        //     href: "/management/Recruitment",
-        //     icon: "fa-solid fa-user-plus",
-        // },
-        // {
-        //     label: "Attendance & Leave",
-        //     href: "/management/AttendanceLeave",
-        //     icon: "fa-solid fa-calendar-days",
-        // },
-        // {
-        //     label: "Training & Development",
-        //     href: "/management/TrainingDevelopment",
-        //     icon: "fa-solid fa-graduation-cap",
-        // },
-        // {
-        //     label: "Medical & Wellness",
-        //     href: "/management/MedicalWellness",
-        //     icon: "fa-solid fa-heart-pulse",
-        // },
-        // {
-        //     label: "Discipline & Cases",
-        //     href: "/management/DisciplineCases",
-        //     icon: "fa-solid fa-shield-halved",
-        // },
         {
             category: "Employee Forms",
             icon: "fa-solid fa-file-lines",
             children: [
                 {
                     label: "Accomplishment Report",
-                    href: "/forms/accomplishment-report",
+                    href: "/hr/accomplishment-report",
                     icon: "fa-solid fa-file-lines",
                 },
                 {
                     label: "Change Off",
-                    href: "/forms/change-off",
+                    href: "/hr/change-off",
                     icon: "fa-solid fa-right-left",
                 },
                 {
-                    label: "Leave Form",
-                    href: "/forms/leave-form",
-                    icon: "fa-solid fa-calendar-plus",
-                },
-                {
-                    label: "Leave of Absence Report",
-                    href: "/forms/leave-of-absence",
-                    icon: "fa-solid fa-calendar-xmark",
-                },
-                {
                     label: "Manpower Requisition Form",
-                    href: "/forms/manpower-requisition",
+                    href: "/hr/manpower",
                     icon: "fa-solid fa-user-group",
                 },
                 {
                     label: "Official Business Notification",
-                    href: "/forms/official-business",
+                    href: "/hr/business-notification",
                     icon: "fa-solid fa-briefcase",
                 },
                 {
+                    label: "Leave of Absence Report",
+                    href: "/hr/leave",
+                    icon: "fa-solid fa-calendar-xmark",
+                },
+                {
                     label: "Overtime Request Form",
-                    href: "/forms/overtime-request",
+                    href: "/hr/overtime-request",
                     icon: "fa-solid fa-clock-rotate-left",
                 },
                 {
                     label: "Undertime Form",
-                    href: "/forms/undertime",
+                    href: "/hr/undertime-form",
                     icon: "fa-solid fa-clock",
                 },
             ],
@@ -141,29 +111,19 @@ const menuItems = {
                     icon: "fa-solid fa-calendar-days",
                 },
                 {
-                    label: "Leave of Absence Report",
-                    href: "/hr/leave-of-absence",
-                    icon: "fa-solid fa-calendar-xmark",
+                    label: "Employee Salaries",
+                    href: "/hr/salary-employee",
+                    icon: "fa-solid fa-users-gear",
                 },
                 {
-                    label: "Overtime Request Form",
-                    href: "/forms/overtime-request",
-                    icon: "fa-solid fa-clock-rotate-left",
+                    label: "Salary Deductions",
+                    href: "/hr/salary-deductions",
+                    icon: "fa-solid fa-file-invoice-dollar",
                 },
                 {
-                    label: "Undertime Form",
-                    href: "/forms/undertime",
-                    icon: "fa-solid fa-clock",
-                },
-                {
-                    label: "Salary Payroll",
+                    label: "Payroll",
                     href: "/hr/salary-payroll",
                     icon: "fa-solid fa-money-check-dollar",
-                },
-                {
-                    label: "Salary of Employee",
-                    href: "/hr/salary-employee",
-                    icon: "fa-solid fa-address-card",
                 },
             ],
         },
@@ -288,11 +248,6 @@ const menuItems = {
                     href: "/head/change-off",
                     icon: "fa-solid fa-right-left",
                 },
-                // {
-                //     label: "Leave Form",
-                //     href: "/head/leave",
-                //     icon: "fa-solid fa-calendar-plus",
-                // },
                 {
                     label: "Manpower Requisition Form",
                     href: "/head/manpower",
@@ -302,17 +257,6 @@ const menuItems = {
                     label: "Official Business Notification",
                     href: "/head/business-notification",
                     icon: "fa-solid fa-briefcase",
-                },
-            ],
-        },
-        {
-            category: "Staff Payroll",
-            icon: "fa-solid fa-file-invoice-dollar",
-            children: [
-                {
-                    label: "Payroll Cut-off",
-                    href: "/head/payroll-cut-off",
-                    icon: "fa-solid fa-calendar-days",
                 },
                 {
                     label: "Leave of Absence Report",
@@ -328,6 +272,17 @@ const menuItems = {
                     label: "Undertime Form",
                     href: "/head/undertime-form",
                     icon: "fa-solid fa-clock",
+                },
+            ],
+        },
+        {
+            category: "Staff Payroll",
+            icon: "fa-solid fa-file-invoice-dollar",
+            children: [
+                {
+                    label: "Payroll Cut-off",
+                    href: "/head/payroll-cut-off",
+                    icon: "fa-solid fa-calendar-days",
                 },
             ],
         },

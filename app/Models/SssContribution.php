@@ -11,11 +11,11 @@ class SssContribution extends Model
     protected $fillable = [
         'min_salary',
         'max_salary',
-        'msc',        // Added
+        'msc',
         'ee_share',
-        'er_share',   // Added
-        'wisp_ee',    // Matches migration name wisp_ee
+        'er_share',
+        'wisp_ee',
         'wisp_er',
-        'ec_er'       // Added
+        'ec_er'
     ];
 }

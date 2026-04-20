@@ -372,6 +372,7 @@ class PayrollCutOffController extends Controller
                     'employee_name' => $item->employee_name,
                     'department_name' => $item->department?->name ?? 'N/A',
                     'hr_status_id' => $item->hr_status_id,
+                    'report_date' => $item->created_at->format('Y-m-d H:i:s'),
                     'rest_name' => $restDayId ?? 'N/A',
 
                     'late_minutes' => $totalLateMinutes,

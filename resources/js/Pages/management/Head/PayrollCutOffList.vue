@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed } from "vue";
 import { router } from "@inertiajs/vue3";
 import {
     Search,
@@ -7,9 +7,8 @@ import {
     Eye,
     Check,
     X,
-    ArrowLeft,
-    AlertCircle,
     UserCircle,
+    AlertCircle,
 } from "lucide-vue-next";
 import { toastStore } from "@/stores/toast";
 
@@ -46,13 +45,10 @@ const props = defineProps({
     cutoff: Object,
     reports: Object,
     filters: Object,
-    departments: Array,
     employees: Array,
 });
 
 const search = ref(props.filters?.search || "");
-// selectedDept is kept in script to prevent reference errors, but removed from UI
-const selectedDept = ref("");
 const selectedEmplo = ref("");
 const selectedStatus = ref("");
 const isViewOpen = ref(false);
@@ -65,35 +61,23 @@ const statuses = [
     { id: 1, name: "Pending" },
 ];
 
-// Employee options now shows all employees since Dept filter is gone
-const employeeOptions = computed(() => {
-    return props.employees || [];
-});
-
-// Table Filter Logic
 const filteredReports = computed(() => {
     let data = props.reports.data || [];
-
     return data.filter((item) => {
-        // Search
         const term = search.value.toLowerCase();
         const matchesSearch =
             !term || item.employee_name?.toLowerCase().includes(term);
-
-        // Change this line in your computed property:
         const matchesStatus =
             !selectedStatus.value ||
             String(item.head_status_id) === String(selectedStatus.value);
-
-        // Specific Employee Filter
         const matchesSpecificEmp =
             !selectedEmplo.value || item.user_id == selectedEmplo.value;
-
         return matchesSearch && matchesStatus && matchesSpecificEmp;
     });
 });
 
 const formatDate = (dateString) => {
+    if (!dateString) return "";
     return new Date(dateString).toLocaleDateString("en-US", {
         weekday: "short",
         month: "short",
@@ -127,13 +111,12 @@ const handleAction = (reportId, statusId) => {
         {
             preserveScroll: true,
             onSuccess: () => {
-                toastStore.show("Payroll status updated", "success");
+                toastStore.show("Status updated", "success");
                 processingId.value = null;
                 isViewOpen.value = false;
             },
-            onError: (errors) => {
-                const firstError = Object.values(errors)[0];
-                toastStore.show(firstError || "Update failed", "danger");
+            onError: () => {
+                toastStore.show("Update failed", "danger");
                 processingId.value = null;
             },
         },
@@ -151,9 +134,10 @@ const getStatusClass = (status) => {
 
 const goBack = () => router.get("/head/payroll-cut-off");
 </script>
+
 <template>
     <div class="p-6 space-y-8">
-        <Card class="shadow-sm border-blue-100 max-w-7xl mx-auto pt-0">
+        <Card class="shadow-sm border-blue-100 pt-0">
             <CardHeader
                 class="space-y-4 bg-slate-50/50 border-b border-blue-50/50 rounded-t-xl py-6"
             >
@@ -163,41 +147,34 @@ const goBack = () => router.get("/head/payroll-cut-off");
                     <span
                         class="hover:text-brand-blue cursor-pointer"
                         @click="goBack"
+                        >Payroll Cutoff</span
                     >
-                        Payroll Cutoff
-                    </span>
                     <span>/</span>
                     <span class="font-bold text-brand-blue"
                         >List of Attendance</span
                     >
                 </nav>
-
-                <div class="flex justify-between">
-                    <div>
-                        <CardTitle
-                            class="text-3xl font-extrabold text-brand-blue"
-                        >
-                            Head Approval:
-                            {{
-                                props.cutoff?.name === "first_cutoff"
-                                    ? "First"
-                                    : "Second"
-                            }}
-                            Period
-                        </CardTitle>
-                        <CardDescription>
-                            Reviewing attendance for
-                            {{ formatDate(props.cutoff?.from_cutoff_date) }}
-                            to
-                            {{ formatDate(props.cutoff?.to_cutoff_date) }}
-                        </CardDescription>
-                    </div>
+                <div>
+                    <CardTitle class="text-3xl font-extrabold text-brand-blue">
+                        Head Approval:
+                        {{
+                            props.cutoff?.name === "first_cutoff"
+                                ? "First"
+                                : "Second"
+                        }}
+                        Period
+                    </CardTitle>
+                    <CardDescription>
+                        Reviewing attendance for
+                        {{ formatDate(props.cutoff?.from_cutoff_date) }} to
+                        {{ formatDate(props.cutoff?.to_cutoff_date) }}
+                    </CardDescription>
                 </div>
             </CardHeader>
 
             <CardContent class="mt-3">
                 <div
-                    class="flex flex-col md:flex-row gap-3 mb-6 items-center pt-3"
+                    class="flex flex-col md:flex-row justify-between gap-3 mb-6 items-center pt-3"
                 >
                     <div class="relative w-full md:w-1/3">
                         <Search
@@ -205,18 +182,18 @@ const goBack = () => router.get("/head/payroll-cut-off");
                         />
                         <Input
                             v-model="search"
-                            placeholder="Search employee name..."
+                            placeholder="Search employee..."
                             class="h-12 pl-10 w-full"
                         />
                     </div>
 
                     <select
                         v-model="selectedEmplo"
-                        class="h-12 w-full md:w-1/3 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
+                        class="h-12 w-full md:w-1/4 rounded-md border border-slate-200 bg-white px-3 text-sm"
                     >
                         <option value="">All Employees</option>
                         <option
-                            v-for="emp in employeeOptions"
+                            v-for="emp in props.employees"
                             :key="emp.id"
                             :value="emp.id"
                         >
@@ -224,15 +201,15 @@ const goBack = () => router.get("/head/payroll-cut-off");
                         </option>
                     </select>
 
-                    <select
+                    <!-- <select
                         v-model="selectedStatus"
-                        class="h-12 w-full md:w-1/3 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
+                        class="h-12 w-full md:w-1/3 rounded-md border border-slate-200 bg-white px-3 text-sm"
                     >
                         <option value="">All Statuses</option>
                         <option v-for="s in statuses" :key="s.id" :value="s.id">
                             {{ s.name }}
                         </option>
-                    </select>
+                    </select> -->
                 </div>
 
                 <div class="rounded-md border border-slate-200 overflow-hidden">
@@ -240,37 +217,8 @@ const goBack = () => router.get("/head/payroll-cut-off");
                         <TableHeader class="bg-slate-50/50">
                             <TableRow>
                                 <TableHead
-                                    class="font-bold text-slate-600 uppercase text-xs tracking-wider"
-                                >
-                                    Employee & Department
-                                </TableHead>
-                                <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs"
-                                    >Lates (hr)</TableHead
-                                >
-                                <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs"
-                                    >Undertime (hr)</TableHead
-                                >
-                                <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs"
-                                    >Paid Absences</TableHead
-                                >
-                                <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs"
-                                    >Unpaid Absences</TableHead
-                                >
-                                <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs"
-                                    >Holiday</TableHead
-                                >
-                                <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs"
-                                    >Overtime (hr)</TableHead
-                                >
-                                <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs"
-                                    >Total</TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs"
+                                    >Employee & Department</TableHead
                                 >
                                 <TableHead
                                     class="text-center font-bold text-slate-600 uppercase text-xs"
@@ -317,136 +265,6 @@ const goBack = () => router.get("/head/payroll-cut-off");
                                             </div>
                                         </div>
                                     </TableCell>
-
-                                    <TableCell
-                                        class="font-semibold text-center text-slate-800"
-                                    >
-                                        <span v-if="report.late_minutes > 0">
-                                            <template
-                                                v-if="report.late_minutes >= 60"
-                                            >
-                                                {{
-                                                    Math.floor(
-                                                        report.late_minutes /
-                                                            60,
-                                                    )
-                                                }}h
-                                            </template>
-                                            <template
-                                                v-if="
-                                                    report.late_minutes % 60 !==
-                                                    0
-                                                "
-                                            >
-                                                {{ report.late_minutes % 60 }}m
-                                            </template>
-                                        </span>
-                                        <span v-else>0</span>
-                                    </TableCell>
-
-                                    <TableCell
-                                        class="font-semibold text-center text-slate-800"
-                                    >
-                                        <span
-                                            v-if="report.undertime_hours.h > 0"
-                                            >{{
-                                                report.undertime_hours.h
-                                            }}h</span
-                                        >
-                                        <span
-                                            v-if="report.undertime_hours.m > 0"
-                                            >{{
-                                                report.undertime_hours.m
-                                            }}m</span
-                                        >
-                                        <span
-                                            v-if="
-                                                report.undertime_hours.h ===
-                                                    0 &&
-                                                report.undertime_hours.m === 0
-                                            "
-                                            >0</span
-                                        >
-                                    </TableCell>
-
-                                    <TableCell
-                                        class="font-semibold text-center text-slate-800"
-                                    >
-                                        {{ report.paid_leaves || 0 }}
-                                    </TableCell>
-
-                                    <TableCell
-                                        class="font-semibold text-center text-slate-800"
-                                    >
-                                        {{ report.unpaid_leaves || 0 }}
-                                    </TableCell>
-
-                                    <TableCell
-                                        class="font-semibold text-center text-slate-800"
-                                    >
-                                        {{ report.holiday_count || 0 }}
-                                    </TableCell>
-
-                                    <TableCell
-                                        class="font-semibold text-center text-slate-800"
-                                    >
-                                        <span v-if="report.overtime_hours.h > 0"
-                                            >{{
-                                                report.overtime_hours.h
-                                            }}h</span
-                                        >
-                                        <span v-if="report.overtime_hours.m > 0"
-                                            >{{
-                                                report.overtime_hours.m
-                                            }}m</span
-                                        >
-                                        <span
-                                            v-if="
-                                                report.overtime_hours.h === 0 &&
-                                                report.overtime_hours.m === 0
-                                            "
-                                            >0</span
-                                        >
-                                    </TableCell>
-
-                                    <TableCell
-                                        class="font-semibold text-center text-slate-800"
-                                    >
-                                        <span
-                                            v-if="report.total_summary.days > 0"
-                                            >{{
-                                                report.total_summary.days
-                                            }}d</span
-                                        >
-                                        <span
-                                            v-if="
-                                                report.total_summary.hours > 0
-                                            "
-                                            >{{
-                                                report.total_summary.hours
-                                            }}h</span
-                                        >
-                                        <span
-                                            v-if="
-                                                report.total_summary.minutes > 0
-                                            "
-                                            >{{
-                                                report.total_summary.minutes
-                                            }}m</span
-                                        >
-                                        <span
-                                            v-if="
-                                                report.total_summary.days ===
-                                                    0 &&
-                                                report.total_summary.hours ===
-                                                    0 &&
-                                                report.total_summary.minutes ===
-                                                    0
-                                            "
-                                            >0m</span
-                                        >
-                                    </TableCell>
-
                                     <TableCell class="text-center">
                                         <Badge
                                             variant="outline"
@@ -456,10 +274,7 @@ const goBack = () => router.get("/head/payroll-cut-off");
                                                 )
                                             "
                                         >
-                                            {{
-                                                report.leader_status_name ||
-                                                "Pending"
-                                            }}
+                                            {{ report.leader_status_name }}
                                         </Badge>
                                     </TableCell>
                                     <TableCell class="text-center">
@@ -471,10 +286,7 @@ const goBack = () => router.get("/head/payroll-cut-off");
                                                 )
                                             "
                                         >
-                                            {{
-                                                report.hr_status_name ||
-                                                "Pending"
-                                            }}
+                                            {{ report.hr_status_name }}
                                         </Badge>
                                     </TableCell>
                                     <TableCell class="text-right px-6">
@@ -491,11 +303,10 @@ const goBack = () => router.get("/head/payroll-cut-off");
                             </template>
                             <TableRow v-else>
                                 <TableCell
-                                    colspan="12"
+                                    colspan="4"
                                     class="text-center text-slate-500 py-10 italic"
+                                    >No records found.</TableCell
                                 >
-                                    No records found.
-                                </TableCell>
                             </TableRow>
                         </TableBody>
                     </Table>
@@ -510,12 +321,12 @@ const goBack = () => router.get("/head/payroll-cut-off");
             >
                 <DialogHeader class="p-6 pb-0">
                     <div class="pr-6">
-                        <DialogTitle class="text-2xl font-bold text-brand-blue"
-                            >Attendance Details:
-                            {{ selectedItem?.employee_name }}</DialogTitle
-                        >
-                        <DialogDescription
-                            >Submitted on
+                        <DialogTitle class="text-2xl font-bold text-brand-blue">
+                            Attendance Details:
+                            {{ selectedItem?.employee_name }}
+                        </DialogTitle>
+                        <DialogDescription>
+                            Submitted on
                             {{ formatDate(selectedItem?.report_date) }}
                         </DialogDescription>
                     </div>

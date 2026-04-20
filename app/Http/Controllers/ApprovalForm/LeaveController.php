@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Head;
+namespace App\Http\Controllers\ApprovalForm;
 
 use App\Http\Controllers\Controller;
 use App\Models\Leave;
@@ -73,7 +73,7 @@ class LeaveController extends Controller
                 ];
             });
 
-        return Inertia::render('management/Head/LeaveList', [
+        return Inertia::render('management/ApprovalForm/LeaveList', [
             'items'           => $leaves,
             'employeeOptions' => $employees,
             'statuses'        => $allStatuses,

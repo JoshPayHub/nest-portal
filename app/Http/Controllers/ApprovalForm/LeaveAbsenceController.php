@@ -1,16 +1,16 @@
 <?php
 
-namespace App\Http\Controllers\Head;
+namespace App\Http\Controllers\ApprovalForm;
 
 use App\Http\Controllers\Controller;
-use App\Models\BusinessNotification;
+use App\Models\LeaveAbsence;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
-class BusinessNotificationController extends Controller
+class LeaveAbsenceController extends Controller
 {
     public function index(Request $request)
     {
@@ -22,8 +22,8 @@ class BusinessNotificationController extends Controller
             ->orderBy('first_name')
             ->get();
 
-        // ✅ Query (same as manpower)
-        $query = BusinessNotification::whereHas('user', function ($q) use ($user) {
+        // ✅ Query (same logic as manpower)
+        $query = LeaveAbsence::whereHas('user', function ($q) use ($user) {
             $q->where('department_id', $user->department_id);
         })
         ->with([
@@ -34,7 +34,7 @@ class BusinessNotificationController extends Controller
 
         // 🔍 Search
         if ($request->filled('search')) {
-            $query->where('purposes', 'like', "%{$request->search}%");
+            $query->where('type_absence', 'like', "%{$request->search}%");
         }
 
         // 👤 Employee filter
@@ -42,58 +42,55 @@ class BusinessNotificationController extends Controller
             $query->where('user_id', $request->employee_id);
         }
 
-        $notifications = $query->latest()
+        // ✅ Transform (same format as manpower/leave)
+        $absences = $query->latest()
             ->paginate(10)
             ->withQueryString()
-            ->through(function ($item) {
+            ->through(function ($absence) {
 
-                $leaderEntry = $item->approvalStatuses
+                $leaderEntry = $absence->approvalStatuses
                     ->first(fn ($log) => $log->user?->user_type_id == 3);
 
-                $hrEntry = $item->approvalStatuses
+                $hrEntry = $absence->approvalStatuses
                     ->first(fn ($log) => $log->user?->user_type_id == 1);
 
                 return [
-                    'id' => $item->id,
+                    'id' => $absence->id,
 
-                    // 👤 employee
-                    'employee_name' => $item->user->first_name . ' ' . $item->user->last_name,
+                    // 👤 employee name (NEW)
+                    'employee_name' => $absence->user->first_name . ' ' . $absence->user->last_name,
 
-                    'date_filed' => $item->created_at->format('M d, Y'),
-                    'exact_date' => Carbon::parse($item->exact_date)->format('M d, Y'),
+                    'date_filed' => $absence->created_at->format('M d, Y'),
+                    'date_absence' => Carbon::parse($absence->date_absence)->format('M d, Y'),
 
-                    'purposes' => $item->purposes,
-                    'reason' => $item->reason,
-                    'location' => $item->location,
+                    'type_absence' => $absence->type_absence,
+                    'reason' => $absence->reason,
 
-                    'business_time' => Carbon::parse($item->business_time)->format('h:i A'),
-                    'returned_time' => Carbon::parse($item->returned_time)->format('h:i A'),
-
-                    // ✅ unified status
+                    // ✅ unified naming (IMPORTANT)
                     'leader_status_name' => $leaderEntry?->status?->name ?? 'Pending',
                     'hr_status_name' => $hrEntry?->status?->name ?? 'Pending',
                 ];
             });
 
-        return Inertia::render('management/Head/BusinessNotificationList', [
-            'items' => $notifications,
+        return Inertia::render('management/ApprovalForm/LeaveAbsenceList', [
+            'items' => $absences, // ✅ SAME AS MANPOWER
             'employeeOptions' => $employees,
             'filters' => $request->only(['search', 'employee_id']),
         ]);
     }
 
-    // ✅ APPROVAL SAME AS MANPOWER
+    // ✅ SAME APPROVAL FUNCTION AS MANPOWER
     public function approve(Request $request, $id)
     {
         $request->validate([
-            'status_id' => 'required|in:7,8',
+            'status_id' => 'required|in:7,8', // 7 = Approved, 8 = Rejected
         ]);
 
-        $notification = BusinessNotification::findOrFail($id);
+        $absence = LeaveAbsence::findOrFail($id);
 
-        DB::table('business_notification_statuses')->updateOrInsert(
+        DB::table('leave_absent_statuses')->updateOrInsert(
             [
-                'business_notification_id' => $notification->id,
+                'leave_absent_id' => $absence->id,
                 'user_id' => $request->user()->id,
             ],
             [
@@ -103,6 +100,6 @@ class BusinessNotificationController extends Controller
             ]
         );
 
-        return back()->with('message', 'Business notification updated.');
+        return back()->with('message', 'Leave absence updated.');
     }
 }

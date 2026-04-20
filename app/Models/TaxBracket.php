@@ -10,10 +10,10 @@ class TaxBracket extends Model
     use HasFactory;
 
     protected $fillable = [
-        'min_salary',  // Updated to match migration
-        'max_salary',  // Updated to match migration
+        'min_salary',
+        'max_salary',
         'base_tax',
         'excess_rate',
-        'over_amount'  // Updated to match migration
+        'over_amount'
     ];
 }

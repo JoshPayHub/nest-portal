@@ -11,6 +11,8 @@ import {
     User,
     CheckCircle2,
     Clock,
+    Building2,
+    UserCircle,
 } from "lucide-vue-next";
 import { toastStore } from "@/stores/toast";
 
@@ -46,24 +48,35 @@ import {
 const props = defineProps({
     reports: Object,
     employeeOptions: Array,
+    departments: Array, // Added
     filters: Object,
+    auth_user_type: Number, // Added
 });
 
 const search = ref("");
 const selectedEmployee = ref(props.filters.employee_id || "");
+const selectedDept = ref(props.filters.department_id || ""); // Added
 const isViewOpen = ref(false);
 const selectedReport = ref(null);
 const processingId = ref(null);
 
+// Get the current URL dynamically
+const currentPath = window.location.pathname;
+
 watch(selectedEmployee, (value) => {
     router.get(
-        "/head/accomplishment-report", // Adjust to your actual route path
-        { employee_id: value },
-        {
-            preserveState: true,
-            replace: true,
-            preserveScroll: true,
-        },
+        currentPath,
+        { ...props.filters, employee_id: value },
+        { preserveState: true, replace: true, preserveScroll: true },
+    );
+});
+
+// Watch Department Filter
+watch(selectedDept, (value) => {
+    router.get(
+        currentPath,
+        { department_id: value }, // Reset employee filter when dept changes
+        { preserveState: true, replace: true, preserveScroll: true },
     );
 });
 
@@ -71,7 +84,6 @@ const filteredReports = computed(() => {
     const reportsArray = props.reports.data || [];
     let filtered = reportsArray;
 
-    // Frontend Search (Employee name or Date)
     if (search.value) {
         const searchTerm = search.value.toLowerCase();
         filtered = filtered.filter((report) => {
@@ -90,17 +102,12 @@ const openView = (report) => {
     isViewOpen.value = true;
 };
 
-// Fixed handleAction to use hardcoded URL strings instead of the route() helper
 const handleAction = (reportId, statusId) => {
     processingId.value = reportId;
 
-    // We use a template literal string to build the URL manually,
-    // just like how your Position script does it.
     router.post(
-        `/head/accomplishment-report/${reportId}/approve`,
-        {
-            status_id: statusId,
-        },
+        `${currentPath}/${reportId}/approve`,
+        { status_id: statusId },
         {
             preserveScroll: true,
             onSuccess: () => {
@@ -124,11 +131,16 @@ const getStatusClass = (status) => {
     if (s === "rejected") return "bg-red-100 text-red-700 border-red-200";
     return "bg-amber-100 text-amber-700 border-amber-200";
 };
+
+// Check if current user is the "Your Status" column or if they are just viewing as HR
+const getRoleLabel = computed(() => {
+    return props.auth_user_type === 1 ? "HR Status" : "Your Status";
+});
 </script>
 
 <template>
     <div class="p-6">
-        <Card class="shadow-sm border-blue-100 max-w-7xl mx-auto">
+        <Card class="shadow-sm border-blue-100">
             <CardHeader class="border-b border-slate-100">
                 <div
                     class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
@@ -137,11 +149,14 @@ const getStatusClass = (status) => {
                         <CardTitle
                             class="text-3xl font-extrabold text-brand-blue tracking-tight"
                         >
-                            Team Approvals
+                            Accomplishment Reports
                         </CardTitle>
                         <CardDescription class="text-base mt-1 text-slate-500">
-                            Review and manage accomplishment reports from your
-                            department.
+                            {{
+                                auth_user_type === 1
+                                    ? "Manage organization-wide reports."
+                                    : "Review and manage reports from your department."
+                            }}
                         </CardDescription>
                     </div>
                 </div>
@@ -162,21 +177,40 @@ const getStatusClass = (status) => {
                         />
                     </div>
 
-                    <select
-                        v-model="selectedEmployee"
-                        class="h-12 w-full md:w-1/4 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
+                    <div
+                        class="flex flex-col md:flex-row gap-3 w-full md:w-2/3 justify-end"
                     >
-                        <option value="">All Employees</option>
-                        <option
-                            v-for="emp in employeeOptions"
-                            :key="emp.id"
-                            :value="emp.id"
+                        <select
+                            v-if="auth_user_type === 1"
+                            v-model="selectedDept"
+                            class="h-12 w-full md:w-1/3 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
                         >
-                            {{ emp.first_name }} {{ emp.last_name }} ({{
-                                emp.username
-                            }})
-                        </option>
-                    </select>
+                            <option value="">All Departments</option>
+                            <option
+                                v-for="d in departments"
+                                :key="d.id"
+                                :value="d.id"
+                            >
+                                {{ d.name }}
+                            </option>
+                        </select>
+
+                        <select
+                            v-model="selectedEmployee"
+                            class="h-12 w-full md:w-1/3 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
+                        >
+                            <option value="">All Employees</option>
+                            <option
+                                v-for="emp in employeeOptions"
+                                :key="emp.id"
+                                :value="emp.id"
+                            >
+                                {{ emp.first_name }} {{ emp.last_name }} ({{
+                                    emp.username
+                                }})
+                            </option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="rounded-md border border-slate-200 overflow-hidden">
@@ -197,7 +231,7 @@ const getStatusClass = (status) => {
                                 >
                                 <TableHead
                                     class="text-center font-bold text-slate-600 uppercase text-xs"
-                                    >Your Status</TableHead
+                                    >Dept Head Status</TableHead
                                 >
                                 <TableHead
                                     class="text-center font-bold text-slate-600 uppercase text-xs"
@@ -216,21 +250,28 @@ const getStatusClass = (status) => {
                                     :key="report.id"
                                     class="hover:bg-blue-50/30 transition-colors group"
                                 >
-                                    <TableCell>
+                                    <TableCell
+                                        class="font-semibold text-slate-800"
+                                    >
                                         <div class="flex items-center gap-3">
                                             <div
-                                                class="p-2 bg-slate-100 rounded-full text-slate-500"
+                                                class="p-2 bg-blue-50 rounded text-brand-blue"
                                             >
-                                                <User class="w-4 h-4" />
+                                                <UserCircle class="w-4 h-4" />
                                             </div>
-                                            <span
-                                                class="font-semibold text-slate-700"
-                                                >{{
-                                                    report.employee_name
-                                                }}</span
-                                            >
+                                            <div>
+                                                <p>
+                                                    {{ report.employee_name }}
+                                                </p>
+                                                <p
+                                                    class="text-xs text-slate-500 font-normal"
+                                                >
+                                                    {{ report.department_name }}
+                                                </p>
+                                            </div>
                                         </div>
                                     </TableCell>
+
                                     <TableCell>
                                         <span
                                             class="text-sm font-medium text-slate-600"
@@ -293,9 +334,7 @@ const getStatusClass = (status) => {
                                     <FileText
                                         class="w-10 h-10 mx-auto mb-2 opacity-20"
                                     />
-                                    <p>
-                                        No pending reports for your department.
-                                    </p>
+                                    <p>No reports found.</p>
                                 </TableCell>
                             </TableRow>
                         </TableBody>
@@ -311,9 +350,10 @@ const getStatusClass = (status) => {
                     <DialogTitle class="text-2xl font-bold text-brand-blue">
                         Report Details: {{ selectedReport?.employee_name }}
                     </DialogTitle>
-                    <DialogDescription>
-                        Submitted on {{ selectedReport?.report_date }}
-                    </DialogDescription>
+                    <DialogDescription
+                        >Submitted on
+                        {{ selectedReport?.report_date }}</DialogDescription
+                    >
                 </DialogHeader>
 
                 <div class="flex-1 overflow-y-auto p-6 pt-4">
@@ -371,37 +411,47 @@ const getStatusClass = (status) => {
                     >
 
                     <div class="flex gap-2">
-                        <Button
+                        <template
                             v-if="
-                                selectedReport?.leader_status_name.toLowerCase() ===
-                                'pending'
+                                (auth_user_type === 3 &&
+                                    selectedReport?.leader_status_name.toLowerCase() ===
+                                        'pending') ||
+                                (auth_user_type === 1 &&
+                                    selectedReport?.hr_status_name.toLowerCase() ===
+                                        'pending')
                             "
-                            variant="outline"
-                            class="border-red-200 text-red-600 hover:bg-red-50"
-                            :disabled="processingId === selectedReport?.id"
-                            @click="handleAction(selectedReport.id, 8)"
                         >
-                            <X class="w-4 h-4 mr-1" /> Reject
-                        </Button>
+                            <Button
+                                variant="outline"
+                                class="border-red-200 text-red-600 hover:bg-red-50"
+                                :disabled="processingId === selectedReport?.id"
+                                @click="handleAction(selectedReport.id, 8)"
+                            >
+                                <X class="w-4 h-4 mr-1" /> Reject
+                            </Button>
+
+                            <Button
+                                class="bg-emerald-600 hover:bg-emerald-700 text-white"
+                                :disabled="processingId === selectedReport?.id"
+                                @click="handleAction(selectedReport.id, 7)"
+                            >
+                                <Check class="w-4 h-4 mr-1" /> Approve Report
+                            </Button>
+                        </template>
 
                         <Button
-                            v-if="
-                                selectedReport?.leader_status_name.toLowerCase() ===
-                                    'pending' ||
-                                selectedReport?.leader_status_name.toLowerCase() ===
-                                    'rejected'
+                            v-else-if="
+                                (auth_user_type === 3 &&
+                                    selectedReport?.leader_status_name.toLowerCase() ===
+                                        'rejected') ||
+                                (auth_user_type === 1 &&
+                                    selectedReport?.hr_status_name.toLowerCase() ===
+                                        'rejected')
                             "
                             class="bg-emerald-600 hover:bg-emerald-700 text-white"
-                            :disabled="processingId === selectedReport?.id"
                             @click="handleAction(selectedReport.id, 7)"
                         >
-                            <Check class="w-4 h-4 mr-1" />
-                            {{
-                                selectedReport?.leader_status_name.toLowerCase() ===
-                                "rejected"
-                                    ? "Change to Approve"
-                                    : "Approve Report"
-                            }}
+                            <Check class="w-4 h-4 mr-1" /> Change to Approve
                         </Button>
                     </div>
                 </DialogFooter>

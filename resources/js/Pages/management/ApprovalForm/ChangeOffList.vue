@@ -1,17 +1,15 @@
 <script setup>
 import { ref, computed, watch } from "vue";
-import { router, usePage } from "@inertiajs/vue3";
+import { router } from "@inertiajs/vue3";
 import {
-    Plus,
     Search,
     Calendar,
     Eye,
     Check,
     X,
     User,
-    Clock,
     FileText,
-    ArrowRight,
+    UserCircle,
 } from "lucide-vue-next";
 import { toastStore } from "@/stores/toast";
 
@@ -46,26 +44,28 @@ import {
 
 const props = defineProps({
     requests: Object,
+    departments: Array,
     employeeOptions: Array,
     filters: Object,
+    auth_user_type: Number,
 });
 
 const search = ref("");
 const selectedEmployee = ref(props.filters.employee_id || "");
+const selectedDept = ref(props.filters.department_id || "");
 const isViewOpen = ref(false);
 const selectedRequest = ref(null);
 const processingId = ref(null);
 
-// Watcher for Employee Filter
-watch(selectedEmployee, (value) => {
+const baseRoute =
+    props.auth_user_type === 1 ? "/hr/change-off" : "/head/change-off";
+
+// Combined Watcher for Filters
+watch([selectedEmployee, selectedDept], ([empId, deptId]) => {
     router.get(
-        "/head/change-off",
-        { employee_id: value },
-        {
-            preserveState: true,
-            replace: true,
-            preserveScroll: true,
-        },
+        baseRoute,
+        { employee_id: empId, department_id: deptId },
+        { preserveState: true, replace: true, preserveScroll: true },
     );
 });
 
@@ -81,6 +81,10 @@ const filteredRequests = computed(() => {
     );
 });
 
+const getRelevantStatus = (req) => {
+    return props.auth_user_type === 1 ? req.hr_status : req.leader_status;
+};
+
 const openView = (req) => {
     selectedRequest.value = req;
     isViewOpen.value = true;
@@ -88,9 +92,8 @@ const openView = (req) => {
 
 const handleAction = (requestId, statusId) => {
     processingId.value = requestId;
-
     router.post(
-        `/head/change-off/${requestId}/approve`,
+        `${baseRoute}/${requestId}/approve`,
         { status_id: statusId },
         {
             preserveScroll: true,
@@ -100,8 +103,10 @@ const handleAction = (requestId, statusId) => {
                 isViewOpen.value = false;
             },
             onError: (errors) => {
-                const firstError = Object.values(errors)[0];
-                toastStore.show(firstError || "Something went wrong", "danger");
+                toastStore.show(
+                    Object.values(errors)[0] || "Something went wrong",
+                    "danger",
+                );
                 processingId.value = null;
             },
         },
@@ -138,8 +143,11 @@ const formatScheduleSub = (day, time) => {
                             Change Off Approvals
                         </CardTitle>
                         <CardDescription class="text-base mt-1 text-slate-500">
-                            Review and manage schedule change requests from your
-                            team.
+                            {{
+                                auth_user_type === 1
+                                    ? "HR Administration Portal"
+                                    : "Review team schedule changes."
+                            }}
                         </CardDescription>
                     </div>
                 </div>
@@ -155,24 +163,43 @@ const formatScheduleSub = (day, time) => {
                         />
                         <Input
                             v-model="search"
-                            placeholder="Search employee or date..."
+                            placeholder="Search name or date..."
                             class="h-12 pl-10 w-full"
                         />
                     </div>
 
-                    <select
-                        v-model="selectedEmployee"
-                        class="h-12 w-full md:w-1/4 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
+                    <div
+                        class="flex flex-col md:flex-row gap-3 w-full md:w-auto flex-1 justify-end"
                     >
-                        <option value="">All Employees</option>
-                        <option
-                            v-for="emp in employeeOptions"
-                            :key="emp.id"
-                            :value="emp.id"
+                        <select
+                            v-if="auth_user_type === 1"
+                            v-model="selectedDept"
+                            class="h-12 w-full md:w-1/3 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
                         >
-                            {{ emp.first_name }} {{ emp.last_name }}
-                        </option>
-                    </select>
+                            <option value="">All Departments</option>
+                            <option
+                                v-for="d in departments"
+                                :key="d.id"
+                                :value="d.id"
+                            >
+                                {{ d.name }}
+                            </option>
+                        </select>
+
+                        <select
+                            v-model="selectedEmployee"
+                            class="h-12 w-full md:w-1/3 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
+                        >
+                            <option value="">All Employees</option>
+                            <option
+                                v-for="emp in employeeOptions"
+                                :key="emp.id"
+                                :value="emp.id"
+                            >
+                                {{ emp.first_name }} {{ emp.last_name }}
+                            </option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="rounded-md border border-slate-200 overflow-hidden">
@@ -189,7 +216,7 @@ const formatScheduleSub = (day, time) => {
                                 >
                                 <TableHead
                                     class="font-bold text-slate-600 uppercase text-xs text-center"
-                                    >Your Status</TableHead
+                                    >Dept Head Status</TableHead
                                 >
                                 <TableHead
                                     class="font-bold text-slate-600 uppercase text-xs text-center"
@@ -208,23 +235,23 @@ const formatScheduleSub = (day, time) => {
                                     :key="req.id"
                                     class="hover:bg-blue-50/30 transition-colors group"
                                 >
-                                    <TableCell>
+                                    <TableCell
+                                        class="font-semibold text-slate-800"
+                                    >
                                         <div class="flex items-center gap-3">
                                             <div
-                                                class="p-2 bg-slate-100 rounded-full text-slate-500"
+                                                class="p-2 bg-blue-50 rounded text-brand-blue"
                                             >
-                                                <User class="w-4 h-4" />
+                                                <UserCircle class="w-4 h-4" />
                                             </div>
                                             <div>
-                                                <p
-                                                    class="font-semibold text-slate-700"
-                                                >
+                                                <p>
                                                     {{ req.employee_name }}
                                                 </p>
                                                 <p
-                                                    class="text-[10px] text-slate-400"
+                                                    class="text-xs text-slate-500 font-normal"
                                                 >
-                                                    Filed: {{ req.date_filed }}
+                                                    {{ req.department_name }}
                                                 </p>
                                             </div>
                                         </div>
@@ -232,10 +259,9 @@ const formatScheduleSub = (day, time) => {
                                     <TableCell>
                                         <Badge
                                             variant="secondary"
-                                            class="bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-50"
+                                            class="bg-blue-50 text-brand-blue border-blue-100"
+                                            >{{ req.request_type }}</Badge
                                         >
-                                            {{ req.request_type }}
-                                        </Badge>
                                     </TableCell>
                                     <TableCell class="text-center">
                                         <Badge
@@ -245,9 +271,8 @@ const formatScheduleSub = (day, time) => {
                                                     req.leader_status,
                                                 )
                                             "
+                                            >{{ req.leader_status }}</Badge
                                         >
-                                            {{ req.leader_status }}
-                                        </Badge>
                                     </TableCell>
                                     <TableCell class="text-center">
                                         <Badge
@@ -255,9 +280,8 @@ const formatScheduleSub = (day, time) => {
                                             :class="
                                                 getStatusClass(req.hr_status)
                                             "
+                                            >{{ req.hr_status }}</Badge
                                         >
-                                            {{ req.hr_status }}
-                                        </Badge>
                                     </TableCell>
                                     <TableCell class="text-right px-6">
                                         <Button
@@ -295,28 +319,13 @@ const formatScheduleSub = (day, time) => {
                     <DialogTitle class="text-2xl font-bold text-brand-blue">
                         Request Details: {{ selectedRequest?.employee_name }}
                     </DialogTitle>
-                    <DialogDescription>
-                        Submitted on
-                        {{ selectedRequest?.date_filed }}
-                    </DialogDescription>
+                    <DialogDescription
+                        >Submitted on
+                        {{ selectedRequest?.date_filed }}</DialogDescription
+                    >
                 </DialogHeader>
 
                 <div class="flex-1 overflow-y-auto p-6 pt-4">
-                    <div
-                        class="grid grid-cols-2 gap-4 py-4 border-y border-slate-100"
-                    >
-                        <div>
-                            <p
-                                class="text-xs font-bold text-slate-400 uppercase"
-                            >
-                                Type:
-                                <span class="text-sm font-semibold text-black">
-                                    {{ selectedRequest?.request_type }}
-                                </span>
-                            </p>
-                        </div>
-                    </div>
-
                     <div class="space-y-3 mt-4">
                         <div
                             class="bg-white border border-slate-200 rounded-xl p-4"
@@ -334,22 +343,19 @@ const formatScheduleSub = (day, time) => {
                                 </span>
                             </div>
                             <div class="grid gap-1">
-                                <div class="text-slate-700">
-                                    <span class="text-sm font-bold">{{
-                                        selectedRequest?.original_date
-                                    }}</span>
+                                <div class="text-sm font-bold text-slate-700">
+                                    {{ selectedRequest?.original_date }}
                                 </div>
-                                <div class="text-slate-500">
-                                    <span class="text-xs">{{
+                                <div class="text-xs text-slate-500">
+                                    {{
                                         formatScheduleSub(
                                             selectedRequest?.original_day,
                                             selectedRequest?.original_time,
                                         )
-                                    }}</span>
+                                    }}
                                 </div>
                             </div>
                         </div>
-
                         <div
                             class="bg-white border border-slate-200 rounded-xl p-4"
                         >
@@ -366,18 +372,16 @@ const formatScheduleSub = (day, time) => {
                                 </span>
                             </div>
                             <div class="grid gap-1">
-                                <div class="ftext-slate-700">
-                                    <span class="text-sm font-bold">{{
-                                        selectedRequest?.new_date
-                                    }}</span>
+                                <div class="text-sm font-bold text-slate-700">
+                                    {{ selectedRequest?.new_date }}
                                 </div>
-                                <div class="text-slate-500">
-                                    <span class="text-xs">{{
+                                <div class="text-xs text-slate-500">
+                                    {{
                                         formatScheduleSub(
                                             selectedRequest?.new_day,
                                             selectedRequest?.new_time,
                                         )
-                                    }}</span>
+                                    }}
                                 </div>
                             </div>
                         </div>
@@ -392,36 +396,41 @@ const formatScheduleSub = (day, time) => {
                     >
 
                     <div class="flex gap-2">
-                        <Button
+                        <template
                             v-if="
-                                selectedRequest?.leader_status.toLowerCase() ===
-                                'pending'
+                                getRelevantStatus(
+                                    selectedRequest,
+                                )?.toLowerCase() === 'pending'
                             "
-                            variant="outline"
-                            class="border-red-200 text-red-600 hover:bg-red-50"
-                            :disabled="processingId === selectedRequest?.id"
-                            @click="handleAction(selectedRequest.id, 8)"
                         >
-                            <X class="w-4 h-4 mr-1" /> Reject
-                        </Button>
+                            <Button
+                                variant="outline"
+                                class="border-red-200 text-red-600 hover:bg-red-50"
+                                :disabled="processingId === selectedRequest?.id"
+                                @click="handleAction(selectedRequest.id, 8)"
+                            >
+                                <X class="w-4 h-4 mr-1" /> Reject
+                            </Button>
+
+                            <Button
+                                class="bg-emerald-600 hover:bg-emerald-700 text-white"
+                                :disabled="processingId === selectedRequest?.id"
+                                @click="handleAction(selectedRequest.id, 7)"
+                            >
+                                <Check class="w-4 h-4 mr-1" /> Approve
+                            </Button>
+                        </template>
 
                         <Button
-                            v-if="
-                                ['pending', 'rejected'].includes(
-                                    selectedRequest?.leader_status.toLowerCase(),
-                                )
+                            v-else-if="
+                                getRelevantStatus(
+                                    selectedRequest,
+                                )?.toLowerCase() === 'rejected'
                             "
                             class="bg-emerald-600 hover:bg-emerald-700 text-white"
-                            :disabled="processingId === selectedRequest?.id"
                             @click="handleAction(selectedRequest.id, 7)"
                         >
-                            <Check class="w-4 h-4 mr-1" />
-                            {{
-                                selectedRequest?.leader_status.toLowerCase() ===
-                                "rejected"
-                                    ? "Change to Approve"
-                                    : "Approve Request"
-                            }}
+                            <Check class="w-4 h-4 mr-1" /> Change to Approve
                         </Button>
                     </div>
                 </DialogFooter>

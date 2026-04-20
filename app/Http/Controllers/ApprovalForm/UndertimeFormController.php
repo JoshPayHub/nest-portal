@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Head;
+namespace App\Http\Controllers\ApprovalForm;
 
 use App\Http\Controllers\Controller;
 use App\Models\Undertime;
@@ -67,7 +67,7 @@ class UndertimeFormController extends Controller
                 ];
             });
 
-        return Inertia::render('management/Head/UndertimeFormList', [
+        return Inertia::render('management/ApprovalForm/UndertimeFormList', [
             'undertimes' => $undertimes,
             'statuses'   => $allStatuses,
             'employeeOptions' => $employees,

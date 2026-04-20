@@ -1,17 +1,17 @@
 <?php
 
-use App\Http\Controllers\Head\AccomplishmentReportController;
+use App\Http\Controllers\ApprovalForm\AccomplishmentReportController;
 use App\Http\Controllers\Head\AnnouncementPolicyController;
-use App\Http\Controllers\Head\BusinessNotificationController;
-use App\Http\Controllers\Head\ChangeOffController;
+use App\Http\Controllers\ApprovalForm\BusinessNotificationController;
+use App\Http\Controllers\ApprovalForm\ChangeOffController;
 use App\Http\Controllers\Head\DashboardController;
-use App\Http\Controllers\Head\LeaveAbsenceController;
-use App\Http\Controllers\Head\LeaveController;
-use App\Http\Controllers\Head\ManpowerController;
-use App\Http\Controllers\Head\OvertimeRequestController;
+use App\Http\Controllers\ApprovalForm\LeaveAbsenceController;
+use App\Http\Controllers\ApprovalForm\LeaveController;
+use App\Http\Controllers\ApprovalForm\ManpowerController;
+use App\Http\Controllers\ApprovalForm\OvertimeRequestController;
 use App\Http\Controllers\Head\PayrollCutOffController;
 use App\Http\Controllers\Head\ProfileController;
-use App\Http\Controllers\Head\UndertimeFormController;
+use App\Http\Controllers\ApprovalForm\UndertimeFormController;
 use Illuminate\Support\Facades\Route;
 
 // head.php

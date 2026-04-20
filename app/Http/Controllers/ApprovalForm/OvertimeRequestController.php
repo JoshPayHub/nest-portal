@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Head;
+namespace App\Http\Controllers\ApprovalForm;
 
 use App\Http\Controllers\Controller;
 use App\Models\Overtime;
@@ -85,7 +85,7 @@ class OvertimeRequestController extends Controller
                 ];
             });
 
-        return Inertia::render('management/Head/OvertimeList', [
+        return Inertia::render('management/ApprovalForm/OvertimeList', [
             'reports' => $reports, // Changed from 'overtimes' to 'reports'
             'statuses'  => $allStatuses,
             'employeeOptions' => $employees,
