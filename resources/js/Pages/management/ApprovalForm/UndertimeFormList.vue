@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, watch } from "vue";
 import { router } from "@inertiajs/vue3";
 import {
     Search,
@@ -46,20 +46,27 @@ import {
 const props = defineProps({
     undertimes: Object,
     employeeOptions: Array,
+    departments: Array, // Added from controller
     filters: Object,
+    auth_user_type: Number, // Added from controller
 });
 
-const search = ref("");
+const search = ref(props.filters?.search || "");
 const selectedEmployee = ref(props.filters?.employee_id || "");
+const selectedDepartment = ref(props.filters?.department_id || "");
 const isViewOpen = ref(false);
 const selectedUndertime = ref(null);
 const processingId = ref(null);
 
-// Watch employee filter
-watch(selectedEmployee, (value) => {
+// Combined watcher for server-side filtering
+watch([selectedEmployee, selectedDepartment, search], ([emp, dept, q]) => {
     router.get(
-        "/head/undertime-form",
-        { employee_id: value },
+        window.location.pathname,
+        {
+            employee_id: emp,
+            department_id: dept,
+            search: q,
+        },
         {
             preserveState: true,
             replace: true,
@@ -68,29 +75,23 @@ watch(selectedEmployee, (value) => {
     );
 });
 
-// Filter undertimes by search (client-side)
-const filteredData = computed(() => {
-    const dataArray = props.undertimes?.data || [];
-    if (!search.value) return dataArray;
-
-    const searchTerm = search.value.toLowerCase();
-    return dataArray.filter((item) => {
-        return (
-            item.employee_name.toLowerCase().includes(searchTerm) ||
-            item.undertime_date.toLowerCase().includes(searchTerm)
-        );
-    });
-});
-
 const openView = (req) => {
     selectedUndertime.value = req;
     isViewOpen.value = true;
 };
 
+// Helper to get status based on user role
+const getMyCurrentStatus = (item) => {
+    if (!item) return "";
+    return props.auth_user_type === 1
+        ? item.hr_status.toLowerCase()
+        : item.leader_status.toLowerCase();
+};
+
 const handleAction = (id, statusId) => {
     processingId.value = id;
     router.post(
-        `/head/undertime-form/${id}/approve`,
+        `${window.location.pathname}/${id}/approve`,
         { status_id: statusId },
         {
             preserveScroll: true,
@@ -133,68 +134,96 @@ const getStatusClass = (status) => {
                             Undertime Approvals
                         </CardTitle>
                         <CardDescription class="text-base mt-1 text-slate-500">
-                            Review and manage undertime applications from your
-                            department.
+                            Review and manage undertime applications.
                         </CardDescription>
                     </div>
                 </div>
             </CardHeader>
 
             <CardContent class="mt-3">
-                <div class="flex justify-between gap-3 mb-6 items-center">
+                <div
+                    class="flex flex-col md:flex-row justify-between gap-3 mb-6 items-center"
+                >
                     <div class="relative w-full md:w-1/3">
                         <Search
                             class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
                         />
                         <Input
                             v-model="search"
-                            placeholder="Search in results..."
+                            placeholder="Search employee..."
                             class="h-12 pl-10 w-full"
                         />
                     </div>
 
-                    <select
-                        v-model="selectedEmployee"
-                        class="h-12 w-full md:w-1/4 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
+                    <div
+                        class="flex flex-col md:flex-row gap-2 w-full md:w-auto"
                     >
-                        <option value="">All Employees</option>
-                        <option
-                            v-for="emp in employeeOptions"
-                            :key="emp.id"
-                            :value="emp.id"
+                        <select
+                            v-if="auth_user_type === 1"
+                            v-model="selectedDepartment"
+                            class="h-12 w-full md:min-w-[200px] rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
                         >
-                            {{ emp.first_name }} {{ emp.last_name }} ({{
-                                emp.username
-                            }})
-                        </option>
-                    </select>
+                            <option value="">All Departments</option>
+                            <option
+                                v-for="dept in departments"
+                                :key="dept.id"
+                                :value="dept.id"
+                            >
+                                {{ dept.name }}
+                            </option>
+                        </select>
+
+                        <select
+                            v-model="selectedEmployee"
+                            class="h-12 w-full md:min-w-[200px] rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
+                        >
+                            <option value="">All Employees</option>
+                            <option
+                                v-for="emp in employeeOptions"
+                                :key="emp.id"
+                                :value="emp.id"
+                            >
+                                {{ emp.first_name }} {{ emp.last_name }}
+                            </option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="rounded-md border border-slate-200 overflow-hidden">
                     <Table>
                         <TableHeader class="bg-slate-50/50">
                             <TableRow>
-                                <TableHead>Employee</TableHead>
-                                <TableHead>Undertime Date</TableHead>
-                                <TableHead class="text-center"
+                                <TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs"
+                                    >Employee</TableHead
+                                >
+                                <TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs"
+                                    >Undertime Date</TableHead
+                                >
+                                <TableHead
+                                    class="text-center font-bold text-slate-600 uppercase text-xs"
                                     >Total Time</TableHead
                                 >
-                                <TableHead class="text-center"
-                                    >Your Status</TableHead
+                                <TableHead
+                                    class="text-center font-bold text-slate-600 uppercase text-xs"
+                                    >Dept Status</TableHead
                                 >
-                                <TableHead class="text-center"
+                                <TableHead
+                                    class="text-center font-bold text-slate-600 uppercase text-xs"
                                     >HR Status</TableHead
                                 >
-                                <TableHead class="text-right"
+                                <TableHead
+                                    class="text-right font-bold text-slate-600 uppercase text-xs"
                                     >Actions</TableHead
                                 >
                             </TableRow>
                         </TableHeader>
 
                         <TableBody>
-                            <template v-if="filteredData.length > 0">
+                            <template v-if="undertimes.data.length > 0">
                                 <TableRow
-                                    v-for="item in filteredData"
+                                    v-for="item in undertimes.data"
                                     :key="item.id"
                                     class="hover:bg-blue-50/30 transition-colors group"
                                 >
@@ -205,22 +234,38 @@ const getStatusClass = (status) => {
                                             >
                                                 <User class="w-4 h-4" />
                                             </div>
-                                            <span
-                                                class="font-semibold text-slate-700"
-                                            >
-                                                {{ item.employee_name }}
-                                            </span>
+                                            <div>
+                                                <p
+                                                    class="font-semibold text-slate-700"
+                                                >
+                                                    {{ item.employee_name }}
+                                                </p>
+                                                <p
+                                                    class="text-[10px] font-mono text-brand-blue uppercase"
+                                                >
+                                                    {{ item.department_name }}
+                                                </p>
+                                            </div>
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <span
-                                            class="text-sm font-medium text-slate-600"
-                                        >
-                                            {{ item.undertime_date }}
-                                        </span>
+                                        <div class="flex flex-col">
+                                            <span
+                                                class="text-sm font-medium text-slate-700"
+                                                >{{ item.undertime_date }}</span
+                                            >
+                                            <span
+                                                class="text-[11px] text-slate-400"
+                                                >Filed:
+                                                {{ item.date_filed }}</span
+                                            >
+                                        </div>
                                     </TableCell>
                                     <TableCell class="text-center">
-                                        <Badge variant="outline">
+                                        <Badge
+                                            variant="outline"
+                                            class="font-bold border-blue-200 text-brand-blue"
+                                        >
                                             {{ item.total_time }}
                                         </Badge>
                                     </TableCell>
@@ -273,7 +318,7 @@ const getStatusClass = (status) => {
                     </Table>
                 </div>
 
-                <Pagination :links="undertimes.links" />
+                <Pagination v-if="undertimes.links" :links="undertimes.links" />
             </CardContent>
         </Card>
 
@@ -297,24 +342,22 @@ const getStatusClass = (status) => {
                             <p
                                 class="text-xs font-bold text-slate-400 uppercase"
                             >
-                                From (Start Time)
+                                From (Start)
                             </p>
                             <p class="text-sm font-semibold text-slate-700">
                                 {{ selectedUndertime?.from_date }}
                             </p>
                         </div>
-
                         <div>
                             <p
                                 class="text-xs font-bold text-slate-400 uppercase"
                             >
-                                From (To Time)
+                                To (End)
                             </p>
                             <p class="text-sm font-semibold text-slate-700">
                                 {{ selectedUndertime?.to_date }}
                             </p>
                         </div>
-
                         <div>
                             <p
                                 class="text-xs font-bold text-slate-400 uppercase"
@@ -325,7 +368,6 @@ const getStatusClass = (status) => {
                                 {{ selectedUndertime?.total_time }}
                             </p>
                         </div>
-
                         <div>
                             <p
                                 class="text-xs font-bold text-slate-400 uppercase"
@@ -338,31 +380,25 @@ const getStatusClass = (status) => {
                         </div>
                     </div>
 
-                    <div class="mt-4">
-                        <div
-                            class="bg-white border border-slate-200 rounded-xl p-4"
+                    <div
+                        class="bg-slate-50 border border-slate-200 rounded-xl p-4"
+                    >
+                        <span
+                            class="text-sm font-bold text-slate-700 flex items-center gap-1 mb-2 border-b pb-2"
                         >
-                            <div class="border-b pb-2 mb-2">
-                                <span
-                                    class="text-sm font-bold text-slate-700 flex items-center gap-1"
-                                >
-                                    <FileTextIcon
-                                        class="w-3.5 h-3.5 text-brand-blue"
-                                    />
-                                    Reason for Request
-                                </span>
-                            </div>
-                            <p
-                                class="text-sm text-slate-600 whitespace-pre-wrap"
-                            >
-                                {{ selectedUndertime?.reason }}
-                            </p>
-                        </div>
+                            <FileTextIcon class="w-3.5 h-3.5 text-brand-blue" />
+                            Reason for Request
+                        </span>
+                        <p
+                            class="text-sm text-slate-600 whitespace-pre-wrap italic leading-relaxed"
+                        >
+                            "{{ selectedUndertime?.reason }}"
+                        </p>
                     </div>
                 </div>
 
                 <DialogFooter
-                    class="p-6 border-t bg-slate-50/50 flex justify-between gap-2"
+                    class="p-6 border-t bg-slate-50/50 flex flex-row items-center justify-between gap-2"
                 >
                     <Button variant="secondary" @click="isViewOpen = false"
                         >Close</Button
@@ -371,7 +407,7 @@ const getStatusClass = (status) => {
                     <div class="flex gap-2">
                         <template
                             v-if="
-                                selectedUndertime?.leader_status.toLowerCase() ===
+                                getMyCurrentStatus(selectedUndertime) ===
                                 'pending'
                             "
                         >
@@ -393,16 +429,17 @@ const getStatusClass = (status) => {
                                 "
                                 @click="handleAction(selectedUndertime.id, 7)"
                             >
-                                <Check class="w-4 h-4 mr-1" /> Approve Request
+                                <Check class="w-4 h-4 mr-1" /> Approve
                             </Button>
                         </template>
 
                         <Button
                             v-else-if="
-                                selectedUndertime?.leader_status.toLowerCase() ===
+                                getMyCurrentStatus(selectedUndertime) ===
                                 'rejected'
                             "
                             class="bg-emerald-600 hover:bg-emerald-700 text-white"
+                            :disabled="processingId === selectedUndertime?.id"
                             @click="handleAction(selectedUndertime.id, 7)"
                         >
                             <Check class="w-4 h-4 mr-1" /> Change to Approve

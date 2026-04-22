@@ -3,8 +3,7 @@
 namespace App\Http\Controllers\ApprovalForm;
 
 use App\Http\Controllers\Controller;
-use App\Models\Leave;
-use App\Models\Status;
+use App\Models\BusinessNotification;
 use App\Models\User;
 use App\Models\Department;
 use App\Models\Position;
@@ -13,13 +12,12 @@ use Inertia\Inertia;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
-class LeaveController extends Controller
+class BusinessNotificationController extends Controller
 {
     public function index(Request $request)
     {
         $user = $request->user();
         $isHR = $user->user_type_id == 1;
-        $allStatuses = Status::all();
 
         // 1. Fetch Active Departments and Positions for filters
         $departments = Department::where('status_id', 1)->orderBy('name', 'asc')->get();
@@ -36,8 +34,8 @@ class LeaveController extends Controller
 
         $employees = $employeesQuery->orderBy('first_name', 'asc')->get();
 
-        // 3. Build Leave Query
-        $leavesQuery = Leave::with([
+        // 3. Build Business Notification Query
+        $query = BusinessNotification::with([
             'user.department',
             'approvalStatuses.user.userType',
             'approvalStatuses.status'
@@ -45,84 +43,80 @@ class LeaveController extends Controller
 
         // Access Logic: Head sees only their department. HR sees all (unless filtered).
         if (!$isHR) {
-            $leavesQuery->whereHas('user', function ($q) use ($user) {
+            $query->whereHas('user', function ($q) use ($user) {
                 $q->where('department_id', $user->department_id);
             });
         } else {
             // Apply Department Filter for HR
             if ($request->filled('department_id')) {
-                $leavesQuery->whereHas('user', function ($q) use ($request) {
+                $query->whereHas('user', function ($q) use ($request) {
                     $q->where('department_id', $request->department_id);
                 });
             }
         }
 
-        // Apply Search Filter (by name)
+        // Apply Search Filter (Purposes or Location)
         if ($request->filled('search')) {
             $search = $request->search;
-            $leavesQuery->whereHas('user', function ($q) use ($search) {
-                $q->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%");
+            $query->where(function($q) use ($search) {
+                $q->where('purposes', 'like', "%{$search}%")
+                  ->orWhere('location', 'like', "%{$search}%");
             });
         }
 
         // Apply Employee Filter
         if ($request->filled('employee_id')) {
-            $leavesQuery->where('user_id', $request->employee_id);
+            $query->where('user_id', $request->employee_id);
         }
 
-        // 4. Paginate and Map
-        $leaves = $leavesQuery->orderBy('created_at', 'desc')
+        $notifications = $query->latest()
             ->paginate(10)
             ->withQueryString()
-            ->through(function ($leave) {
+            ->through(function ($item) {
                 // Find specific approval entries (Leader = ID 3, HR = ID 1)
-                $leaderEntry = $leave->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 3);
-                $hrEntry     = $leave->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 1);
+                $leaderEntry = $item->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 3);
+                $hrEntry     = $item->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 1);
 
                 return [
-                    'id'                 => $leave->id,
-                    'reference_no'       => $leave->reference_no,
-                    'employee_name'      => $leave->user->first_name . ' ' . $leave->user->last_name,
-                    'department_name'    => $leave->user->department->name ?? 'N/A',
-                    'date_filed'         => $leave->created_at->format('M d, Y'),
-                    'type_leave'         => $leave->type_leave,
-                    'pay_type'           => ($leave->pay_type === 'With Pay') ? 'With Pay' : 'Without Pay',
-                    'start_date'         => Carbon::parse($leave->start_date)->format('M d, Y'),
-                    'end_date'           => Carbon::parse($leave->end_date)->format('M d, Y'),
-                    'total_days'         => $leave->total_days,
-                    'reason'             => $leave->reason,
-                    // Status tracking
+                    'id'                 => $item->id,
+                    'employee_name'      => $item->user->first_name . ' ' . $item->user->last_name,
+                    'department_name'    => $item->user->department->name ?? 'N/A',
+                    'date_filed'         => $item->created_at->format('M d, Y'),
+                    'exact_date'         => Carbon::parse($item->exact_date)->format('M d, Y'),
+                    'purposes'           => $item->purposes,
+                    'reason'             => $item->reason,
+                    'location'           => $item->location,
+                    'business_time'      => Carbon::parse($item->business_time)->format('h:i A'),
+                    'returned_time'      => Carbon::parse($item->returned_time)->format('h:i A'),
                     'leader_status_name' => $leaderEntry?->status?->name ?? 'Pending',
                     'hr_status_name'     => $hrEntry?->status?->name ?? 'Pending',
-                    'status'             => $leaderEntry?->status?->name ?? 'Pending', // Default view status
                 ];
             });
 
-        return Inertia::render('management/ApprovalForm/LeaveList', [
-            'items'           => $leaves,
+        return Inertia::render('management/ApprovalForm/BusinessNotificationList', [
+            'items'           => $notifications,
             'departments'     => $departments,
             'positions'       => $positions,
             'employeeOptions' => $employees,
-            'statuses'        => $allStatuses,
-            'filters'         => $request->only(['employee_id', 'department_id', 'search']),
+            'filters'         => $request->only(['search', 'employee_id', 'department_id']),
             'auth_user_type'  => $user->user_type_id
         ]);
     }
 
     public function approve(Request $request, $id)
     {
+        // 7 = Approved, 8 = Rejected
         $request->validate([
-            'status_id' => 'required|in:7,8', // 7=Approved, 8=Rejected
+            'status_id' => 'required|in:7,8',
         ]);
 
-        $leave = Leave::findOrFail($id);
+        $notification = BusinessNotification::findOrFail($id);
 
-        // Record or Update the approval status for the current user
-        DB::table('leave_statuses')->updateOrInsert(
+        // Update or insert the approval status for the current logged-in user
+        DB::table('business_notification_statuses')->updateOrInsert(
             [
-                'leave_id' => $leave->id,
-                'user_id'  => $request->user()->id,
+                'business_notification_id' => $notification->id,
+                'user_id'                  => $request->user()->id,
             ],
             [
                 'status_id'  => $request->status_id,
@@ -131,6 +125,6 @@ class LeaveController extends Controller
             ]
         );
 
-        return redirect()->back()->with('message', 'Leave action processed successfully.');
+        return back()->with('message', 'Business notification request processed.');
     }
 }

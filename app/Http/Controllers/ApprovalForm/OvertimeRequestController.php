@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Overtime;
 use App\Models\Status;
 use App\Models\User;
+use App\Models\Department;
+use App\Models\Position;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -13,67 +15,80 @@ use Carbon\Carbon;
 
 class OvertimeRequestController extends Controller
 {
-    // Show overtime requests
     public function index(Request $request)
     {
         $user = $request->user();
+        $isHR = $user->user_type_id == 1;
         $allStatuses = Status::all();
 
-        // Fetch employees in the same department for the filter dropdown
-        $employees = User::where('department_id', $user->department_id)
-            ->select('id', 'first_name', 'last_name', 'username')
-            ->orderBy('first_name', 'asc')
-            ->get();
+        // 1. Fetch Active Departments and Positions for filters
+        $departments = Department::where('status_id', 1)->orderBy('name', 'asc')->get();
+        $positions = Position::where('status_id', 1)->orderBy('name', 'asc')->get();
 
-        $reportsQuery = Overtime::where('department_id', $user->department_id)
-            ->with([
-                'user',
-                'activities',
-                'approvalStatuses.user.userType',
-                'approvalStatuses.status'
-            ]);
+        // 2. Fetch Employees for Filter: HR sees all, Head sees department only
+        $employeesQuery = User::query()->select('id', 'first_name', 'last_name', 'username', 'department_id');
 
-        // Apply Employee Filter if selected
+        if (!$isHR) {
+            $employeesQuery->where('department_id', $user->department_id);
+        } elseif ($request->filled('department_id')) {
+            $employeesQuery->where('department_id', $request->department_id);
+        }
+
+        $employees = $employeesQuery->orderBy('first_name', 'asc')->get();
+
+        // 3. Build Overtime Query
+        $reportsQuery = Overtime::with([
+            'user.department',
+            'activities',
+            'approvalStatuses.user.userType',
+            'approvalStatuses.status'
+        ]);
+
+        // Access Logic: Head sees department only. HR sees all (unless filtered).
+        if (!$isHR) {
+            $reportsQuery->where('department_id', $user->department_id);
+        } else {
+            if ($request->filled('department_id')) {
+                $reportsQuery->where('department_id', $request->department_id);
+            }
+        }
+
+        // Apply Employee Filter
         if ($request->filled('employee_id')) {
             $reportsQuery->where('user_id', $request->employee_id);
         }
 
+        // 4. Paginate and Map
         $reports = $reportsQuery->orderBy('created_at', 'desc')
             ->paginate(10)
             ->withQueryString()
             ->through(function ($report) {
-                // Adjust these IDs (3 and 1) to match your actual user_type_id roles
+                // Identify roles: Leader = 3, HR = 1
                 $leaderEntry = $report->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 3);
                 $hrEntry     = $report->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 1);
 
                 $firstActivity = $report->activities->first();
 
                 return [
-                    'id' => $report->id,
-                    'user_id' => $report->user_id,
-                    'employee_name' => $report->user->first_name . ' ' . $report->user->last_name,
-                    'created_at' => $report->created_at?->format('M d, Y') ?? '',
-                    'cut_off_date' => $report->cut_off_date
-                        ? Carbon::parse($report->cut_off_date)->format('M d, Y')
-                        : '',
-
-                    'overtime_date' => $firstActivity
-                        ? Carbon::parse($firstActivity->overtime_date)->format('M d, Y')
-                        : 'N/A',
-
-                    'start_time'  => $firstActivity ? Carbon::parse($firstActivity->time_start)->format('h:i A') : '',
-                    'end_time'    => $firstActivity ? Carbon::parse($firstActivity->time_end)->format('h:i A') : '',
-                    'total_hours' => $report->activities->sum('additional_hours_worked'),
-                    'reason'      => $firstActivity?->description ?? 'No reason provided',
-
+                    'id'                 => $report->id,
+                    'user_id'            => $report->user_id,
+                    'employee_name'      => $report->user->first_name . ' ' . $report->user->last_name,
+                    'department_name'    => $report->user->department->name ?? 'N/A',
+                    'date_filed'         => $report->created_at?->format('M d, Y') ?? '',
+                    'cut_off_date'       => $report->cut_off_date
+                                            ? Carbon::parse($report->cut_off_date)->format('M d, Y')
+                                            : '',
+                    'overtime_date'      => $firstActivity
+                                            ? Carbon::parse($firstActivity->overtime_date)->format('M d, Y')
+                                            : 'N/A',
+                    'start_time'         => $firstActivity ? Carbon::parse($firstActivity->time_start)->format('h:i A') : '',
+                    'end_time'           => $firstActivity ? Carbon::parse($firstActivity->time_end)->format('h:i A') : '',
+                    'total_hours'        => $report->activities->sum('additional_hours_worked'),
+                    'reason'             => $firstActivity?->description ?? 'No reason provided',
                     'leader_status_name' => $leaderEntry?->status?->name ?? 'Pending',
-                    'leader_approver_id' => $leaderEntry?->user_id,
-
-                    'hr_status_name' => $hrEntry?->status?->name ?? 'Pending',
-                    'hr_approver_id' => $hrEntry?->user_id,
-
-                    'activities_count' => $report->activities->count(),
-                    'activities' => $report->activities->map(function ($item) {
+                    'hr_status_name'     => $hrEntry?->status?->name ?? 'Pending',
+                    'activities_count'   => $report->activities->count(),
+                    'activities'         => $report->activities->map(function ($item) {
                         return [
                             'date'        => Carbon::parse($item->overtime_date)->format('M d, Y'),
                             'description' => $item->description,
@@ -86,17 +101,20 @@ class OvertimeRequestController extends Controller
             });
 
         return Inertia::render('management/ApprovalForm/OvertimeList', [
-            'reports' => $reports, // Changed from 'overtimes' to 'reports'
-            'statuses'  => $allStatuses,
+            'reports'         => $reports,
+            'departments'     => $departments,
+            'positions'       => $positions,
+            'statuses'        => $allStatuses,
             'employeeOptions' => $employees,
-            'filters' => $request->only(['employee_id']),
+            'filters'         => $request->only(['employee_id', 'department_id']),
+            'auth_user_type'  => $user->user_type_id
         ]);
     }
 
     public function approve(Request $request, $id)
     {
         $request->validate([
-            'status_id' => 'required|in:7,8',
+            'status_id' => 'required|in:7,8', // 7=Approved, 8=Rejected
         ]);
 
         $overtime = Overtime::findOrFail($id);
@@ -104,7 +122,7 @@ class OvertimeRequestController extends Controller
         DB::table('overtime_statuses')->updateOrInsert(
             [
                 'overtime_id' => $overtime->id,
-                'user_id' => $request->user()->id,
+                'user_id'     => $request->user()->id,
             ],
             [
                 'status_id'  => $request->status_id,

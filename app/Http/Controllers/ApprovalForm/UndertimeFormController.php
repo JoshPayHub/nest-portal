@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Undertime;
 use App\Models\Status;
 use App\Models\User;
+use App\Models\Department;
+use App\Models\Position;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -13,32 +15,54 @@ use Carbon\Carbon;
 
 class UndertimeFormController extends Controller
 {
-    // Show undertime requests for the Department Head's staff
     public function index(Request $request)
     {
         $user = $request->user();
+        $isHR = $user->user_type_id == 1;
         $allStatuses = Status::all();
 
-        // Fetch employees in the same department for the filter dropdown
-        $employees = User::where('department_id', $user->department_id)
-            ->select('id', 'first_name', 'last_name', 'username')
-            ->orderBy('first_name', 'asc')
-            ->get();
+        // 1. Fetch Active Departments and Positions for filters
+        $departments = Department::where('status_id', 1)->orderBy('name', 'asc')->get();
+        $positions = Position::where('status_id', 1)->orderBy('name', 'asc')->get();
 
-        $reportsQuery = Undertime::whereHas('user', function ($query) use ($user) {
-                $query->where('department_id', $user->department_id);
-            })
-            ->with([
-                'user',
-                'approvalStatuses.user.userType',
-                'approvalStatuses.status'
-            ]);
+        // 2. Fetch Employees for Filter: HR sees all, Head sees department only
+        $employeesQuery = User::query()->select('id', 'first_name', 'last_name', 'username', 'department_id');
 
-        // Apply Employee Filter if selected
+        if (!$isHR) {
+            $employeesQuery->where('department_id', $user->department_id);
+        } elseif ($request->filled('department_id')) {
+            $employeesQuery->where('department_id', $request->department_id);
+        }
+
+        $employees = $employeesQuery->orderBy('first_name', 'asc')->get();
+
+        // 3. Build Undertime Query
+        $reportsQuery = Undertime::with([
+            'user.department',
+            'approvalStatuses.user.userType',
+            'approvalStatuses.status'
+        ]);
+
+        // Logic: Head sees only their department. HR sees all (unless filtered).
+        if (!$isHR) {
+            $reportsQuery->whereHas('user', function ($q) use ($user) {
+                $q->where('department_id', $user->department_id);
+            });
+        } else {
+            // Apply Department Filter for HR
+            if ($request->filled('department_id')) {
+                $reportsQuery->whereHas('user', function ($q) use ($request) {
+                    $q->where('department_id', $request->department_id);
+                });
+            }
+        }
+
+        // Apply Employee Filter
         if ($request->filled('employee_id')) {
             $reportsQuery->where('user_id', $request->employee_id);
         }
 
+        // 4. Paginate and Map
         $undertimes = $reportsQuery->orderBy('created_at', 'desc')
             ->paginate(10)
             ->withQueryString()
@@ -47,35 +71,40 @@ class UndertimeFormController extends Controller
                 $leaderEntry = $item->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 3);
                 $hrEntry     = $item->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 1);
 
+                // Time calculation logic
                 $totalMins = (int)$item->total_time;
                 $h = floor($totalMins / 60);
                 $m = $totalMins % 60;
                 $displayTime = ($h > 0 ? "{$h}h " : "") . ($m > 0 || $h == 0 ? "{$m}m" : "");
 
                 return [
-                    'id' => $item->id,
-                    'employee_name' => $item->user->first_name . ' ' . $item->user->last_name,
-                    'date_filed' => $item->created_at->format('M d, Y'),
-                    'reason' => $item->reason,
-                    'undertime_date' => Carbon::parse($item->undertime_date)->format('M d, Y'),
-                    'from_date' => Carbon::parse($item->from_date)->format('h:i A'),
-                    'to_date' => Carbon::parse($item->to_date)->format('h:i A'),
-                    'total_time' => $displayTime,
-                    'leader_status' => $leaderEntry ? $leaderEntry->status->name : 'Pending',
-                    'leader_status_id' => $leaderEntry?->status_id,
-                    'hr_status'     => $hrEntry ? $hrEntry->status->name : 'Pending',
+                    'id'                => $item->id,
+                    'employee_name'     => $item->user->first_name . ' ' . $item->user->last_name,
+                    'department_name'   => $item->user->department->name ?? 'N/A',
+                    'date_filed'        => $item->created_at->format('M d, Y'),
+                    'reason'            => $item->reason,
+                    'undertime_date'    => Carbon::parse($item->undertime_date)->format('M d, Y'),
+                    'from_date'         => Carbon::parse($item->from_date)->format('h:i A'),
+                    'to_date'           => Carbon::parse($item->to_date)->format('h:i A'),
+                    'total_time'        => $displayTime,
+                    'leader_status'     => $leaderEntry?->status?->name ?? 'Pending',
+                    'leader_status_id'  => $leaderEntry?->status_id,
+                    'hr_status'         => $hrEntry?->status?->name ?? 'Pending',
+                    'hr_status_id'      => $hrEntry?->status_id,
                 ];
             });
 
         return Inertia::render('management/ApprovalForm/UndertimeFormList', [
-            'undertimes' => $undertimes,
-            'statuses'   => $allStatuses,
+            'undertimes'      => $undertimes,
+            'departments'     => $departments,
+            'positions'       => $positions,
+            'statuses'        => $allStatuses,
             'employeeOptions' => $employees,
-            'filters' => $request->only(['employee_id']),
+            'filters'         => $request->only(['employee_id', 'department_id']),
+            'auth_user_type'  => $user->user_type_id
         ]);
     }
 
-    // Process Approval/Rejection (IDs 7 and 8)
     public function approve(Request $request, $id)
     {
         $request->validate([
@@ -87,7 +116,7 @@ class UndertimeFormController extends Controller
         DB::table('undertime_statuses')->updateOrInsert(
             [
                 'undertime_id' => $undertime->id,
-                'user_id' => $request->user()->id,
+                'user_id'      => $request->user()->id,
             ],
             [
                 'status_id'  => $request->status_id,
@@ -96,6 +125,6 @@ class UndertimeFormController extends Controller
             ]
         );
 
-        return redirect()->back()->with('message', 'Action processed successfully.');
+        return redirect()->back()->with('message', 'Undertime request processed.');
     }
 }
