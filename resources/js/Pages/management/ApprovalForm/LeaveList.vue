@@ -12,6 +12,7 @@ import {
     Clock,
     ClipboardList,
     FileTextIcon,
+    UserCircle,
 } from "lucide-vue-next";
 import { toastStore } from "@/stores/toast";
 
@@ -134,7 +135,7 @@ const getStatusClass = (status) => {
 
 <template>
     <div class="p-6">
-        <Card class="shadow-sm border-blue-100 max-w-7xl mx-auto">
+        <Card class="shadow-sm border-blue-100">
             <CardHeader class="border-b border-slate-100">
                 <div
                     class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
@@ -162,39 +163,43 @@ const getStatusClass = (status) => {
                         />
                         <Input
                             v-model="search"
-                            placeholder="Search by employee name..."
+                            placeholder="Search name..."
                             class="h-12 pl-10 w-full"
                         />
                     </div>
 
-                    <select
-                        v-if="auth_user_type === 1"
-                        v-model="selectedDepartment"
-                        class="h-12 w-full md:w-1/4 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
+                    <div
+                        class="flex flex-col md:flex-row gap-3 w-full md:w-auto flex-1 justify-end"
                     >
-                        <option value="">All Departments</option>
-                        <option
-                            v-for="dept in departments"
-                            :key="dept.id"
-                            :value="dept.id"
+                        <select
+                            v-if="auth_user_type === 1"
+                            v-model="selectedDepartment"
+                            class="h-12 w-full md:w-1/3 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
                         >
-                            {{ dept.name }}
-                        </option>
-                    </select>
+                            <option value="">All Departments</option>
+                            <option
+                                v-for="dept in departments"
+                                :key="dept.id"
+                                :value="dept.id"
+                            >
+                                {{ dept.name }}
+                            </option>
+                        </select>
 
-                    <select
-                        v-model="selectedEmployee"
-                        class="h-12 w-full md:w-1/4 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
-                    >
-                        <option value="">All Employees</option>
-                        <option
-                            v-for="emp in employeeOptions"
-                            :key="emp.id"
-                            :value="emp.id"
+                        <select
+                            v-model="selectedEmployee"
+                            class="h-12 w-full md:w-1/3 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
                         >
-                            {{ emp.first_name }} {{ emp.last_name }}
-                        </option>
-                    </select>
+                            <option value="">All Employees</option>
+                            <option
+                                v-for="emp in employeeOptions"
+                                :key="emp.id"
+                                :value="emp.id"
+                            >
+                                {{ emp.first_name }} {{ emp.last_name }}
+                            </option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="rounded-md border border-slate-200 overflow-hidden">
@@ -203,7 +208,7 @@ const getStatusClass = (status) => {
                             <TableRow>
                                 <TableHead
                                     class="font-bold text-slate-600 uppercase text-xs"
-                                    >Employee / Ref No.
+                                    >Employee
                                 </TableHead>
                                 <TableHead
                                     class="font-bold text-slate-600 uppercase text-xs"
@@ -234,27 +239,28 @@ const getStatusClass = (status) => {
                                     :key="item.id"
                                     class="hover:bg-blue-50/30 transition-colors group"
                                 >
-                                    <TableCell>
+                                    <TableCell
+                                        class="font-semibold text-slate-800"
+                                    >
                                         <div class="flex items-center gap-3">
                                             <div
-                                                class="p-2 bg-slate-100 rounded-full text-slate-500"
+                                                class="p-2 bg-blue-50 rounded text-brand-blue"
                                             >
-                                                <User class="w-4 h-4" />
+                                                <UserCircle class="w-4 h-4" />
                                             </div>
                                             <div>
-                                                <p
-                                                    class="font-semibold text-slate-700"
-                                                >
+                                                <p>
                                                     {{ item.employee_name }}
                                                 </p>
                                                 <p
-                                                    class="text-[10px] font-mono text-brand-blue uppercase"
+                                                    class="text-xs text-slate-500 font-normal"
                                                 >
-                                                    {{ item.reference_no }}
+                                                    {{ item.department_name }}
                                                 </p>
                                             </div>
                                         </div>
                                     </TableCell>
+
                                     <TableCell>
                                         <div class="flex flex-col">
                                             <span

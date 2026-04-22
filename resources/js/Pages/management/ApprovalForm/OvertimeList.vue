@@ -12,6 +12,7 @@ import {
     Timer,
     Clock,
     FileTextIcon,
+    UserCircle,
 } from "lucide-vue-next";
 import { toastStore } from "@/stores/toast";
 
@@ -132,7 +133,7 @@ const getStatusClass = (status) => {
 
 <template>
     <div class="p-6">
-        <Card class="shadow-sm border-blue-100 max-w-7xl mx-auto">
+        <Card class="shadow-sm border-blue-100">
             <CardHeader class="border-b border-slate-100">
                 <div
                     class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
@@ -160,39 +161,43 @@ const getStatusClass = (status) => {
                         />
                         <Input
                             v-model="search"
-                            placeholder="Search employee..."
+                            placeholder="Search name..."
                             class="h-12 pl-10 w-full"
                         />
                     </div>
 
-                    <select
-                        v-if="auth_user_type === 1"
-                        v-model="selectedDepartment"
-                        class="h-12 w-full md:w-1/4 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
+                    <div
+                        class="flex flex-col md:flex-row gap-3 w-full md:w-auto flex-1 justify-end"
                     >
-                        <option value="">All Departments</option>
-                        <option
-                            v-for="dept in departments"
-                            :key="dept.id"
-                            :value="dept.id"
+                        <select
+                            v-if="auth_user_type === 1"
+                            v-model="selectedDepartment"
+                            class="h-12 w-full md:w-1/3 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
                         >
-                            {{ dept.name }}
-                        </option>
-                    </select>
+                            <option value="">All Departments</option>
+                            <option
+                                v-for="dept in departments"
+                                :key="dept.id"
+                                :value="dept.id"
+                            >
+                                {{ dept.name }}
+                            </option>
+                        </select>
 
-                    <select
-                        v-model="selectedEmployee"
-                        class="h-12 w-full md:w-1/4 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
-                    >
-                        <option value="">All Employees</option>
-                        <option
-                            v-for="emp in employeeOptions"
-                            :key="emp.id"
-                            :value="emp.id"
+                        <select
+                            v-model="selectedEmployee"
+                            class="h-12 w-full md:w-1/3 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
                         >
-                            {{ emp.first_name }} {{ emp.last_name }}
-                        </option>
-                    </select>
+                            <option value="">All Employees</option>
+                            <option
+                                v-for="emp in employeeOptions"
+                                :key="emp.id"
+                                :value="emp.id"
+                            >
+                                {{ emp.first_name }} {{ emp.last_name }}
+                            </option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="rounded-md border border-slate-200 overflow-hidden">
@@ -201,14 +206,10 @@ const getStatusClass = (status) => {
                             <TableRow>
                                 <TableHead
                                     class="font-bold text-slate-600 uppercase text-xs"
-                                    >Employee / Ref</TableHead
+                                    >Employee</TableHead
                                 >
                                 <TableHead
                                     class="font-bold text-slate-600 uppercase text-xs"
-                                    >Date Filed</TableHead
-                                >
-                                <TableHead
-                                    class="font-bold text-slate-600 uppercase text-xs text-center"
                                     >Total Hours</TableHead
                                 >
                                 <TableHead
@@ -232,48 +233,40 @@ const getStatusClass = (status) => {
                                     :key="item.id"
                                     class="hover:bg-blue-50/30 transition-colors group"
                                 >
-                                    <TableCell>
+                                    <TableCell
+                                        class="font-semibold text-slate-800"
+                                    >
                                         <div class="flex items-center gap-3">
                                             <div
-                                                class="p-2 bg-slate-100 rounded-full text-slate-500"
+                                                class="p-2 bg-blue-50 rounded text-brand-blue"
                                             >
-                                                <User class="w-4 h-4" />
+                                                <UserCircle class="w-4 h-4" />
                                             </div>
                                             <div>
-                                                <p
-                                                    class="font-semibold text-slate-700"
-                                                >
+                                                <p>
                                                     {{ item.employee_name }}
                                                 </p>
                                                 <p
-                                                    class="text-[10px] font-mono text-brand-blue uppercase"
+                                                    class="text-xs text-slate-500 font-normal"
                                                 >
                                                     {{ item.department_name }}
                                                 </p>
                                             </div>
                                         </div>
                                     </TableCell>
+
                                     <TableCell>
                                         <div class="flex flex-col">
                                             <span
                                                 class="text-sm font-medium text-slate-700"
-                                                >{{ item.date_filed }}</span
-                                            >
-                                            <span
-                                                class="text-[11px] text-slate-400"
-                                                >OT Date:
-                                                {{ item.overtime_date }}</span
+                                                >{{
+                                                    item.total_hours
+                                                }}
+                                                hours</span
                                             >
                                         </div>
                                     </TableCell>
-                                    <TableCell class="text-center">
-                                        <Badge
-                                            variant="outline"
-                                            class="font-bold text-brand-blue border-blue-200"
-                                        >
-                                            {{ item.total_hours }} Hrs
-                                        </Badge>
-                                    </TableCell>
+
                                     <TableCell class="text-center">
                                         <Badge
                                             variant="outline"
@@ -329,32 +322,24 @@ const getStatusClass = (status) => {
         </Card>
 
         <Dialog v-model:open="isViewOpen">
-            <DialogContent class="max-w-2xl max-h-[90vh] flex flex-col p-0">
-                <DialogHeader class="p-6 pb-0">
-                    <DialogTitle class="text-2xl font-bold text-brand-blue"
-                        >Overtime Details:
-                        {{ selectedItem?.employee_name }}</DialogTitle
-                    >
-                    <DialogDescription
-                        >Request filed on
-                        {{ selectedItem?.date_filed }}</DialogDescription
-                    >
+            <DialogContent class="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <div class="pr-6">
+                        <DialogTitle class="text-2xl font-bold text-brand-blue"
+                            >Overtime Details:
+                            {{ selectedItem?.employee_name }}</DialogTitle
+                        >
+                        <DialogDescription
+                            >Request filed on
+                            {{ selectedItem?.date_filed }}</DialogDescription
+                        >
+                    </div>
                 </DialogHeader>
 
-                <div class="flex-1 overflow-y-auto p-6 pt-4">
+                <div class="flex-1 overflow-y-auto py-4">
                     <div
                         class="grid grid-cols-2 gap-6 py-4 border-y border-slate-100 mb-4"
                     >
-                        <div class="space-y-1">
-                            <p
-                                class="text-xs font-bold text-slate-400 uppercase"
-                            >
-                                Department
-                            </p>
-                            <p class="text-sm font-semibold text-slate-700">
-                                {{ selectedItem?.department_name }}
-                            </p>
-                        </div>
                         <div class="space-y-1">
                             <p
                                 class="text-xs font-bold text-slate-400 uppercase"
@@ -368,39 +353,51 @@ const getStatusClass = (status) => {
                     </div>
 
                     <div class="space-y-3">
-                        <p
-                            class="text-xs font-bold text-slate-400 uppercase mb-2"
-                        >
-                            Activity Logs
-                        </p>
                         <div
                             v-for="(act, idx) in selectedItem?.activities"
                             :key="idx"
-                            class="p-4 rounded-lg border border-slate-100 bg-slate-50/50"
+                            class="bg-white border border-slate-200 rounded-xl p-4"
                         >
-                            <div class="flex justify-between items-start mb-2">
-                                <span
-                                    class="text-sm font-bold text-slate-700 flex items-center gap-1"
-                                >
-                                    <Calendar
-                                        class="w-3.5 h-3.5 text-brand-blue"
-                                    />
-                                    {{ act.date }}
-                                </span>
-                                <Badge
-                                    class="bg-white border-slate-200 text-slate-600"
-                                    >{{ act.hours }} hrs</Badge
-                                >
-                            </div>
                             <div
-                                class="text-xs text-slate-500 flex items-center gap-1 mb-2"
+                                class="flex flex-wrap items-center justify-between gap-2 border-b pb-2 mb-2"
                             >
-                                <Clock class="w-3 h-3" /> {{ act.time_start }} -
-                                {{ act.time_end }}
+                                <div class="flex items-center gap-4">
+                                    <div
+                                        class="flex items-center gap-1.5 text-sm font-bold text-slate-700"
+                                    >
+                                        <Calendar
+                                            class="w-3.5 h-3.5 text-brand-blue"
+                                        />
+                                        {{ act.date }}
+                                    </div>
+                                    <div
+                                        class="flex items-center gap-1.5 text-sm text-slate-500"
+                                    >
+                                        <Timer
+                                            class="w-3.5 h-3.5 text-slate-400"
+                                        />
+                                        {{ act.time_start }} -
+                                        {{ act.time_end }}
+                                    </div>
+                                </div>
+                                <Badge
+                                    variant="secondary"
+                                    class="bg-blue-50 text-brand-blue border-blue-100"
+                                >
+                                    {{ act.hours }} hrs
+                                </Badge>
                             </div>
-                            <p class="text-sm text-slate-600 italic">
-                                "{{ act.description }}"
-                            </p>
+
+                            <div
+                                class="text-sm text-slate-600 leading-relaxed break-words whitespace-pre-wrap"
+                            >
+                                <p
+                                    class="text-[10px] font-bold uppercase text-slate-400 mb-1"
+                                >
+                                    Task Description:
+                                </p>
+                                {{ act.description }}
+                            </div>
                         </div>
                     </div>
                 </div>

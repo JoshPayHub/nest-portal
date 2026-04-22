@@ -11,6 +11,7 @@ import {
     X,
     User,
     FileTextIcon,
+    UserCircle,
 } from "lucide-vue-next";
 import { toastStore } from "@/stores/toast";
 
@@ -120,9 +121,7 @@ const getStatusClass = (status) => {
 
 <template>
     <div class="p-6">
-        <Card
-            class="shadow-sm border-blue-100 max-w-7xl mx-auto overflow-hidden"
-        >
+        <Card class="shadow-sm border-blue-100 overflow-hidden">
             <CardHeader class="border-b border-slate-100 bg-white/50">
                 <div
                     class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
@@ -150,18 +149,18 @@ const getStatusClass = (status) => {
                         />
                         <Input
                             v-model="search"
-                            placeholder="Search employee..."
+                            placeholder="Search name..."
                             class="h-12 pl-10 w-full"
                         />
                     </div>
 
                     <div
-                        class="flex flex-col md:flex-row gap-2 w-full md:w-auto"
+                        class="flex flex-col md:flex-row gap-3 w-full md:w-auto flex-1 justify-end"
                     >
                         <select
                             v-if="auth_user_type === 1"
                             v-model="selectedDepartment"
-                            class="h-12 w-full md:min-w-[200px] rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
+                            class="h-12 w-full md:w-1/3 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
                         >
                             <option value="">All Departments</option>
                             <option
@@ -175,7 +174,7 @@ const getStatusClass = (status) => {
 
                         <select
                             v-model="selectedEmployee"
-                            class="h-12 w-full md:min-w-[200px] rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
+                            class="h-12 w-full md:w-1/3 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
                         >
                             <option value="">All Employees</option>
                             <option
@@ -203,10 +202,6 @@ const getStatusClass = (status) => {
                                 >
                                 <TableHead
                                     class="text-center font-bold text-slate-600 uppercase text-xs"
-                                    >Total Time</TableHead
-                                >
-                                <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs"
                                     >Dept Status</TableHead
                                 >
                                 <TableHead
@@ -227,21 +222,21 @@ const getStatusClass = (status) => {
                                     :key="item.id"
                                     class="hover:bg-blue-50/30 transition-colors group"
                                 >
-                                    <TableCell>
+                                    <TableCell
+                                        class="font-semibold text-slate-800"
+                                    >
                                         <div class="flex items-center gap-3">
                                             <div
-                                                class="p-2 bg-slate-100 rounded-full text-slate-500"
+                                                class="p-2 bg-blue-50 rounded text-brand-blue"
                                             >
-                                                <User class="w-4 h-4" />
+                                                <UserCircle class="w-4 h-4" />
                                             </div>
                                             <div>
-                                                <p
-                                                    class="font-semibold text-slate-700"
-                                                >
+                                                <p>
                                                     {{ item.employee_name }}
                                                 </p>
                                                 <p
-                                                    class="text-[10px] font-mono text-brand-blue uppercase"
+                                                    class="text-xs text-slate-500 font-normal"
                                                 >
                                                     {{ item.department_name }}
                                                 </p>
@@ -254,20 +249,7 @@ const getStatusClass = (status) => {
                                                 class="text-sm font-medium text-slate-700"
                                                 >{{ item.undertime_date }}</span
                                             >
-                                            <span
-                                                class="text-[11px] text-slate-400"
-                                                >Filed:
-                                                {{ item.date_filed }}</span
-                                            >
                                         </div>
-                                    </TableCell>
-                                    <TableCell class="text-center">
-                                        <Badge
-                                            variant="outline"
-                                            class="font-bold border-blue-200 text-brand-blue"
-                                        >
-                                            {{ item.total_time }}
-                                        </Badge>
                                     </TableCell>
                                     <TableCell class="text-center">
                                         <Badge
@@ -323,18 +305,23 @@ const getStatusClass = (status) => {
         </Card>
 
         <Dialog v-model:open="isViewOpen">
-            <DialogContent class="max-w-2xl max-h-[90vh] flex flex-col p-0">
-                <DialogHeader class="p-6 pb-0">
-                    <DialogTitle class="text-2xl font-bold text-brand-blue">
-                        Undertime Details:
-                        {{ selectedUndertime?.employee_name }}
-                    </DialogTitle>
-                    <DialogDescription>
-                        Submitted on {{ selectedUndertime?.date_filed }}
-                    </DialogDescription>
+            <DialogContent class="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <div class="pr-6">
+                        <DialogTitle class="text-2xl font-bold text-brand-blue">
+                            Undertime Details:
+                            {{ selectedUndertime?.employee_name }}</DialogTitle
+                        >
+                        <DialogDescription>
+                            Submitted on
+                            {{
+                                selectedUndertime?.date_filed
+                            }}</DialogDescription
+                        >
+                    </div>
                 </DialogHeader>
 
-                <div class="flex-1 overflow-y-auto p-6 pt-4 space-y-4">
+                <div class="flex-1 overflow-y-auto py-4 space-y-4">
                     <div
                         class="grid grid-cols-2 gap-6 py-4 border-y border-slate-100 mb-4"
                     >
@@ -381,19 +368,23 @@ const getStatusClass = (status) => {
                     </div>
 
                     <div
-                        class="bg-slate-50 border border-slate-200 rounded-xl p-4"
+                        class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm"
                     >
-                        <span
-                            class="text-sm font-bold text-slate-700 flex items-center gap-1 mb-2 border-b pb-2"
+                        <div class="border-b pb-3 mb-3">
+                            <div
+                                class="flex items-center gap-1.5 text-sm font-bold text-slate-700"
+                            >
+                                <FileTextIcon
+                                    class="w-3.5 h-3.5 text-brand-blue"
+                                />
+                                Reason
+                            </div>
+                        </div>
+                        <div
+                            class="text-sm text-slate-600 leading-relaxed break-words whitespace-pre-wrap"
                         >
-                            <FileTextIcon class="w-3.5 h-3.5 text-brand-blue" />
-                            Reason for Request
-                        </span>
-                        <p
-                            class="text-sm text-slate-600 whitespace-pre-wrap italic leading-relaxed"
-                        >
-                            "{{ selectedUndertime?.reason }}"
-                        </p>
+                            {{ selectedUndertime?.reason }}
+                        </div>
                     </div>
                 </div>
 

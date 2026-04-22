@@ -131,7 +131,7 @@ const formatScheduleSub = (day, time) => {
 
 <template>
     <div class="p-6">
-        <Card class="shadow-sm border-blue-100 max-w-7xl mx-auto">
+        <Card class="shadow-sm border-blue-100">
             <CardHeader class="border-b border-slate-100">
                 <div
                     class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
@@ -163,7 +163,7 @@ const formatScheduleSub = (day, time) => {
                         />
                         <Input
                             v-model="search"
-                            placeholder="Search name or date..."
+                            placeholder="Search name..."
                             class="h-12 pl-10 w-full"
                         />
                     </div>
@@ -212,7 +212,11 @@ const formatScheduleSub = (day, time) => {
                                 >
                                 <TableHead
                                     class="font-bold text-slate-600 uppercase text-xs"
-                                    >Request Type</TableHead
+                                    >ORIGINAL DAY</TableHead
+                                >
+                                <TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs"
+                                    >REQUESTED DAY</TableHead
                                 >
                                 <TableHead
                                     class="font-bold text-slate-600 uppercase text-xs text-center"
@@ -256,13 +260,49 @@ const formatScheduleSub = (day, time) => {
                                             </div>
                                         </div>
                                     </TableCell>
+
                                     <TableCell>
-                                        <Badge
-                                            variant="secondary"
-                                            class="bg-blue-50 text-brand-blue border-blue-100"
-                                            >{{ req.request_type }}</Badge
-                                        >
+                                        <div class="text-sm">
+                                            <div
+                                                v-if="
+                                                    formatScheduleSub(
+                                                        req.original_day,
+                                                        req.original_time,
+                                                    )
+                                                "
+                                                class="text-slate-500 text-xs"
+                                            >
+                                                {{
+                                                    formatScheduleSub(
+                                                        req.original_day,
+                                                        req.original_time,
+                                                    )
+                                                }}
+                                            </div>
+                                        </div>
                                     </TableCell>
+
+                                    <TableCell>
+                                        <div class="text-sm">
+                                            <div
+                                                v-if="
+                                                    formatScheduleSub(
+                                                        req.new_day,
+                                                        req.new_time,
+                                                    )
+                                                "
+                                                class="text-slate-500 text-xs"
+                                            >
+                                                {{
+                                                    formatScheduleSub(
+                                                        req.new_day,
+                                                        req.new_time,
+                                                    )
+                                                }}
+                                            </div>
+                                        </div>
+                                    </TableCell>
+
                                     <TableCell class="text-center">
                                         <Badge
                                             variant="outline"
@@ -314,18 +354,23 @@ const formatScheduleSub = (day, time) => {
         </Card>
 
         <Dialog v-model:open="isViewOpen">
-            <DialogContent class="max-w-2xl flex flex-col p-0">
-                <DialogHeader class="p-6 pb-0">
-                    <DialogTitle class="text-2xl font-bold text-brand-blue">
-                        Request Details: {{ selectedRequest?.employee_name }}
-                    </DialogTitle>
-                    <DialogDescription
-                        >Submitted on
-                        {{ selectedRequest?.date_filed }}</DialogDescription
-                    >
+            <DialogContent class="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <div class="pr-6">
+                        <DialogTitle class="text-2xl font-bold text-brand-blue"
+                            >Request Details:
+                            {{ selectedRequest?.employee_name }}</DialogTitle
+                        >
+                        <DialogDescription
+                            >Submitted on
+                            {{ selectedRequest?.date_filed }}</DialogDescription
+                        >
+                    </div>
                 </DialogHeader>
 
-                <div class="flex-1 overflow-y-auto p-6 pt-4">
+                <div
+                    class="flex-1 overflow-y-auto py-4 border-t border-slate-100"
+                >
                     <div class="space-y-3 mt-4">
                         <div
                             class="bg-white border border-slate-200 rounded-xl p-4"

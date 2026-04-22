@@ -11,6 +11,7 @@ import {
     Clock,
     Eye,
     Lock,
+    FileTextIcon,
 } from "lucide-vue-next";
 import {
     Card,
@@ -90,7 +91,7 @@ const getStatusClass = (status) => {
 
 <template>
     <div class="p-6">
-        <Card class="max-w-7xl mx-auto shadow-sm border-blue-100">
+        <Card class="shadow-sm border-blue-100">
             <CardHeader class="border-b">
                 <div class="flex justify-between items-center">
                     <div>
@@ -332,70 +333,62 @@ const getStatusClass = (status) => {
                 </div>
 
                 <div
-                    class="grid grid-cols-1 gap-3 bg-slate-50 p-4 rounded-lg border border-slate-100"
+                    class="grid grid-cols-2 gap-6 py-4 border-y border-slate-100 mb-4"
                 >
-                    <div class="grid grid-cols-2">
-                        <div>
-                            <p
-                                class="text-[10px] font-bold text-slate-400 uppercase"
-                            >
-                                Location
-                            </p>
-                            <p class="text-xs font-semibold text-slate-700">
-                                {{ selectedNotification?.location }}
-                            </p>
-                        </div>
-                        <div>
-                            <p
-                                class="text-[10px] font-bold text-slate-400 uppercase"
-                            >
-                                Purpose of Trip
-                            </p>
-                            <p class="text-xs font-semibold text-slate-700">
-                                {{ selectedNotification?.purposes }}
-                            </p>
-                        </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase">
+                            Location
+                        </p>
+                        <p class="text-sm font-semibold text-slate-700">
+                            {{ selectedNotification?.location }}
+                        </p>
                     </div>
-                    <div class="grid grid-cols-2">
-                        <div>
-                            <p
-                                class="text-[10px] font-bold text-slate-400 uppercase"
-                            >
-                                Departure Time
-                            </p>
-                            <p class="text-xs font-semibold text-slate-700">
-                                {{ selectedNotification?.business_time }}
-                            </p>
-                        </div>
-                        <div>
-                            <p
-                                class="text-[10px] font-bold text-slate-400 uppercase"
-                            >
-                                Expected Return Time
-                            </p>
-                            <p class="text-xs font-semibold text-slate-700">
-                                {{ selectedNotification?.returned_time }}
-                            </p>
-                        </div>
+
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase">
+                            Purpose of Trip
+                        </p>
+                        <p class="text-sm font-semibold text-slate-700">
+                            {{ selectedNotification?.purposes }}
+                        </p>
+                    </div>
+
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase">
+                            Departure Time
+                        </p>
+                        <p class="text-sm font-semibold text-slate-700">
+                            {{ selectedNotification?.business_time }}
+                        </p>
+                    </div>
+
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase">
+                            Expected Return Time
+                        </p>
+                        <p class="text-sm font-semibold text-slate-700">
+                            {{ selectedNotification?.returned_time }}
+                        </p>
                     </div>
                 </div>
 
-                <div>
-                    <p class="text-xs font-bold text-slate-400 uppercase mb-2">
-                        Detailed Reason
-                    </p>
-                    <div
-                        class="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-sm"
-                    >
-                        <p
-                            class="text-sm text-slate-700 leading-relaxed break-words whitespace-pre-wrap"
+                <div
+                    class="bg-white border border-slate-200 rounded-xl p-4 mb-2"
+                >
+                    <div class="border-b pb-2 mb-2">
+                        <span
+                            class="text-sm font-bold text-slate-700 flex items-center gap-1"
                         >
-                            {{
-                                selectedNotification?.reason ||
-                                "No reason provided."
-                            }}
-                        </p>
+                            <FileTextIcon class="w-3.5 h-3.5 text-brand-blue" />
+                            Detailed Reason
+                        </span>
                     </div>
+                    <p class="text-sm text-slate-600 whitespace-pre-wrap">
+                        {{
+                            selectedNotification?.reason ||
+                            "No reason provided."
+                        }}
+                    </p>
                 </div>
 
                 <DialogFooter class="mt-3">

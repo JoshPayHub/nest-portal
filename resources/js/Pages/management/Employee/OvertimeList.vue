@@ -86,9 +86,7 @@ const getStatusClass = (status) => {
 
 <template>
     <div class="p-6">
-        <Card
-            class="shadow-sm border-blue-100 max-w-7xl mx-auto overflow-hidden"
-        >
+        <Card class="shadow-sm border-blue-100 overflow-hidden">
             <CardHeader class="border-b border-slate-100 bg-white/50">
                 <div
                     class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
@@ -137,7 +135,7 @@ const getStatusClass = (status) => {
                                 >
                                 <TableHead
                                     class="w-[150px] font-bold text-slate-600 uppercase text-xs tracking-wider"
-                                    >Duration</TableHead
+                                    >Total Hours</TableHead
                                 >
                                 <TableHead
                                     class="text-center font-bold text-slate-600 uppercase text-xs tracking-wider"
@@ -177,11 +175,6 @@ const getStatusClass = (status) => {
                                         <div class="flex flex-col">
                                             <span
                                                 class="text-sm font-medium text-slate-700"
-                                                >{{ ot.start_time }} -
-                                                {{ ot.end_time }}</span
-                                            >
-                                            <span
-                                                class="text-[11px] text-slate-400 font-medium tracking-wide uppercase"
                                                 >{{
                                                     ot.total_hours
                                                 }}
@@ -352,10 +345,10 @@ const getStatusClass = (status) => {
                     <div
                         v-for="(item, index) in selectedOvertime?.activities"
                         :key="index"
-                        class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm"
+                        class="bg-white border border-slate-200 rounded-xl p-4"
                     >
                         <div
-                            class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-50 pb-3 mb-3"
+                            class="flex flex-wrap items-center justify-between gap-2 border-b pb-2 mb-2"
                         >
                             <div class="flex items-center gap-4">
                                 <div

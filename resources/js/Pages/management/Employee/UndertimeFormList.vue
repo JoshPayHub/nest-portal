@@ -9,6 +9,7 @@ import {
     FileText,
     Clock,
     Eye,
+    FileTextIcon,
 } from "lucide-vue-next";
 import {
     Card,
@@ -88,7 +89,7 @@ const getStatusClass = (status) => {
 
 <template>
     <div class="p-6">
-        <Card class="max-w-7xl mx-auto shadow-sm border-blue-100">
+        <Card class="shadow-sm border-blue-100">
             <CardHeader class="border-b">
                 <div class="flex justify-between items-center">
                     <div>
@@ -134,10 +135,6 @@ const getStatusClass = (status) => {
                                     >UNDERTIME DATE</TableHead
                                 >
                                 <TableHead
-                                    class="font-bold text-slate-600 uppercase text-xs tracking-wider"
-                                    >Reason</TableHead
-                                >
-                                <TableHead
                                     class="text-center font-bold text-slate-600 uppercase text-xs tracking-wider"
                                     >DEPT. HEAD</TableHead
                                 >
@@ -179,20 +176,6 @@ const getStatusClass = (status) => {
                                             {{ item.undertime_date }}
                                         </div>
                                     </TableCell>
-                                    <!-- <TableCell>
-                                        <div class="flex items-center gap-2">
-                                            <Clock
-                                                class="w-4 h-4 text-slate-400"
-                                            />
-                                            {{ item.total_time }}
-                                        </div>
-                                    </TableCell> -->
-                                    <TableCell
-                                        class="truncate max-w-[100px] text-sm font-medium text-slate-700"
-                                    >
-                                        <p></p>
-                                        {{ item.reason }}</TableCell
-                                    >
 
                                     <TableCell class="text-center">
                                         <Badge
@@ -334,56 +317,49 @@ const getStatusClass = (status) => {
                 </div>
 
                 <div
-                    class="grid sm:grid-cols-3 grid-cols-1 gap-3 bg-slate-50 p-4 rounded-lg border border-slate-100"
+                    class="grid grid-cols-3 gap-6 py-4 border-y border-slate-100 mb-4"
                 >
                     <div>
-                        <p
-                            class="text-[10px] font-bold text-slate-400 uppercase"
-                        >
-                            From (Start Time)
+                        <p class="text-xs font-bold text-slate-400 uppercase">
+                            From (Start)
                         </p>
-                        <p class="text-xs font-semibold text-slate-700">
+                        <p class="text-sm font-semibold text-slate-700">
                             {{ selectedUndertime?.from_date }}
                         </p>
                     </div>
                     <div>
-                        <p
-                            class="text-[10px] font-bold text-slate-400 uppercase"
-                        >
-                            From (To Time)
+                        <p class="text-xs font-bold text-slate-400 uppercase">
+                            To (End)
                         </p>
-                        <p class="text-xs font-semibold text-slate-700">
+                        <p class="text-sm font-semibold text-slate-700">
                             {{ selectedUndertime?.to_date }}
                         </p>
                     </div>
-
                     <div>
-                        <p
-                            class="text-[10px] font-bold text-slate-400 uppercase"
-                        >
+                        <p class="text-xs font-bold text-slate-400 uppercase">
                             Calculated Duration
                         </p>
-                        <p class="text-xs font-semibold text-slate-700">
+                        <p class="text-sm font-semibold text-slate-700">
                             {{ selectedUndertime?.total_time }}
                         </p>
                     </div>
                 </div>
 
-                <div>
-                    <p class="text-xs font-bold text-slate-400 uppercase mb-2">
-                        Reason
-                    </p>
-                    <div
-                        class="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-sm"
-                    >
-                        <p
-                            class="text-sm text-slate-700 leading-relaxed break-words whitespace-pre-wrap"
+                <div
+                    class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm"
+                >
+                    <div class="border-b pb-3 mb-3">
+                        <div
+                            class="flex items-center gap-1.5 text-sm font-bold text-slate-700"
                         >
-                            {{
-                                selectedUndertime?.reason ||
-                                "No reason provided."
-                            }}
-                        </p>
+                            <FileTextIcon class="w-3.5 h-3.5 text-brand-blue" />
+                            Reason
+                        </div>
+                    </div>
+                    <div
+                        class="text-sm text-slate-600 leading-relaxed break-words whitespace-pre-wrap"
+                    >
+                        {{ selectedUndertime?.reason }}
                     </div>
                 </div>
 

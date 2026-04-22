@@ -11,6 +11,7 @@ import {
     FileText,
     Users,
     Clock,
+    FileTextIcon,
 } from "lucide-vue-next";
 import {
     Card,
@@ -90,7 +91,7 @@ const getStatusClass = (status) => {
 
 <template>
     <div class="p-6">
-        <Card class="max-w-7xl mx-auto shadow-sm border-blue-100">
+        <Card class="shadow-sm border-blue-100">
             <CardHeader class="border-b">
                 <div class="flex justify-between items-center">
                     <div>
@@ -325,79 +326,81 @@ const getStatusClass = (status) => {
                 </div>
 
                 <div
-                    class="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 p-4 rounded-lg border border-slate-100"
+                    class="grid grid-cols-2 gap-6 py-4 border-y border-slate-100 mb-4"
                 >
                     <div>
-                        <p
-                            class="text-[10px] font-bold text-slate-400 uppercase"
-                        >
+                        <p class="text-xs font-bold text-slate-400 uppercase">
                             Report To
                         </p>
-                        <p class="text-xs font-semibold text-slate-700">
+                        <p class="text-sm font-semibold text-slate-700">
                             {{ selectedManpower?.report_to }}
                         </p>
                     </div>
 
                     <div>
-                        <p
-                            class="text-[10px] font-bold text-slate-400 uppercase"
-                        >
+                        <p class="text-xs font-bold text-slate-400 uppercase">
                             Position Type
                         </p>
-                        <p class="text-xs font-semibold text-slate-700">
+                        <p class="text-sm font-semibold text-slate-700">
                             {{ selectedManpower?.position_type }}
                         </p>
                     </div>
+
                     <div>
-                        <p
-                            class="text-[10px] font-bold text-slate-400 uppercase"
-                        >
+                        <p class="text-xs font-bold text-slate-400 uppercase">
                             Status
                         </p>
-                        <p class="text-xs font-semibold text-slate-700">
+                        <p class="text-sm font-semibold text-slate-700">
                             {{ selectedManpower?.status_type }}
                         </p>
                     </div>
+
                     <div>
-                        <p
-                            class="text-[10px] font-bold text-slate-400 uppercase"
-                        >
+                        <p class="text-xs font-bold text-slate-400 uppercase">
                             Payment
                         </p>
-                        <p class="text-xs font-semibold text-slate-700">
+                        <p class="text-sm font-semibold text-slate-700">
                             {{ selectedManpower?.payment_type }}
                         </p>
                     </div>
                 </div>
 
-                <div>
-                    <p class="text-xs font-bold text-slate-400 uppercase mb-2">
-                        Job Description
-                    </p>
+                <div class="space-y-3 mt-4">
                     <div
-                        class="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-sm"
+                        class="bg-white border border-slate-200 rounded-xl p-4"
                     >
-                        <p
-                            class="text-sm text-slate-700 leading-relaxed break-words whitespace-pre-wrap"
-                        >
+                        <div class="border-b pb-2 mb-2">
+                            <span
+                                class="text-sm font-bold text-slate-700 flex items-center gap-1"
+                            >
+                                <FileTextIcon
+                                    class="w-3.5 h-3.5 text-brand-blue"
+                                />
+                                Job Description
+                            </span>
+                        </div>
+                        <p class="text-sm text-slate-600 whitespace-pre-wrap">
                             {{
                                 selectedManpower?.job_description ||
                                 "No reason provided."
                             }}
                         </p>
                     </div>
-                </div>
 
-                <div>
-                    <p class="text-xs font-bold text-slate-400 uppercase mb-2">
-                        Justification
-                    </p>
                     <div
-                        class="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-sm"
+                        class="bg-white border border-slate-200 rounded-xl p-4"
                     >
-                        <p
-                            class="text-sm text-slate-700 leading-relaxed break-words whitespace-pre-wrap"
-                        >
+                        <div class="border-b pb-2 mb-2">
+                            <span
+                                class="text-sm font-bold text-slate-700 flex items-center gap-1"
+                            >
+                                <FileTextIcon
+                                    class="w-3.5 h-3.5 text-brand-blue"
+                                />
+                                Justification
+                            </span>
+                        </div>
+                        <p class="text-sm text-slate-600 whitespace-pre-wrap">
                             {{
                                 selectedManpower?.justification ||
                                 "No reason provided."

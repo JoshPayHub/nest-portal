@@ -135,7 +135,7 @@ const getStatusClass = (status) => {
 
 <template>
     <div class="p-6">
-        <Card class="shadow-sm border-blue-100 max-w-7xl mx-auto">
+        <Card class="shadow-sm border-blue-100">
             <CardHeader class="border-b border-slate-100">
                 <div>
                     <CardTitle
@@ -151,26 +151,26 @@ const getStatusClass = (status) => {
 
             <CardContent class="mt-3">
                 <div
-                    class="flex flex-col lg:flex-row justify-between gap-3 mb-6 items-center"
+                    class="flex flex-col md:flex-row justify-between gap-3 mb-6 items-center"
                 >
-                    <div class="relative w-full lg:w-1/3">
+                    <div class="relative w-full md:w-1/3">
                         <Search
                             class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
                         />
                         <Input
                             v-model="search"
-                            placeholder="Search purpose or location..."
+                            placeholder="Search name..."
                             class="h-12 pl-10 w-full"
                         />
                     </div>
 
                     <div
-                        class="flex flex-col md:flex-row gap-3 w-full lg:w-auto flex-1 justify-end"
+                        class="flex flex-col md:flex-row gap-3 w-full md:w-auto flex-1 justify-end"
                     >
                         <select
                             v-if="auth_user_type === 1"
                             v-model="selectedDepartment"
-                            class="h-12 w-full md:w-48 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium"
+                            class="h-12 w-full md:w-1/3 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
                         >
                             <option value="">All Departments</option>
                             <option
@@ -184,7 +184,7 @@ const getStatusClass = (status) => {
 
                         <select
                             v-model="selectedEmployee"
-                            class="h-12 w-full md:w-48 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium"
+                            class="h-12 w-full md:w-1/3 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
                         >
                             <option value="">All Employees</option>
                             <option
@@ -230,7 +230,9 @@ const getStatusClass = (status) => {
                                     :key="item.id"
                                     class="hover:bg-blue-50/30 group"
                                 >
-                                    <TableCell>
+                                    <TableCell
+                                        class="font-semibold text-slate-800"
+                                    >
                                         <div class="flex items-center gap-3">
                                             <div
                                                 class="p-2 bg-blue-50 rounded text-brand-blue"
@@ -238,19 +240,18 @@ const getStatusClass = (status) => {
                                                 <UserCircle class="w-4 h-4" />
                                             </div>
                                             <div>
-                                                <p
-                                                    class="font-medium text-slate-900"
-                                                >
+                                                <p>
                                                     {{ item.employee_name }}
                                                 </p>
                                                 <p
-                                                    class="text-xs text-slate-500"
+                                                    class="text-xs text-slate-500 font-normal"
                                                 >
                                                     {{ item.department_name }}
                                                 </p>
                                             </div>
                                         </div>
                                     </TableCell>
+
                                     <TableCell>
                                         <span
                                             class="text-sm font-medium text-slate-700"
@@ -318,17 +319,19 @@ const getStatusClass = (status) => {
         </Card>
 
         <Dialog v-model:open="isViewOpen">
-            <DialogContent class="max-w-2xl max-h-[90vh] flex flex-col p-0">
-                <DialogHeader class="p-6 pb-0">
-                    <DialogTitle class="text-2xl font-bold text-brand-blue">
-                        Notification: {{ selectedItem?.employee_name }}
-                    </DialogTitle>
-                    <DialogDescription>
-                        Submitted on {{ selectedItem?.date_filed }}
-                    </DialogDescription>
+            <DialogContent class="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <div class="pr-6">
+                        <DialogTitle class="text-2xl font-bold text-brand-blue">
+                            Notification: {{ selectedItem?.employee_name }}
+                        </DialogTitle>
+                        <DialogDescription>
+                            Submitted on {{ selectedItem?.date_filed }}
+                        </DialogDescription>
+                    </div>
                 </DialogHeader>
 
-                <div class="flex-1 overflow-y-auto p-6 pt-4">
+                <div class="flex-1 overflow-y-auto py-4">
                     <div
                         class="grid grid-cols-2 gap-6 py-4 border-y border-slate-100 mb-4"
                     >

@@ -172,7 +172,7 @@ const getRoleLabel = computed(() => {
                         />
                         <Input
                             v-model="search"
-                            placeholder="Search in results..."
+                            placeholder="Search in name..."
                             class="h-12 pl-10 w-full"
                         />
                     </div>
@@ -231,7 +231,7 @@ const getRoleLabel = computed(() => {
                                 >
                                 <TableHead
                                     class="text-center font-bold text-slate-600 uppercase text-xs"
-                                    >Dept Head Status</TableHead
+                                    >Dept. Head</TableHead
                                 >
                                 <TableHead
                                     class="text-center font-bold text-slate-600 uppercase text-xs"
@@ -345,18 +345,21 @@ const getRoleLabel = computed(() => {
         </Card>
 
         <Dialog v-model:open="isViewOpen">
-            <DialogContent class="max-w-4xl max-h-[90vh] flex flex-col p-0">
-                <DialogHeader class="p-6 pb-0">
-                    <DialogTitle class="text-2xl font-bold text-brand-blue">
-                        Report Details: {{ selectedReport?.employee_name }}
-                    </DialogTitle>
-                    <DialogDescription
-                        >Submitted on
-                        {{ selectedReport?.report_date }}</DialogDescription
-                    >
+            <DialogContent class="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <div class="pr-6">
+                        <DialogTitle class="text-2xl font-bold text-brand-blue"
+                            >Report Details:
+                            {{ selectedReport?.employee_name }}</DialogTitle
+                        >
+                        <DialogDescription
+                            >Submitted on
+                            {{ selectedReport?.report_date }}</DialogDescription
+                        >
+                    </div>
                 </DialogHeader>
 
-                <div class="flex-1 overflow-y-auto p-6 pt-4">
+                <div class="flex-1 overflow-y-auto py-4">
                     <div
                         class="grid grid-cols-2 gap-4 py-4 border-y border-slate-100"
                     >
@@ -377,28 +380,51 @@ const getRoleLabel = computed(() => {
                         <div
                             v-for="(act, index) in selectedReport?.activities"
                             :key="index"
-                            class="bg-white border border-slate-200 rounded-xl p-4"
+                            class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm"
                         >
                             <div
-                                class="flex items-center justify-between border-b pb-2 mb-2"
+                                class="flex flex-wrap items-center justify-between gap-2 border-b pb-3 mb-3"
                             >
-                                <span
-                                    class="text-sm font-bold text-slate-700 flex items-center gap-1"
+                                <div
+                                    class="flex items-center gap-1.5 text-sm font-bold text-slate-700"
                                 >
                                     <Calendar
                                         class="w-3.5 h-3.5 text-brand-blue"
                                     />
                                     {{ act.date }}
-                                </span>
-                                <Badge variant="outline" class="text-[10px]">{{
-                                    act.status_name
-                                }}</Badge>
+                                </div>
+
+                                <div
+                                    class="flex justify-end items-center gap-1 text-[10px] font-bold"
+                                    :class="
+                                        act.status_name?.toLowerCase() ===
+                                        'completed'
+                                            ? 'text-green-600'
+                                            : 'text-amber-600'
+                                    "
+                                >
+                                    <component
+                                        :is="
+                                            act.status_name?.toLowerCase() ===
+                                            'completed'
+                                                ? CheckCircle2
+                                                : Clock
+                                        "
+                                        class="w-3 h-3"
+                                    />
+                                    {{ act.status_name?.toUpperCase() }}
+                                </div>
                             </div>
-                            <p
-                                class="text-sm text-slate-600 whitespace-pre-wrap"
+                            <div
+                                class="text-sm text-slate-600 leading-relaxed break-words whitespace-pre-wrap"
                             >
+                                <p
+                                    class="text-[10px] font-bold uppercase text-slate-400 mb-1"
+                                >
+                                    Activity:
+                                </p>
                                 {{ act.activity }}
-                            </p>
+                            </div>
                         </div>
                     </div>
                 </div>

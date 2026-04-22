@@ -36,6 +36,7 @@ class OvertimeRequestController extends Controller
 
         $employees = $employeesQuery->orderBy('first_name', 'asc')->get();
 
+
         // 3. Build Overtime Query
         $reportsQuery = Overtime::with([
             'user.department',
@@ -51,6 +52,15 @@ class OvertimeRequestController extends Controller
             if ($request->filled('department_id')) {
                 $reportsQuery->where('department_id', $request->department_id);
             }
+        }
+
+         // Search Filter
+         if ($request->filled('search')) {
+            $search = $request->search;
+            $reportsQuery->whereHas('user', function ($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%");
+            });
         }
 
         // Apply Employee Filter

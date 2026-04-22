@@ -169,11 +169,6 @@ const menuItems = {
                     icon: "fa-solid fa-right-left",
                 },
                 {
-                    label: "Leave Form",
-                    href: "/employee/leave",
-                    icon: "fa-solid fa-calendar-plus",
-                },
-                {
                     label: "Manpower Requisition Form",
                     href: "/employee/manpower",
                     icon: "fa-solid fa-user-group",
@@ -183,20 +178,9 @@ const menuItems = {
                     href: "/employee/business-notification",
                     icon: "fa-solid fa-briefcase",
                 },
-            ],
-        },
-        {
-            category: "Payroll Management",
-            icon: "fa-solid fa-file-invoice-dollar",
-            children: [
-                {
-                    label: "Payroll Cut-off",
-                    href: "/employee/payroll-cut-off",
-                    icon: "fa-solid fa-calendar-days",
-                },
                 {
                     label: "Leave of Absence Report",
-                    href: "/employee/leave-of-absence",
+                    href: "/employee/leave",
                     icon: "fa-solid fa-calendar-xmark",
                 },
                 {
@@ -208,6 +192,17 @@ const menuItems = {
                     label: "Undertime Form",
                     href: "/employee/undertime-form",
                     icon: "fa-solid fa-clock",
+                },
+            ],
+        },
+        {
+            category: "Payroll Management",
+            icon: "fa-solid fa-file-invoice-dollar",
+            children: [
+                {
+                    label: "Payroll Cut-off",
+                    href: "/employee/payroll-cut-off",
+                    icon: "fa-solid fa-calendar-days",
                 },
                 {
                     label: "Salary Payroll",

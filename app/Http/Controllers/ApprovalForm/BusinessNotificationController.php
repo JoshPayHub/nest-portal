@@ -55,12 +55,12 @@ class BusinessNotificationController extends Controller
             }
         }
 
-        // Apply Search Filter (Purposes or Location)
+        // Apply Search Filter (by name)
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('purposes', 'like', "%{$search}%")
-                  ->orWhere('location', 'like', "%{$search}%");
+            $query->whereHas('user', function ($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%");
             });
         }
 

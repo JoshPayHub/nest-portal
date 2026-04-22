@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from "vue";
+import { ref, watch, computed } from "vue";
 import { router } from "@inertiajs/vue3";
 import {
     Search,
@@ -52,7 +52,7 @@ const props = defineProps({
     auth_user_type: Number, // Added user type prop
 });
 
-const search = ref(props.filters.search || "");
+const search = ref("");
 const selectedEmployee = ref(props.filters.employee_id || "");
 const selectedDepartment = ref(props.filters.department_id || ""); // Added department filter
 const isViewOpen = ref(false);
@@ -129,7 +129,7 @@ const canUserApprove = (item) => {
 
 <template>
     <div class="p-6">
-        <Card class="shadow-sm border-blue-100 max-w-7xl mx-auto">
+        <Card class="shadow-sm border-blue-100">
             <CardHeader class="border-b border-slate-100">
                 <div>
                     <CardTitle
@@ -145,26 +145,26 @@ const canUserApprove = (item) => {
 
             <CardContent class="mt-3">
                 <div
-                    class="flex flex-col lg:flex-row justify-between gap-3 mb-6 items-center"
+                    class="flex flex-col md:flex-row justify-between gap-3 mb-6 items-center"
                 >
-                    <div class="relative w-full lg:w-1/3">
+                    <div class="relative w-full md:w-1/3">
                         <Search
                             class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
                         />
                         <Input
                             v-model="search"
-                            placeholder="Search by position..."
+                            placeholder="Search name..."
                             class="h-12 pl-10 w-full"
                         />
                     </div>
 
                     <div
-                        class="flex flex-col md:flex-row gap-3 w-full lg:w-auto flex-1 justify-end"
+                        class="flex flex-col md:flex-row gap-3 w-full md:w-auto flex-1 justify-end"
                     >
                         <select
                             v-if="auth_user_type === 1"
                             v-model="selectedDepartment"
-                            class="h-12 w-full md:w-48 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
+                            class="h-12 w-full md:w-1/3 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
                         >
                             <option value="">All Departments</option>
                             <option
@@ -178,7 +178,7 @@ const canUserApprove = (item) => {
 
                         <select
                             v-model="selectedEmployee"
-                            class="h-12 w-full md:w-48 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
+                            class="h-12 w-full md:w-1/3 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
                         >
                             <option value="">All Employees</option>
                             <option
@@ -225,7 +225,7 @@ const canUserApprove = (item) => {
                         </TableHeader>
 
                         <TableBody>
-                            <template v-if="items?.data?.length > 0">
+                            <template v-if="items.data.length > 0">
                                 <TableRow
                                     v-for="item in items.data"
                                     :key="item.id"
@@ -322,17 +322,19 @@ const canUserApprove = (item) => {
         </Card>
 
         <Dialog v-model:open="isViewOpen">
-            <DialogContent class="max-w-2xl max-h-[90vh] flex flex-col p-0">
-                <DialogHeader class="p-6 pb-0">
-                    <DialogTitle class="text-2xl font-bold text-brand-blue">
-                        Report Details: {{ selectedItem?.employee_name }}
-                    </DialogTitle>
-                    <DialogDescription>
-                        Submitted on {{ selectedItem?.date_filed }}
-                    </DialogDescription>
+            <DialogContent class="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <div class="pr-6">
+                        <DialogTitle class="text-2xl font-bold text-brand-blue">
+                            Manpower Details: {{ selectedItem?.employee_name }}
+                        </DialogTitle>
+                        <DialogDescription>
+                            Submitted on {{ selectedItem?.date_filed }}
+                        </DialogDescription>
+                    </div>
                 </DialogHeader>
 
-                <div class="flex-1 overflow-y-auto p-6 pt-4">
+                <div class="flex-1 overflow-y-auto6 py-4">
                     <div
                         class="grid grid-cols-3 gap-6 py-4 border-y border-slate-100 mb-4"
                     >

@@ -11,6 +11,7 @@ import {
     Clock,
     FileText,
     Plane,
+    FileTextIcon,
 } from "lucide-vue-next";
 import {
     Card,
@@ -92,7 +93,7 @@ const getStatusClass = (status) => {
 
 <template>
     <div class="p-6">
-        <Card class="shadow-sm border-blue-100 max-w-7xl mx-auto">
+        <Card class="shadow-sm border-blue-100">
             <CardHeader class="border-b border-slate-100">
                 <div
                     class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
@@ -349,19 +350,20 @@ const getStatusClass = (status) => {
                     </div>
                 </div>
 
-                <div class="mt-4">
-                    <p class="text-xs font-bold text-slate-400 uppercase mb-2">
-                        Reason for Leave:
-                    </p>
-                    <div
-                        class="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-sm"
-                    >
-                        <p
-                            class="text-sm text-slate-700 leading-relaxed break-words whitespace-pre-wrap"
+                <div
+                    class="bg-white border border-slate-200 rounded-xl p-4 mt-4 mb-2"
+                >
+                    <div class="border-b pb-2 mb-2">
+                        <span
+                            class="text-sm font-bold text-slate-700 flex items-center gap-1"
                         >
-                            {{ selectedLeave?.reason || "No reason provided." }}
-                        </p>
+                            <FileTextIcon class="w-3.5 h-3.5 text-brand-blue" />
+                            Reason for Leave:
+                        </span>
                     </div>
+                    <p class="text-sm text-slate-600 whitespace-pre-wrap">
+                        {{ selectedLeave?.reason || "No reason provided." }}
+                    </p>
                 </div>
 
                 <DialogFooter class="mt-6 print:hidden">

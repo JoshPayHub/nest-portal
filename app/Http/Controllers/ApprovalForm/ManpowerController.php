@@ -57,9 +57,12 @@ class ManpowerController extends Controller
         }
 
         // Search Filter
-        if ($request->filled('search')) {
+         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where('position_type', 'like', "%{$search}%");
+            $query->whereHas('user', function ($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%");
+            });
         }
 
         // Employee Filter

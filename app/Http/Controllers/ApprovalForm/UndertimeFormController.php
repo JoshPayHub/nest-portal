@@ -57,6 +57,15 @@ class UndertimeFormController extends Controller
             }
         }
 
+         // Search Filter
+         if ($request->filled('search')) {
+            $search = $request->search;
+            $reportsQuery->whereHas('user', function ($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%");
+            });
+        }
+
         // Apply Employee Filter
         if ($request->filled('employee_id')) {
             $reportsQuery->where('user_id', $request->employee_id);

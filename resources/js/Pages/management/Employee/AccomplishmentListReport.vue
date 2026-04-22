@@ -96,7 +96,7 @@ const getStatusClass = (status) => {
 
 <template>
     <div class="p-6">
-        <Card class="shadow-sm border-blue-100 max-w-7xl mx-auto">
+        <Card class="shadow-sm border-blue-100">
             <CardHeader class="border-b border-slate-100">
                 <div
                     class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
@@ -359,7 +359,7 @@ const getStatusClass = (status) => {
                         class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm"
                     >
                         <div
-                            class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-50 pb-3 mb-3"
+                            class="flex flex-wrap items-center justify-between gap-2 border-b pb-3 mb-3"
                         >
                             <div
                                 class="flex items-center gap-1.5 text-sm font-bold text-slate-700"
