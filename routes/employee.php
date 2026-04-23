@@ -20,80 +20,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth', 'user_type:Employee'])->prefix('employee')->name('employee.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Accomplishment Report Form
-    Route::controller(AccomplishmentReportController::class)->group(function () {
-        Route::get('/accomplishment-report', 'index')->name('accomplishmentreport.index');
-        Route::get('/accomplishment-report/create', 'createIndex')->name('accomplishmentreport.createIndex');
-        Route::post('/accomplishment-report/store', 'store')->name('accomplishmentreport.store');
-        Route::get('/accomplishment-report/edit/{id}', 'edit')->name('accomplishmentreport.edit');
-        Route::put('/accomplishment-report/update/{id}', 'update')->name('accomplishmentreport.update');
-
-    });
-
-    // Change Off Form
-    Route::controller(ChangeOffController::class)->group(function () {
-        Route::get('/change-off', 'index')->name('changeoff.index');
-        Route::get('/change-off/create', 'create')->name('changeoff.create');
-        Route::post('/change-off/store', 'store')->name('changeoff.store');
-        Route::get('/change-off/edit/{id}', 'edit')->name('changeoff.edit');
-        Route::put('/change-off/update/{id}', 'update')->name('changeoff.update');
-    });
-
-    // Leave Form
-    Route::controller(LeaveController::class)->group(function () {
-        Route::get('/leave', 'index')->name('leave.index');
-        Route::get('/leave/create', 'create')->name('leave.create');
-        Route::post('/leave/store', 'store')->name('leave.store');
-        Route::get('/leave/edit/{id}', 'edit')->name('leave.edit');
-        Route::put('/leave/update/{id}', 'update')->name('leave.update');
-    });
-
-    // Leave of Absence Form
-    Route::controller(LeaveAbsenceController::class)->group(function () {
-        Route::get('/leave-of-absence', 'index')->name('leaveabsence.index');
-        Route::get('/leave-of-absence/create', 'create')->name('leaveabsence.create');
-        Route::post('/leave-of-absence/store', 'store')->name('leaveabsence.store');
-        Route::get('/leave-of-absence/edit/{id}', 'edit')->name('leaveabsence.edit');
-        Route::put('/leave-of-absence/update/{id}', 'update')->name('leaveabsence.update');
-    });
-
-    // Manpower Form
-    Route::controller(ManpowerController::class)->group(function () {
-        Route::get('/manpower', 'index')->name('manpower.index');
-        Route::get('/manpower/create', 'create')->name('manpower.create');
-        Route::post('/manpower/store', 'store')->name('manpower.store');
-        Route::get('/manpower/edit/{id}', 'edit')->name('manpower.edit');
-        Route::put('/manpower/update/{id}', 'update')->name('manpower.update');
-    });
-
-    // Business Notification Form
-    Route::controller(BusinessNotificationController::class)->group(function () {
-        Route::get('/business-notification', 'index')->name('businessnotification.index');
-        Route::get('/business-notification/create', 'create')->name('businessnotification.create');
-        Route::post('/business-notification/store', 'store')->name('businessnotification.store');
-        Route::get('/business-notification/edit/{id}', 'edit')->name('businessnotification.edit');
-        Route::put('/business-notification/update/{id}', 'update')->name('businessnotification.update');
-    });
-
-    // Overtime Request Form
-    Route::controller(OvertimeRequestController::class)->group(function () {
-        Route::get('/overtime-request', 'index')->name('overtimerequest.index');
-        Route::get('/overtime-request/create', 'create')->name('overtimerequest.create');
-        Route::post('/overtime-request/store', 'store')->name('overtimerequest.store');
-        Route::get('/overtime-request/edit/{id}', 'edit')->name('overtimerequest.edit');
-        Route::put('/overtime-request/update/{id}', 'update')->name('overtimerequest.update');
-    });
-
-    // Undertime Form
-    Route::controller(UndertimeFormController::class)->group(function () {
-        Route::get('/undertime-form', 'index')->name('undertimeform.index');
-        Route::get('/undertime-form/create', 'create')->name('undertimeform.create');
-        Route::post('/undertime-form/store', 'store')->name('undertimeform.store');
-        Route::get('/undertime-form/edit/{id}', 'edit')->name('undertimeform.edit');
-        Route::put('/undertime-form/update/{id}', 'update')->name('undertimeform.update');
-    });
-
-    // Profile
+     // Profile
     Route::controller(ProfileController::class)->group(function () {
         Route::get('/profile', 'index')->name('profile');
         Route::put('/profile/update', 'update')->name('profile.update');
@@ -102,15 +29,88 @@ Route::middleware(['auth', 'user_type:Employee'])->prefix('employee')->name('emp
     // Announcements
     Route::get('/announcements-policies', [AnnouncementPolicyController::class, 'index'])->name('announcementpolicy.index');
 
+    // Accomplishment Report Form
+    Route::controller(AccomplishmentReportController::class)->group(function () {
+        Route::get('/accomplishment-reports', 'index')->name('accomplishmentreports.index');
+        Route::get('/accomplishment-reports/create', 'createIndex')->name('accomplishmentreports.createIndex');
+        Route::post('/accomplishment-reports/store', 'store')->name('accomplishmentreports.store');
+        Route::get('/accomplishment-reports/edit/{id}', 'edit')->name('accomplishmentreports.edit');
+        Route::put('/accomplishment-reports/update/{id}', 'update')->name('accomplishmentreports.update');
+
+    });
+
+    // Change Off Form
+    Route::controller(ChangeOffController::class)->group(function () {
+        Route::get('/change-offs', 'index')->name('changeoffs.index');
+        Route::get('/change-offs/create', 'create')->name('changeoffs.create');
+        Route::post('/change-offs/store', 'store')->name('changeoffs.store');
+        Route::get('/change-offs/edit/{id}', 'edit')->name('changeoffs.edit');
+        Route::put('/change-offs/update/{id}', 'update')->name('changeoffs.update');
+    });
+
+    // Leave Form
+    Route::controller(LeaveController::class)->group(function () {
+        Route::get('/leaves', 'index')->name('leaves.index');
+        Route::get('/leaves/create', 'create')->name('leaves.create');
+        Route::post('/leaves/store', 'store')->name('leaves.store');
+        Route::get('/leaves/edit/{id}', 'edit')->name('leaves.edit');
+        Route::put('/leaves/update/{id}', 'update')->name('leaves.update');
+    });
+
+    // Leave of Absence Form
+    Route::controller(LeaveAbsenceController::class)->group(function () {
+        Route::get('/leave-of-absences', 'index')->name('leaveabsences.index');
+        Route::get('/leave-of-absences/create', 'create')->name('leaveabsences.create');
+        Route::post('/leave-of-absences/store', 'store')->name('leaveabsences.store');
+        Route::get('/leave-of-absences/edit/{id}', 'edit')->name('leaveabsences.edit');
+        Route::put('/leave-of-absences/update/{id}', 'update')->name('leaveabsences.update');
+    });
+
+    // Manpower Form
+    Route::controller(ManpowerController::class)->group(function () {
+        Route::get('/manpowers', 'index')->name('manpowers.index');
+        Route::get('/manpowers/create', 'create')->name('manpowers.create');
+        Route::post('/manpowers/store', 'store')->name('manpowers.store');
+        Route::get('/manpowers/edit/{id}', 'edit')->name('manpowers.edit');
+        Route::put('/manpowers/update/{id}', 'update')->name('manpowers.update');
+    });
+
+    // Business Notification Form
+    Route::controller(BusinessNotificationController::class)->group(function () {
+        Route::get('/business-notifications', 'index')->name('businessnotifications.index');
+        Route::get('/business-notifications/create', 'create')->name('businessnotifications.create');
+        Route::post('/business-notifications/store', 'store')->name('businessnotifications.store');
+        Route::get('/business-notifications/edit/{id}', 'edit')->name('businessnotifications.edit');
+        Route::put('/business-notifications/update/{id}', 'update')->name('businessnotifications.update');
+    });
+
+    // Overtime Request Form
+    Route::controller(OvertimeRequestController::class)->group(function () {
+        Route::get('/overtime-requests', 'index')->name('overtimerequests.index');
+        Route::get('/overtime-requests/create', 'create')->name('overtimerequests.create');
+        Route::post('/overtime-requests/store', 'store')->name('overtimerequests.store');
+        Route::get('/overtime-requests/edit/{id}', 'edit')->name('overtimerequests.edit');
+        Route::put('/overtime-requests/update/{id}', 'update')->name('overtimerequests.update');
+    });
+
+    // Undertime Form
+    Route::controller(UndertimeFormController::class)->group(function () {
+        Route::get('/undertime-forms', 'index')->name('undertimeforms.index');
+        Route::get('/undertime-forms/create', 'create')->name('undertimeforms.create');
+        Route::post('/undertime-forms/store', 'store')->name('undertimeforms.store');
+        Route::get('/undertime-forms/edit/{id}', 'edit')->name('undertimeforms.edit');
+        Route::put('/undertime-forms/update/{id}', 'update')->name('undertimeforms.update');
+    });
+
     // CutOff
     Route::controller(PayrollCutOffController::class)->group(function () {
-        Route::get('/payroll-cut-off', 'index')->name('payrollcutoff.index');
-        Route::get('/payroll-cut-off/{id}/attendance', 'attendancePage')->name('payrollcutoff.attendance');
+        Route::get('/payroll-cut-offs', 'index')->name('payrollcutoffs.index');
+        Route::get('/payroll-cut-offs/{id}/attendance', 'attendancePage')->name('payrollcutoffs.attendance');
     });
 
     // Attendance
-    Route::post('/attendance/store', [AttendanceController::class, 'store'])->name('attendance.store');
+    Route::post('/attendances/store', [AttendanceController::class, 'store'])->name('attendances.store');
 
     // Salary
-    Route::get('/salary-payroll', [SalaryPayrollController::class, 'index'])->name('salarypayroll.index');
+    Route::get('/salary-payrolls', [SalaryPayrollController::class, 'index'])->name('salarypayrolls.index');
 });

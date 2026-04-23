@@ -160,37 +160,37 @@ const menuItems = {
             children: [
                 {
                     label: "Accomplishment Report",
-                    href: "/employee/accomplishment-report",
+                    href: "/employee/accomplishment-reports",
                     icon: "fa-solid fa-file-lines",
                 },
                 {
                     label: "Change Off",
-                    href: "/employee/change-off",
+                    href: "/employee/change-offs",
                     icon: "fa-solid fa-right-left",
                 },
                 {
                     label: "Manpower Requisition Form",
-                    href: "/employee/manpower",
+                    href: "/employee/manpowers",
                     icon: "fa-solid fa-user-group",
                 },
                 {
                     label: "Official Business Notification",
-                    href: "/employee/business-notification",
+                    href: "/employee/business-notifications",
                     icon: "fa-solid fa-briefcase",
                 },
                 {
                     label: "Leave of Absence Report",
-                    href: "/employee/leave",
+                    href: "/employee/leaves",
                     icon: "fa-solid fa-calendar-xmark",
                 },
                 {
                     label: "Overtime Request Form",
-                    href: "/employee/overtime-request",
+                    href: "/employee/overtime-requests",
                     icon: "fa-solid fa-clock-rotate-left",
                 },
                 {
                     label: "Undertime Form",
-                    href: "/employee/undertime-form",
+                    href: "/employee/undertime-forms",
                     icon: "fa-solid fa-clock",
                 },
             ],
@@ -201,12 +201,12 @@ const menuItems = {
             children: [
                 {
                     label: "Payroll Cut-off",
-                    href: "/employee/payroll-cut-off",
+                    href: "/employee/payroll-cut-offs",
                     icon: "fa-solid fa-calendar-days",
                 },
                 {
                     label: "Salary Payroll",
-                    href: "/employee/salary-payroll",
+                    href: "/employee/salary-payrolls",
                     icon: "fa-solid fa-money-check-dollar",
                 },
             ],
