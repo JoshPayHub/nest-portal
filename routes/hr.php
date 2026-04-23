@@ -33,75 +33,108 @@ Route::middleware(['auth', 'user_type:HR'])->prefix('hr')->name('hr.')->group(fu
         Route::delete('/announcements-policies/{announcementPolicy}', 'destroy')->name('announcementpolicy.destroy');
     });
 
-    Route::get('/add-employees', [EmployeeController::class, 'index'])->name('addemployees.index');
-    Route::post('/add-employees/store', [EmployeeController::class, 'store'])->name('addemployees.store');
-    Route::get('/employees/edit/{user}', [EmployeeController::class, 'edit'])->name('employees.edit');
-    Route::put('/employees/update/{user}', [EmployeeController::class, 'update'])->name('employees.update');
+    Route::controller(EmployeeController::class)->group(function () {
+        Route::get('/add-employees', 'index')->name('addemployees.index');
+        Route::post('/add-employees/store', 'store')->name('addemployees.store');
+        Route::get('/employees/edit/{user}', 'edit')->name('employees.edit');
+        Route::put('/employees/update/{user}', 'update')->name('employees.update');
+    });
+
     Route::get('/list-employee', [EmployeeListController::class, 'index'])->name('employee.index');
 
-    Route::get('/department', [DepartmentController::class, 'index'])->name('department.index');
-    Route::post('/department/store', [DepartmentController::class, 'store'])->name('department.store');
-    Route::post('/department/update/{id}', [DepartmentController::class, 'update'])->name('department.update');
+    Route::controller(DepartmentController::class)->group(function () {
+        Route::get('/department', 'index')->name('department.index');
+        Route::post('/department/store', 'store')->name('department.store');
+        Route::post('/department/update/{id}', 'update')->name('department.update');
+    });
 
-    Route::get('/position', [PositionController::class, 'index'])->name('position.index');
-    Route::post('/position/store', [PositionController::class, 'store'])->name('position.store');
-    Route::post('/position/update/{id}', [PositionController::class, 'update'])->name('position.update');
+    Route::controller(PositionController::class)->group(function () {
+        Route::get('/position', 'index')->name('position.index');
+        Route::post('/position/store', 'store')->name('position.store');
+        Route::post('/position/update/{id}', 'update')->name('position.update');
+    });
 
-    Route::get('/holiday', [HolidayController::class, 'index'])->name('holiday.index');
-    Route::post('/holiday/store', [HolidayController::class, 'store'])->name('holiday.store');
-    Route::post('/holiday/update/{id}', [HolidayController::class, 'update'])->name('holiday.update');
+    Route::controller(HolidayController::class)->group(function () {
+        Route::get('/holiday', 'index')->name('holiday.index');
+        Route::post('/holiday/store', 'store')->name('holiday.store');
+        Route::post('/holiday/update/{id}', 'update')->name('holiday.update');
+    });
 
-    Route::get('/payroll-cut-off', [PayrollCutOffController::class, 'index'])->name('payrollcutoff.index');
-    Route::post('/payroll-cut-off/store', [PayrollCutOffController::class, 'store'])->name('payrollcutoff.store');
-    Route::post('/payroll-cut-off/update/{id}', [PayrollCutOffController::class, 'update'])->name('payrollcutoff.update');
-    Route::get('/payroll-cut-off/{id}/attendance', [PayrollCutOffController::class, 'attendancePage'])->name('payrollcutoff.attendance');
-    Route::post('/payroll-cut-off/{id}/approve', [PayrollCutOffController::class, 'approve'])->name('payrollcutoff.approve');
-    Route::get('/payroll-cutoff/{id}/export', [PayrollCutOffController::class, 'exportAttendance'])->name('attendance.export');
+    Route::controller(PayrollCutOffController::class)->group(function () {
+        Route::get('/payroll-cut-off', 'index')->name('payrollcutoff.index');
+        Route::post('/payroll-cut-off/store', 'store')->name('payrollcutoff.store');
+        Route::post('/payroll-cut-off/update/{id}', 'update')->name('payrollcutoff.update');
+        Route::get('/payroll-cut-off/{id}/attendance', 'attendancePage')->name('payrollcutoff.attendance');
+        Route::post('/payroll-cut-off/{id}/approve', 'approve')->name('payrollcutoff.approve');
+        Route::get('/payroll-cutoff/{id}/export', 'exportAttendance')->name('attendance.export');
+    });
 
-    Route::get('/salary-employee', [SalaryEmployeeController::class, 'index'])->name('payrollcutoff.index');
-    Route::post('/salary-employee/store', [SalaryEmployeeController::class, 'store'])->name('payrollcutoff.store');
-    Route::post('/salary-employee/update/{id}', [SalaryEmployeeController::class, 'update'])->name('payrollcutoff.update');
+    Route::controller(SalaryEmployeeController::class)->group(function () {
+        Route::get('/salary-employee', 'index')->name('payrollcutoff.index');
+        Route::post('/salary-employee/store', 'store')->name('payrollcutoff.store');
+        Route::post('/salary-employee/update/{id}', 'update')->name('payrollcutoff.update');
+    });
 
-    Route::get('/salary-deductions', [SalaryDeductionsController::class, 'index'])->name('salarydeductions.index');
-    Route::put('/salary-deductions/settings/{id}', [SalaryDeductionsController::class, 'updateSetting']);
-    Route::put('/salary-deductions/sss/{id}', [SalaryDeductionsController::class, 'updateSSS']);
-    Route::put('/salary-deductions/tax/{id}', [SalaryDeductionsController::class, 'updateTax']);
+    Route::controller(SalaryDeductionsController::class)->group(function () {
+        Route::get('/salary-deductions', 'index')->name('salarydeductions.index');
+        Route::put('/salary-deductions/settings/{id}', 'updateSetting');
+        Route::put('/salary-deductions/sss/{id}', 'updateSSS');
+        Route::put('/salary-deductions/tax/{id}', 'updateTax');
+    });
 
-    Route::get('/salary-payroll', [SalaryPayrollController::class, 'index'])->name('salarypayroll.index');
-    Route::get('/salary-payroll/{id}/list', [SalaryPayrollController::class, 'list'])->name('salarypayrolllist.list');
-    Route::post('/salary-payroll/{id}/update', [SalaryPayrollController::class, 'update'])->name('salarypayrolllist.update');
-    Route::get('/salary-payroll/{id}/export', [SalaryPayrollController::class, 'export'])->name('salarypayrollexport.export');
+    Route::controller(SalaryPayrollController::class)->group(function () {
+        Route::get('/salary-payroll', 'index')->name('salarypayroll.index');
+        Route::get('/salary-payroll/{id}/list', 'list')->name('salarypayrolllist.list');
+        Route::post('/salary-payroll/{id}/update', 'update')->name('salarypayrolllist.update');
+        Route::get('/salary-payroll/{id}/export', 'export')->name('salarypayrollexport.export');
+    });
 
     // Form Approval
     // Accomplishment Report Form
-    Route::get('/accomplishment-report', [AccomplishmentReportController::class, 'index'])->name('accomplishmentreport.index');
-    Route::post('/accomplishment-report/{id}/approve', [AccomplishmentReportController::class, 'approve'])->name('accomplishmentreport.approve');
+    Route::controller(AccomplishmentReportController::class)->group(function () {
+        Route::get('/accomplishment-report', 'index')->name('accomplishmentreport.index');
+        Route::post('/accomplishment-report/{id}/approve', 'approve')->name('accomplishmentreport.approve');
+    });
 
     // Change Off Form
-    Route::get('/change-off', [ChangeOffController::class, 'index'])->name('changeoff.index');
-    Route::post('/change-off/{id}/approve', [ChangeOffController::class, 'approve'])->name('changeoff.approve');
+    Route::controller(ChangeOffController::class)->group(function () {
+        Route::get('/change-off', 'index')->name('changeoff.index');
+        Route::post('/change-off/{id}/approve', 'approve')->name('changeoff.approve');
+    });
 
     // Leave Form
-    Route::get('/leave', [LeaveController::class, 'index'])->name('leave.index');
-    Route::post('/leave/{id}/approve', [LeaveController::class, 'approve'])->name('leave.approve');
+    Route::controller(LeaveController::class)->group(function () {
+        Route::get('/leave', 'index')->name('leave.index');
+        Route::post('/leave/{id}/approve', 'approve')->name('leave.approve');
+    });
 
     // Leave of Absence Form
-    Route::get('/leave-of-absence', [LeaveAbsenceController::class, 'index'])->name('leaveabsence.index');
-    Route::post('/leave-of-absence/{id}/approve', [LeaveAbsenceController::class, 'approve'])->name('leaveabsence.approve');
+    Route::controller(LeaveAbsenceController::class)->group(function () {
+        Route::get('/leave-of-absence', 'index')->name('leaveabsence.index');
+        Route::post('/leave-of-absence/{id}/approve', 'approve')->name('leaveabsence.approve');
+    });
 
     // Manpower Form
-    Route::get('/manpower', [ManpowerController::class, 'index'])->name('manpower.index');
-    Route::post('/manpower/{id}/approve', [ManpowerController::class, 'approve'])->name('manpower.approve');
+    Route::controller(ManpowerController::class)->group(function () {
+        Route::get('/manpower', 'index')->name('manpower.index');
+        Route::post('/manpower/{id}/approve', 'approve')->name('manpower.approve');
+    });
 
     // Business Notification Form
-    Route::get('/business-notification', [BusinessNotificationController::class, 'index'])->name('businessnotification.index');
-    Route::post('/business-notification/{id}/approve', [BusinessNotificationController::class, 'approve'])->name('businessnotification.approve');
+    Route::controller(BusinessNotificationController::class)->group(function () {
+        Route::get('/business-notification', 'index')->name('businessnotification.index');
+        Route::post('/business-notification/{id}/approve', 'approve')->name('businessnotification.approve');
+    });
 
     // Overtime Request Form
-    Route::get('/overtime-request', [OvertimeRequestController::class, 'index'])->name('overtimerequest.index');
-    Route::post('/overtime-request/{id}/approve', [OvertimeRequestController::class, 'approve'])->name('overtimerequest.approve');
+    Route::controller(OvertimeRequestController::class)->group(function () {
+        Route::get('/overtime-request', 'index')->name('overtimerequest.index');
+        Route::post('/overtime-request/{id}/approve', 'approve')->name('overtimerequest.approve');
+    });
 
     // Undertime Form
-    Route::get('/undertime-form', [UndertimeFormController::class, 'index'])->name('undertimeform.index');
-    Route::post('/undertime-form/{id}/approve', [UndertimeFormController::class, 'approve'])->name('undertimeform.approve');
+    Route::controller(UndertimeFormController::class)->group(function () {
+        Route::get('/undertime-form', 'index')->name('undertimeform.index');
+        Route::post('/undertime-form/{id}/approve', 'approve')->name('undertimeform.approve');
+    });
 });

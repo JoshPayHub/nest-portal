@@ -1,6 +1,6 @@
 <script setup>
 import { useForm, router, usePage } from "@inertiajs/vue3";
-import { watch, computed } from "vue";
+import { watch, computed, onMounted } from "vue";
 import {
     Card,
     CardHeader,
@@ -14,9 +14,7 @@ import { Input } from "@/Components/ui/input";
 import { Label } from "@/Components/ui/label";
 import { Textarea } from "@/Components/ui/textarea";
 import { toastStore } from "@/stores/toast";
-import { Save, Send, AlertCircle } from "lucide-vue-next";
-
-const page = usePage();
+import { Save, Send, AlertCircle, Clock } from "lucide-vue-next";
 
 const props = defineProps({
     authUser: Object,
@@ -27,42 +25,29 @@ const props = defineProps({
 const today = new Date().toISOString().split("T")[0];
 const STORAGE_KEY = "pending_undertime_request";
 
-const hasRejected = computed(() => {
-    return (props.report?.approval_statuses || []).some(
-        (s) =>
-            s.status_id === 5 || s.status?.name?.toLowerCase() === "rejected",
-    );
-});
-
-const hasApproved = computed(() => {
-    return (props.report?.approval_statuses || []).some(
-        (s) =>
-            s.status_id === 2 || s.status?.name?.toLowerCase() === "approved",
-    );
-});
-
-const isLocked = computed(
-    () => props.isEditing && hasApproved.value && !hasRejected.value,
-);
-
+// Helper: robust time string to minutes
 const getMinutes = (timeStr) => {
     if (!timeStr) return 0;
     const parts = timeStr.split(":");
-    return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    const h = parseInt(parts[0]) || 0;
+    const m = parseInt(parts[1]) || 0;
+    return h * 60 + m;
 };
 
-// Fixed variable name consistency and storage access
+// Fix for Name disappearing: Check both possible prop structures
+const initialName = props.report?.user?.name || props.authUser?.name || "";
+
 const savedDraft = !props.isEditing
     ? JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}
     : {};
 
 const form = useForm({
-    name: props.authUser?.name || "",
+    name: initialName,
     dept_pos: props.authUser
         ? `${props.authUser.department} / ${props.authUser.position ?? ""}`
         : "",
     report_date: props.report?.created_at
-        ? new Date(report.created_at).toISOString().split("T")[0]
+        ? new Date(props.report.created_at).toISOString().split("T")[0]
         : today,
     undertime_date:
         props.report?.undertime_date || savedDraft.undertime_date || "",
@@ -72,83 +57,54 @@ const form = useForm({
     reason: props.report?.reason || savedDraft.reason || "",
 });
 
-// Watcher to calculate total minutes based on time inputs
-watch(
-    () => [form.from_time, form.to_time],
-    ([from, to]) => {
-        if (!from || !to) {
-            form.total_time = 0;
-        } else {
-            const start = getMinutes(from);
-            const end = getMinutes(to);
-            const diff = end - start;
-            form.total_time = diff > 0 ? diff : 0;
-        }
-    },
-    { immediate: true }, // Crucial for refresh: runs immediately on load
-);
+// Function to calculate duration
+const updateDuration = () => {
+    if (form.from_time && form.to_time) {
+        const start = getMinutes(form.from_time);
+        const end = getMinutes(form.to_time);
+        const diff = end - start;
+        form.total_time = diff > 0 ? diff : 0;
+    } else {
+        form.total_time = 0;
+    }
+};
 
-watch(
-    () => form.data(),
-    (newData, oldData) => {
-        Object.keys(newData).forEach((key) => {
-            if (newData[key] !== oldData[key] && form.errors[key]) {
-                form.clearErrors(key);
-            }
-        });
-
-        if (!props.isEditing) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
-        }
-    },
-    { deep: true },
-);
-
-const formattedDisplayTime = computed(() => {
-    const mins = form.total_time;
-    if (!mins || mins <= 0) return "0m";
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
+// Computed property for the visual Display (Div)
+const displayDuration = computed(() => {
+    const total = parseInt(form.total_time) || 0;
+    if (total <= 0) return "0m";
+    const h = Math.floor(total / 60);
+    const m = total % 60;
     return h > 0 ? `${h}h ${m > 0 ? m + "m" : ""}` : `${m}m`;
 });
 
-const submit = () => {
-    if (props.isEditing) {
-        form.put(`/employee/undertime-form/update/${props.report.id}`, {
-            preserveScroll: true,
-            onSuccess: () => {
-                toastStore.show("Undertime submitted successfully!", "success");
-            },
-            onError: () => {
-                toastStore.show(
-                    "Please fix the errors and try again.",
-                    "error",
-                );
-            },
-        });
-    } else {
-        form.post("/employee/undertime-form/store", {
-            preserveScroll: true,
-            onSuccess: () => {
-                localStorage.removeItem(STORAGE_KEY);
-                form.reset();
-                form.report_date = today;
-                form.undertime_date = "";
-                form.total_time = 0;
-                form.from_time = "";
-                form.to_time = "";
-                form.reason = "";
+// Watch for time changes to update the hidden total_time value
+watch(
+    () => [form.from_time, form.to_time],
+    () => {
+        updateDuration();
+    },
+);
 
-                toastStore.show("Undertime submitted successfully!", "success");
-            },
-            onError: () => {
-                toastStore.show(
-                    "Please fix the errors and try again.",
-                    "error",
-                );
-            },
-        });
-    }
+// Auto-calculate on load (especially for Edit mode)
+onMounted(() => {
+    updateDuration();
+});
+
+const submit = () => {
+    const url = props.isEditing
+        ? `/employee/undertime-form/update/${props.report.id}`
+        : "/employee/undertime-form/store";
+
+    const method = props.isEditing ? "put" : "post";
+
+    form[method](url, {
+        preserveScroll: true,
+        onSuccess: () => {
+            if (!props.isEditing) localStorage.removeItem(STORAGE_KEY);
+            toastStore.show("Success!", "success");
+        },
+    });
 };
 </script>
 
@@ -159,9 +115,10 @@ const submit = () => {
             class="bg-amber-50 border border-amber-200 p-4 rounded-lg text-amber-800 text-sm flex items-center gap-2"
         >
             <AlertCircle class="h-4 w-4" />
-            <span>
-                <strong>Notice:</strong> Editing will reset status to "Pending".
-            </span>
+            <span
+                ><strong>Notice:</strong> Editing will reset status to
+                "Pending".</span
+            >
         </div>
 
         <Card class="border-blue-100 shadow-sm">
@@ -179,23 +136,11 @@ const submit = () => {
                         >{{ isEditing ? "Edit" : "New" }} Request</span
                     >
                 </nav>
-
-                <div class="space-y-1">
-                    <CardTitle class="text-3xl font-extrabold text-brand-blue">
-                        {{
-                            isEditing
-                                ? "Update Undertime"
-                                : "Undertime Application"
-                        }}
-                    </CardTitle>
-                    <CardDescription>
-                        {{
-                            isEditing
-                                ? "Modify your undertime details."
-                                : "Fill out this form to request for early departure."
-                        }}
-                    </CardDescription>
-                </div>
+                <CardTitle class="text-3xl font-extrabold text-brand-blue">
+                    {{
+                        isEditing ? "Update Undertime" : "Undertime Application"
+                    }}
+                </CardTitle>
             </CardHeader>
 
             <CardContent class="grid grid-cols-12 gap-5 mt-6">
@@ -209,12 +154,12 @@ const submit = () => {
                 </div>
 
                 <div class="col-span-12 md:col-span-6">
-                    <Label class="p-1">Date</Label>
+                    <Label class="p-1">Date Filed</Label>
                     <Input
                         type="date"
                         v-model="form.report_date"
                         disabled
-                        class="border-2 border-gray-300 bg-slate-50"
+                        class="bg-slate-50 border-2"
                     />
                 </div>
 
@@ -228,7 +173,7 @@ const submit = () => {
                 </div>
 
                 <div class="col-span-12 md:col-span-6">
-                    <Label class="p-1"> Date of Undertime </Label>
+                    <Label class="p-1">Date of Undertime</Label>
                     <Input
                         type="date"
                         v-model="form.undertime_date"
@@ -237,63 +182,49 @@ const submit = () => {
                             'border-red-500': form.errors.undertime_date,
                         }"
                     />
-                    <p
-                        v-if="form.errors.undertime_date"
-                        class="text-red-500 text-xs mt-1"
-                    >
-                        {{ form.errors.undertime_date }}
-                    </p>
                 </div>
 
                 <div class="col-span-12 md:col-span-4">
-                    <Label class="p-1"> From (Start Time) </Label>
+                    <Label class="p-1">From (Start)</Label>
                     <Input
                         type="time"
                         v-model="form.from_time"
                         class="border-2"
-                        :class="{ 'border-red-500': form.errors.from_time }"
                     />
                 </div>
 
                 <div class="col-span-12 md:col-span-4">
-                    <Label class="p-1"> To (End Time) </Label>
+                    <Label class="p-1">To (End)</Label>
                     <Input
                         type="time"
                         v-model="form.to_time"
                         class="border-2"
-                        :class="{ 'border-red-500': form.errors.to_time }"
                     />
                 </div>
 
                 <div class="col-span-12 md:col-span-4">
-                    <Label class="p-1"> Calculated Duration </Label>
-                    <Input
-                        :value="formattedDisplayTime"
-                        readonly
-                        class="border-2 bg-blue-50/50 font-bold text-brand-blue cursor-not-allowed"
-                    />
+                    <Label class="p-1">Total Duration</Label>
+                    <div
+                        class="h-10 px-3 flex items-center gap-2 rounded-md border-2 border-dashed border-blue-200 bg-blue-50/30 text-brand-blue font-bold"
+                    >
+                        <Clock class="w-4 h-4 text-blue-400" />
+                        {{ displayDuration }}
+                    </div>
                     <p
                         v-if="form.errors.total_time"
                         class="text-red-500 text-xs mt-1"
                     >
-                        Check your time range.
+                        Invalid time range.
                     </p>
                 </div>
 
                 <div class="col-span-12">
-                    <Label class="p-1"> Reason </Label>
+                    <Label class="p-1">Reason</Label>
                     <Textarea
                         v-model="form.reason"
                         class="min-h-[100px] border-2"
-                        placeholder="State your reason..."
                         :class="{ 'border-red-500': form.errors.reason }"
                     />
-                    <p
-                        v-if="form.errors.reason"
-                        class="text-red-500 text-xs mt-1"
-                    >
-                        {{ form.errors.reason }}
-                    </p>
                 </div>
             </CardContent>
 
@@ -302,17 +233,17 @@ const submit = () => {
             >
                 <Button
                     variant="ghost"
-                    @click="router.get(route('employee.undertimeform.index'))"
+                    @click="router.get('/employee/undertime-form')"
                     >Cancel</Button
                 >
                 <Button
-                    class="bg-brand-blue text-white shadow-md"
-                    :disabled="form.processing || isLocked"
+                    class="bg-brand-blue text-white"
+                    :disabled="form.processing"
                     @click="submit"
                 >
                     <Save v-if="isEditing" class="mr-2 w-4 h-4" />
                     <Send v-else class="mr-2 w-4 h-4" />
-                    {{ isEditing ? "Update Undertime" : "Submit Undertime" }}
+                    {{ isEditing ? "Update" : "Submit" }}
                 </Button>
             </CardFooter>
         </Card>

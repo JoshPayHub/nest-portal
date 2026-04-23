@@ -142,17 +142,18 @@ const typeOptions = computed(() =>
 <template>
     <div class="p-6 space-y-7">
         <div
-            v-if="isEditing && hasRejected"
-            class="bg-red-50 border border-red-200 p-4 rounded-lg text-red-800 text-sm"
+            v-if="isEditing"
+            class="bg-amber-50 border border-amber-200 p-4 rounded-lg text-amber-800 text-sm flex items-center gap-2"
         >
-            <strong>Notice:</strong> This request was rejected. You can edit and
-            resubmit it now.
+            <AlertCircle class="h-4 w-4" />
+            <span
+                ><strong>Notice:</strong> Editing will reset status to
+                "Pending".</span
+            >
         </div>
 
         <Card class="border-blue-100 shadow-sm">
-            <CardHeader
-                class="space-y-4 bg-slate-50/50 border-b border-blue-50/50 pb-6"
-            >
+            <CardHeader class="space-y-4 border-b border-blue-50/50 pb-6">
                 <nav
                     class="flex items-center gap-2 text-xs uppercase tracking-wider text-slate-400"
                 >
@@ -189,7 +190,7 @@ const typeOptions = computed(() =>
                     <Input
                         v-model="form.name"
                         disabled
-                        class="border-2 border-gray-300 bg-slate-100 font-semibold"
+                        class="border-2 border-gray-300 bg-slate-100"
                     />
                 </div>
                 <div class="col-span-12 md:col-span-6">

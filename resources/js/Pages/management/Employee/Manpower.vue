@@ -157,15 +157,13 @@ const submit = () => {
         >
             <AlertCircle class="h-4 w-4" />
             <span
-                ><strong>Notice:</strong> Updating this request will reset
-                status to "Pending".</span
+                ><strong>Notice:</strong> Editing will reset status to
+                "Pending".</span
             >
         </div>
 
         <Card class="border-blue-100 shadow-sm">
-            <CardHeader
-                class="space-y-4 bg-slate-50/50 border-b border-blue-50/50 pb-6"
-            >
+            <CardHeader class="space-y-4 border-b border-blue-50/50 pb-6">
                 <nav
                     class="flex items-center gap-2 text-xs uppercase tracking-wider text-slate-400"
                 >

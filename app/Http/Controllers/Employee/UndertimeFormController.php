@@ -37,8 +37,8 @@ class UndertimeFormController extends Controller
                     'date_filed' => $item->created_at->format('M d, Y'),
                     'reason' => $item->reason,
                     'undertime_date' => Carbon::parse($item->undertime_date)->format('M d, Y'),
-                    'from_date' => Carbon::parse($item->from_date)->format('h:i A'),
-                    'to_date' => Carbon::parse($item->to_date)->format('h:i A'),
+                    'from_date' => Carbon::parse($item->from_date)->format('H:i'),
+                    'to_date' => Carbon::parse($item->to_date)->format('H:i'),
                     'total_time' => $displayTime,
                     'leader_status' => $leaderEntry ? $leaderEntry->status->name : 'Pending',
                     'hr_status'     => $hrEntry ? $hrEntry->status->name : 'Pending',
@@ -107,12 +107,14 @@ class UndertimeFormController extends Controller
 
         // Fixed: Use undertime_date instead of date_required
         $undertime->undertime_date = Carbon::parse($undertime->undertime_date)->format('Y-m-d');
+        $undertime->from_time = Carbon::parse($undertime->from_time)->format('H:i');
+        $undertime->to_time = Carbon::parse($undertime->to_time)->format('H:i');
 
         return Inertia::render('management/Employee/UndertimeForm', [
             'report' => $undertime,
             'isEditing' => true,
             'authUser' => [
-                'name' => $user->name,
+                'name' => $user->first_name . ' ' . $user->last_name,
                 'department' => $user->department?->name ?? 'N/A',
                 'position' => $user->position?->name ?? 'N/A'
             ]

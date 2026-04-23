@@ -32,6 +32,7 @@ import {
 
 // custom store
 import { toastStore } from "@/stores/toast";
+import { AlertCircle } from "lucide-vue-next";
 
 const page = usePage();
 const authUser = page.props.authUser;
@@ -173,10 +174,19 @@ const submit = () => {
 
 <template>
     <div class="p-6 space-y-7">
-        <Card class="border-blue-100">
-            <CardHeader
-                class="space-y-4 bg-slate-50/50 border-b border-blue-50/50 pb-6"
+        <div
+            v-if="isEditing"
+            class="bg-amber-50 border border-amber-200 p-4 rounded-lg text-amber-800 text-sm flex items-center gap-2"
+        >
+            <AlertCircle class="h-4 w-4" />
+            <span
+                ><strong>Notice:</strong> Editing will reset status to
+                "Pending".</span
             >
+        </div>
+
+        <Card class="border-blue-100 shadow-sm">
+            <CardHeader class="space-y-4 border-b border-blue-50/50 pb-6">
                 <nav
                     class="flex items-center gap-2 text-xs uppercase tracking-wider text-slate-400"
                 >
