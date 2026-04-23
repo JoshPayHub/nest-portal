@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\ApprovalForm\AccomplishmentReportController;
-use App\Http\Controllers\Head\AnnouncementPolicyController;
 use App\Http\Controllers\ApprovalForm\BusinessNotificationController;
 use App\Http\Controllers\ApprovalForm\ChangeOffController;
 use App\Http\Controllers\Head\DashboardController;
@@ -92,16 +91,17 @@ Route::middleware(['auth', 'user_type:Head'])->prefix('head')->name('head.')->gr
         Route::get('/payroll-cutoff/{id}/export', 'exportAttendance')->name('attendance.export');
     });
 
+    // <--------------------------- HEAD form as EMployee --------------------------->
+
     // Profile
-    Route::controller(ProfileController::class)->group(function () {
+    Route::controller(EmployeeProfileController::class)->group(function () {
         Route::get('/profile', 'index')->name('profile');
         Route::put('/profile/update', 'update')->name('profile.update');
     });
 
-    Route::get('/announcements-policies', [AnnouncementPolicyController::class, 'index'])->name('announcementpolicy.index');
+    // Announcements
+    Route::get('/announcements-policies', [EmployeeAnnouncementPolicyController::class, 'index'])->name('announcementpolicy.index');
 
-
-    // <--------------------------- HEAD form as EMployee --------------------------->
     // Accomplishment Report Form
     Route::controller(EmployeeAccomplishmentReportController::class)->group(function () {
         Route::get('/accomplishment-reports', 'index')->name('accomplishmentreports.index');
@@ -174,15 +174,6 @@ Route::middleware(['auth', 'user_type:Head'])->prefix('head')->name('head.')->gr
         Route::get('/undertime-forms/edit/{id}', 'edit')->name('undertimeforms.edit');
         Route::put('/undertime-forms/update/{id}', 'update')->name('undertimeforms.update');
     });
-
-    // Profile
-    Route::controller(EmployeeProfileController::class)->group(function () {
-        Route::get('/profile', 'index')->name('profile');
-        Route::put('/profile/update', 'update')->name('profile.update');
-    });
-
-    // Announcements
-    Route::get('/announcements-policies', [EmployeeAnnouncementPolicyController::class, 'index'])->name('announcementpolicy.index');
 
     // CutOff
     Route::controller(EmployeePayrollCutOffController::class)->group(function () {

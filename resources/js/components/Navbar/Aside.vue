@@ -214,6 +214,7 @@ const menuItems = {
     ],
 
     Head: [
+        // --- GENERAL ---
         {
             label: "Dashboard",
             href: "/head/dashboard",
@@ -229,9 +230,12 @@ const menuItems = {
             href: "/head/announcements-policies",
             icon: "fa-solid fa-scroll",
         },
+
+        // --- STAFF MANAGEMENT SECTION ---
+        { isHeading: true, label: "Staff Management" },
         {
             category: "Staff Forms",
-            icon: "fa-solid fa-file-lines",
+            icon: "fa-solid fa-users-rectangle",
             children: [
                 {
                     label: "Accomplishment Report",
@@ -244,22 +248,22 @@ const menuItems = {
                     icon: "fa-solid fa-right-left",
                 },
                 {
-                    label: "Manpower Requisition Form",
+                    label: "Manpower Requisition",
                     href: "/head/manpower",
                     icon: "fa-solid fa-user-group",
                 },
                 {
-                    label: "Official Business Notification",
+                    label: "Official Business",
                     href: "/head/business-notification",
                     icon: "fa-solid fa-briefcase",
                 },
                 {
-                    label: "Leave of Absence Report",
+                    label: "Leave of Absence",
                     href: "/head/leave",
                     icon: "fa-solid fa-calendar-xmark",
                 },
                 {
-                    label: "Overtime Request Form",
+                    label: "Overtime Request",
                     href: "/head/overtime-request",
                     icon: "fa-solid fa-clock-rotate-left",
                 },
@@ -278,6 +282,66 @@ const menuItems = {
                     label: "Payroll Cut-off",
                     href: "/head/payroll-cut-off",
                     icon: "fa-solid fa-calendar-days",
+                },
+            ],
+        },
+
+        // --- MY PERSONAL PORTAL SECTION ---
+        { isHeading: true, label: "My Personal Portal" },
+        {
+            category: "My Forms",
+            icon: "fa-solid fa-file-signature",
+            children: [
+                {
+                    label: "Accomplishment Report",
+                    href: "/head/accomplishment-reports",
+                    icon: "fa-solid fa-file-lines",
+                },
+                {
+                    label: "Change Off",
+                    href: "/head/change-offs",
+                    icon: "fa-solid fa-right-left",
+                },
+                {
+                    label: "Manpower Requisition",
+                    href: "/head/manpowers",
+                    icon: "fa-solid fa-user-group",
+                },
+                {
+                    label: "Official Business",
+                    href: "/head/business-notifications",
+                    icon: "fa-solid fa-briefcase",
+                },
+                {
+                    label: "Leave of Absence",
+                    href: "/head/leaves",
+                    icon: "fa-solid fa-calendar-xmark",
+                },
+                {
+                    label: "Overtime Request",
+                    href: "/head/overtime-requests",
+                    icon: "fa-solid fa-clock-rotate-left",
+                },
+                {
+                    label: "Undertime Form",
+                    href: "/head/undertime-forms",
+                    icon: "fa-solid fa-clock",
+                },
+            ],
+        },
+        {
+            category: "My Payroll",
+            icon: "fa-solid fa-wallet",
+            children: [
+                {
+                    label: "Payroll Cut-off",
+                    href: "/head/payroll-cut-offs",
+                    icon: "fa-solid fa-calendar-days",
+                },
+                {
+                    label: "Salary Payroll",
+                    href: "/head/salary-payrolls",
+                    icon: "fa-solid fa-money-check-dollar",
                 },
             ],
         },
@@ -325,16 +389,24 @@ const goTo = (href) => {
                 </div>
 
                 <template v-for="(item, index) in filteredMenu" :key="index">
-                    <!-- CATEGORY -->
-                    <div v-if="item.children">
-                        <!-- Category Button -->
+                    <div v-if="item.isHeading" class="mt-4 px-3">
+                        <span
+                            class="text-[11px] font-bold uppercase tracking-widest text-white/70"
+                        >
+                            {{ item.label }}
+                        </span>
+                    </div>
+
+                    <div v-else-if="item.children">
                         <button
                             class="bg-white hover:bg-gray-100 text-brand-blue cursor-pointer text-sm py-2 pe-3 ps-4 flex justify-between items-center rounded-md w-full mt-2 transition-all"
                             @click="toggleCategory(item.category)"
                         >
                             <div class="flex items-center gap-2">
                                 <i v-if="item.icon" :class="item.icon"></i>
-                                <span class="ps-1">{{ item.category }}</span>
+                                <span class="ps-1 font-medium">{{
+                                    item.category
+                                }}</span>
                             </div>
                             <i
                                 class="fa-solid fa-chevron-down transition-transform duration-300"
@@ -344,17 +416,14 @@ const goTo = (href) => {
                             ></i>
                         </button>
 
-                        <!-- Dropdown with smooth transition -->
                         <transition name="slide-fade">
                             <div
                                 v-show="openCategories[item.category]"
                                 class="relative"
                             >
-                                <!-- Vertical Line (only for dropdown) -->
                                 <div
-                                    class="h-full w-0.5 bg-white absolute top-0 bottom-0 start-0 rounded"
+                                    class="h-full w-0.5 bg-white/30 absolute top-0 bottom-0 start-0 rounded ml-1"
                                 ></div>
-
                                 <div class="mt-1 space-y-1">
                                     <button
                                         v-for="child in item.children"
@@ -372,16 +441,13 @@ const goTo = (href) => {
                         </transition>
                     </div>
 
-                    <!-- NORMAL MENU -->
                     <button
                         v-else
                         class="bg-white hover:bg-gray-100 text-brand-blue cursor-pointer text-sm py-2 px-3 flex gap-3 items-center rounded-md w-full mt-2"
                         @click="goTo(item.href)"
                     >
-                        <div class="ps-1">
-                            <i :class="item.icon"></i>
-                        </div>
-                        <div>{{ item.label }}</div>
+                        <div class="ps-1"><i :class="item.icon"></i></div>
+                        <div class="font-medium">{{ item.label }}</div>
                     </button>
                 </template>
             </div>
