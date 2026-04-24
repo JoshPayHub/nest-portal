@@ -127,7 +127,7 @@ Route::middleware(['auth', 'user_type:Head'])->prefix('head')->name('head.')->gr
         Route::get('/leaves/create', 'create')->name('leaves.create');
         Route::post('/leaves/store', 'store')->name('leaves.store');
         Route::get('/leaves/edit/{id}', 'edit')->name('leaves.edit');
-        Route::put('/leave/update/{id}', 'update')->name('leaves.update');
+        Route::put('/leaves/update/{id}', 'update')->name('leaves.update');
     });
 
     // Leave of Absence Form

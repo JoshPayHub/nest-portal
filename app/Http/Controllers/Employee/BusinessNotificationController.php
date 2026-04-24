@@ -42,7 +42,8 @@ class BusinessNotificationController extends Controller
             }); // Fixed: Closed the through function correctly
 
         return Inertia::render('management/Employee/BusinessNotificationList', [
-            'notifications' => $notifications
+            'notifications' => $notifications,
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
@@ -55,7 +56,8 @@ class BusinessNotificationController extends Controller
                 'department' => $user->department?->name ?? 'N/A',
                 'position' => $user->position?->name ?? 'N/A',
             ],
-            'isEditing' => false
+            'isEditing' => false,
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
@@ -79,13 +81,21 @@ class BusinessNotificationController extends Controller
         return redirect()->back()->with('message', 'Business notification submitted successfully');
     }
 
-    public function edit($id)
+    public function edit(Request $request, $id)
     {
         $user = Auth::user()->load(['department', 'position']);
         $notification = BusinessNotification::with(['approvalStatuses.status'])->findOrFail($id);
+        $userTypeId = $request->user()->user_type_id;
+
+        $routeMap = [
+            2 => 'employee.businessnotifications.index',
+            3 => 'head.businessnotifications.index',
+        ];
+
+        $routeName = $routeMap[$userTypeId];
 
         if ($notification->user_id !== $user->id) {
-            return redirect()->route('employee.businessnotification.index')->with('error', 'Unauthorized access.');
+            return redirect()->route($routeName)->with('error', 'Unauthorized access.');
         }
 
         // Logic to check if locked
@@ -93,7 +103,7 @@ class BusinessNotificationController extends Controller
         $hasApproved = $notification->approvalStatuses->contains(fn($s) => $s->status_id === 2 || strtolower($s->status?->name ?? '') === 'approved');
 
         if ($hasApproved && !$hasRejected) {
-            return redirect()->route('employee.businessnotification.index')->with('error', 'This request is approved and cannot be modified.');
+            return redirect()->route($routeName)->with('error', 'This request is approved and cannot be modified.');
         }
 
         return Inertia::render('management/Employee/BusinessNotification', [
@@ -103,16 +113,25 @@ class BusinessNotificationController extends Controller
                 'name' => $user->first_name . ' ' . $user->last_name,
                 'department' => $user->department?->name ?? 'N/A',
                 'position' => $user->position?->name ?? 'N/A',
-            ]
+            ],
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
     public function update(Request $request, $id)
     {
         $notification = BusinessNotification::with('approvalStatuses.status')->findOrFail($id);
+        $userTypeId = $request->user()->user_type_id;
+
+        $routeMap = [
+            2 => 'employee.businessnotifications.index',
+            3 => 'head.businessnotifications.index',
+        ];
+
+        $routeName = $routeMap[$userTypeId];
 
         if ($notification->user_id !== Auth::id()) {
-            return redirect()->route('employee.businessnotification.index')->with('error', 'Unauthorized.');
+            return redirect()->route($routeName)->with('error', 'Unauthorized.');
         }
 
         $validated = $request->validate([
@@ -132,6 +151,6 @@ class BusinessNotificationController extends Controller
                 ->update(['status_id' => 4, 'updated_at' => now()]);
         });
 
-        return redirect()->route('employee.businessnotification.index')->with('message', 'Notification updated.');
+        return redirect()->route($routeName)->with('message', 'Notification updated.');
     }
 }

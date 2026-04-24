@@ -43,6 +43,7 @@ class ChangeOffController extends Controller
 
         return Inertia::render('management/Employee/ChangeOffList', [
             'requests' => $requests,
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
@@ -59,7 +60,8 @@ class ChangeOffController extends Controller
             ],
             'days' => $days,
             'todayDate' => now()->format('Y-m-d'),
-            'isEditing' => false
+            'isEditing' => false,
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
@@ -98,13 +100,21 @@ class ChangeOffController extends Controller
         $days = DB::table('offs')->get();
 
         $report = ChangeOff::with(['label', 'approvalStatuses.status'])->find($id);
+        $userTypeId = $request->user()->user_type_id;
+
+        $routeMap = [
+            2 => 'employee.changeoffs.index',
+            3 => 'head.changeoffs.index',
+        ];
+
+        $routeName = $routeMap[$userTypeId];
 
         if (!$report) {
-            return redirect()->route('employee.changeoff.index')->with('error', 'Request record not found.');
+            return redirect()->route($routeName)->with('error', 'Request record not found.');
         }
 
         if ($report->user_id !== $user->id) {
-            return redirect()->route('employee.changeoff.index')->with('error', 'Unauthorized access.');
+            return redirect()->route($routeName)->with('error', 'Unauthorized access.');
         }
 
         // RESTORED: Your check logic
@@ -112,7 +122,7 @@ class ChangeOffController extends Controller
         $hasApproved = $report->approvalStatuses->contains(fn($s) => $s->status_id === 2 || strtolower($s->status?->name) === 'approved');
 
         if ($hasApproved && !$hasRejected) {
-            return redirect()->route('employee.changeoff.index')->with('error', 'This request is approved and cannot be modified.');
+            return redirect()->route($routeName)->with('error', 'This request is approved and cannot be modified.');
         }
 
         return Inertia::render('management/Employee/ChangeOff', [
@@ -124,7 +134,8 @@ class ChangeOffController extends Controller
             'days' => $days,
             'report' => $report,
             'todayDate' => now()->format('Y-m-d'),
-            'isEditing' => true
+            'isEditing' => true,
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
@@ -132,8 +143,17 @@ class ChangeOffController extends Controller
     {
         $changeOff = ChangeOff::with('approvalStatuses.status')->find($id);
 
+        $userTypeId = $request->user()->user_type_id;
+
+        $routeMap = [
+            2 => 'employee.changeoffs.index',
+            3 => 'head.changeoffs.index',
+        ];
+
+        $routeName = $routeMap[$userTypeId];
+
         if (!$changeOff || $changeOff->user_id !== $request->user()->id) {
-            return redirect()->route('employee.changeoff.index')->with('error', 'Unable to update request.');
+            return redirect()->route($routeName)->with('error', 'Unable to update request.');
         }
 
         // RESTORED: Your check logic
@@ -141,7 +161,7 @@ class ChangeOffController extends Controller
         $hasApproved = $changeOff->approvalStatuses->contains(fn($s) => $s->status_id === 2 || strtolower($s->status?->name) === 'approved');
 
         if ($hasApproved && !$hasRejected) {
-            return redirect()->route('employee.changeoff.index')->with('error', 'Cannot update an approved request.');
+            return redirect()->route($routeName)->with('error', 'Cannot update an approved request.');
         }
 
         $validated = $request->validate([
@@ -167,6 +187,15 @@ class ChangeOffController extends Controller
                 ]);
         });
 
-        return redirect()->route('employee.changeoff.index')->with('message', 'Request updated and resubmitted.');
+        $userTypeId = $request->user()->user_type_id;
+
+        $routeMap = [
+            2 => 'employee.changeoffs.index',
+            3 => 'head.changeoffs.index',
+        ];
+
+        $routeName = $routeMap[$userTypeId];
+
+        return redirect()->route($routeName)->with('message', 'Request updated and resubmitted.');
     }
 }

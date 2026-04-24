@@ -45,7 +45,8 @@ class ManpowerController extends Controller
             });
 
         return Inertia::render('management/Employee/ManpowerList', [
-            'manpowers' => $manpowers
+            'manpowers' => $manpowers,
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
@@ -58,7 +59,8 @@ class ManpowerController extends Controller
                 'department' => $user->department?->name ?? 'N/A',
                 'position' => $user->position?->name ?? 'N/A',
             ],
-            'isEditing' => false
+            'isEditing' => false,
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
@@ -84,13 +86,21 @@ class ManpowerController extends Controller
         return redirect()->back()->with('message', 'Manpower request submitted successfully!');
     }
 
-    public function edit($id)
+    public function edit(Request $request, $id)
     {
         $user = Auth::user()->load(['department', 'position']);
         $manpower = Manpower::with(['approvalStatuses.status'])->findOrFail($id);
+        $userTypeId = $request->user()->user_type_id;
+
+        $routeMap = [
+            2 => 'employee.manpowers.index',
+            3 => 'head.manpowers.index',
+        ];
+
+        $routeName = $routeMap[$userTypeId];
 
         if ($manpower->user_id !== $user->id) {
-            return redirect()->route('employee.manpower.index')->with('error', 'Unauthorized access.');
+            return redirect()->route($routeName)->with('error', 'Unauthorized access.');
         }
 
         // Logic to check if locked
@@ -98,7 +108,7 @@ class ManpowerController extends Controller
         $hasApproved = $manpower->approvalStatuses->contains(fn($s) => $s->status_id === 2 || strtolower($s->status?->name) === 'approved');
 
         if ($hasApproved && !$hasRejected) {
-            return redirect()->route('employee.manpower.index')->with('error', 'This request is approved and cannot be modified.');
+            return redirect()->route($routeName)->with('error', 'This request is approved and cannot be modified.');
         }
 
         // Format date for the HTML input
@@ -111,16 +121,25 @@ class ManpowerController extends Controller
                 'name' => $user->first_name . ' ' . $user->last_name,
                 'department' => $user->department?->name ?? 'N/A',
                 'position' => $user->position?->name ?? 'N/A',
-            ]
+            ],
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
     public function update(Request $request, $id)
     {
         $manpower = Manpower::with('approvalStatuses.status')->findOrFail($id);
+        $userTypeId = $request->user()->user_type_id;
+
+        $routeMap = [
+            2 => 'employee.manpowers.index',
+            3 => 'head.manpowers.index',
+        ];
+
+        $routeName = $routeMap[$userTypeId];
 
         if ($manpower->user_id !== Auth::id()) {
-            return redirect()->route('employee.manpower.index')->with('error', 'Unauthorized.');
+            return redirect()->route($routeName)->with('error', 'Unauthorized.');
         }
 
         $validated = $request->validate([
@@ -144,6 +163,6 @@ class ManpowerController extends Controller
             ]);
         });
 
-        return redirect()->route('employee.manpower.index')->with('message', 'Manpower request updated.');
+        return redirect()->route($routeName)->with('message', 'Manpower request updated.');
     }
 }

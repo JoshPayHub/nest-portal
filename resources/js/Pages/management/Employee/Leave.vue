@@ -20,14 +20,22 @@ import {
 } from "@/Components/ui/select";
 import { Textarea } from "@/Components/ui/textarea";
 import { toastStore } from "@/stores/toast";
+import { AlertCircle } from "lucide-vue-next";
 
 const page = usePage();
 const authUser = page.props.authUser;
+const auth_user_type_id = page.props.auth_user_type_id;
 const report = page.props.report;
 const isEditing = page.props.isEditing ?? false;
 const today = page.props.todayDate || new Date().toISOString().split("T")[0];
 const availableLeave = computed(() => Number(page.props.availableLeave) || 0);
 const STORAGE_KEY = "leave_form_draft";
+
+const routeMap = {
+    2: "/employee",
+    3: "/head",
+};
+const baseRoute = routeMap[auth_user_type_id];
 
 const formatDateForInput = (dateString) => {
     if (!dateString) return "";
@@ -84,7 +92,7 @@ onMounted(() => {
 
 const submit = () => {
     if (isEditing) {
-        form.put(`/employee/leave/update/${report.id}`, {
+        form.put(`${baseRoute}/leaves/update/${report.id}`, {
             preserveScroll: true,
             onSuccess: () => {
                 toastStore.show(
@@ -100,7 +108,7 @@ const submit = () => {
             },
         });
     } else {
-        form.post("/employee/leave/store", {
+        form.post(`${baseRoute}/leaves/store`, {
             preserveScroll: true,
             onSuccess: () => {
                 localStorage.removeItem(STORAGE_KEY);
@@ -142,7 +150,7 @@ const submit = () => {
                 >
                     <span
                         class="hover:text-brand-blue cursor-pointer transition-colors"
-                        @click="router.get('/employee/leave')"
+                        @click="router.get(`${baseRoute}/leaves`)"
                         >Leave List</span
                     >
                     <span class="text-slate-300">/</span>
@@ -325,7 +333,9 @@ const submit = () => {
             <CardContent
                 class="flex justify-end gap-2 border-t bg-slate-50/30 py-4 mt-6"
             >
-                <Button variant="ghost" @click="router.get('/employee/leave')"
+                <Button
+                    variant="ghost"
+                    @click="router.get(`${baseRoute}/leaves`)"
                     >Cancel</Button
                 >
                 <Button

@@ -29,7 +29,13 @@ const props = defineProps({
     authUser: Object,
     report: Object,
     isEditing: Boolean,
+    auth_user_type_id: Number,
 });
+
+const routeMap = {
+    2: "/employee",
+    3: "/head",
+};
 
 const today = new Date().toISOString().split("T")[0];
 const STORAGE_KEY = "pending_manpower_filing";
@@ -109,23 +115,26 @@ watch(
 
 const submit = () => {
     if (props.isEditing) {
-        form.put(`/employee/manpower/update/${props.report.id}`, {
-            preserveScroll: true,
-            onSuccess: () => {
-                toastStore.show(
-                    "Manpower request submitted successfully!",
-                    "success",
-                );
+        form.put(
+            `${routeMap[props.auth_user_type_id]}/manpowers/update/${props.report.id}`,
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toastStore.show(
+                        "Manpower request submitted successfully!",
+                        "success",
+                    );
+                },
+                onError: () => {
+                    toastStore.show(
+                        "Please fix the errors and try again.",
+                        "error",
+                    );
+                },
             },
-            onError: () => {
-                toastStore.show(
-                    "Please fix the errors and try again.",
-                    "error",
-                );
-            },
-        });
+        );
     } else {
-        form.post("/employee/manpower/store", {
+        form.post(`${routeMap[props.auth_user_type_id]}/manpowers/store`, {
             preserveScroll: true,
             onSuccess: () => {
                 localStorage.removeItem(STORAGE_KEY);
@@ -133,6 +142,10 @@ const submit = () => {
                 form.report_date = today;
                 form.report_to = "";
                 form.date_required = "";
+                form.job_description = "";
+                form.justification = "";
+                form.status_type = "";
+                form.payment_type = "";
                 toastStore.show(
                     "Manpower request submitted successfully!",
                     "success",
@@ -169,7 +182,11 @@ const submit = () => {
                 >
                     <span
                         class="hover:text-brand-blue cursor-pointer"
-                        @click="router.get('/employee/manpower')"
+                        @click="
+                            router.get(
+                                `${routeMap[props.auth_user_type_id]}/manpowers`,
+                            )
+                        "
                         >Manpower List</span
                     >
                     <span class="text-slate-300">/</span>
@@ -371,7 +388,11 @@ const submit = () => {
             >
                 <Button
                     variant="ghost"
-                    @click="router.get('/employee/manpower')"
+                    @click="
+                        router.get(
+                            `${routeMap[props.auth_user_type_id]}/manpowers`,
+                        )
+                    "
                     >Cancel</Button
                 >
                 <Button

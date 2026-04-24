@@ -36,7 +36,13 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    auth_user_type_id: Number,
 });
+
+const routeMap = {
+    2: "/employee",
+    3: "/head",
+};
 
 const search = ref("");
 const isViewOpen = ref(false);
@@ -101,7 +107,9 @@ const getStatusClass = (status) => {
                             Track and manage your submitted overtime hours.
                         </CardDescription>
                     </div>
-                    <Link href="/employee/overtime-request/create">
+                    <Link
+                        :href="`${routeMap[props.auth_user_type_id]}/overtime-requests/create`"
+                    >
                         <Button
                             class="bg-brand-blue hover:bg-brand-blue/90 h-11 px-6 font-bold shadow-sm transition-all active:scale-95"
                         >
@@ -215,7 +223,7 @@ const getStatusClass = (status) => {
                                             size="sm"
                                             @click="
                                                 router.get(
-                                                    `/employee/overtime-request/edit/${ot.id}`,
+                                                    `${routeMap[props.auth_user_type_id]}/overtime-requests/edit/${ot.id}`,
                                                 )
                                             "
                                             class="h-8 w-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"

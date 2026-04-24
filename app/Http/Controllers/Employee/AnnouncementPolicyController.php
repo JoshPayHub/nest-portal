@@ -51,6 +51,7 @@ class AnnouncementPolicyController extends Controller
             'data' => $query,
             'statuses' => Status::whereIn('id', [1, 2])->get(),
             'filters' => $request->only(['search', 'tab']),
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 }

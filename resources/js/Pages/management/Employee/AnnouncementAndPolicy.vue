@@ -35,6 +35,7 @@ const props = defineProps({
     data: Object,
     statuses: Array,
     filters: Object,
+    auth_user_type_id: Number,
 });
 
 const isDialogOpen = ref(false);
@@ -47,9 +48,16 @@ const viewData = ref({
     description: "",
 });
 
+const routeMap = {
+    2: "/employee/announcements-policies",
+    3: "/head/announcements-policies",
+};
+
 const handleFilter = () => {
+    const baseRoute = routeMap[props.auth_user_type_id];
+
     router.get(
-        "/employee/announcements-policies",
+        baseRoute,
         {
             search: searchQuery.value,
             tab: activeTab.value,

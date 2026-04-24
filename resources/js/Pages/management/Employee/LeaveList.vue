@@ -47,7 +47,13 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    auth_user_type_id: Number,
 });
+
+const routeMap = {
+    2: "/employee",
+    3: "/head",
+};
 
 const search = ref("");
 
@@ -108,7 +114,9 @@ const getStatusClass = (status) => {
                             Track your leave applications and approval status.
                         </CardDescription>
                     </div>
-                    <Link href="/employee/leave/create">
+                    <Link
+                        :href="`${routeMap[props.auth_user_type_id]}/leaves/create`"
+                    >
                         <Button
                             class="bg-brand-blue hover:bg-brand-blue/90 h-12 px-8 font-bold shadow-md transition-all active:scale-95"
                         >
@@ -238,7 +246,7 @@ const getStatusClass = (status) => {
                                             size="sm"
                                             @click="
                                                 router.get(
-                                                    `/employee/leave/edit/${leave.id}`,
+                                                    `${routeMap[props.auth_user_type_id]}/leaves/edit/${leave.id}`,
                                                 )
                                             "
                                             class="h-8 w-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"

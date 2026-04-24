@@ -37,6 +37,7 @@ import { AlertCircle } from "lucide-vue-next";
 const page = usePage();
 const authUser = page.props.authUser;
 const statuses = page.props.statuses;
+const auth_user_type_id = page.props.auth_user_type_id;
 const report = page.props.report; // Existing report if editing
 const isEditing = page.props.isEditing ?? false;
 
@@ -48,6 +49,12 @@ const getPendingId = () => {
     const status = statuses?.find((s) => s.name.toLowerCase() === "pending");
     return status ? status.id.toString() : "";
 };
+
+const routeMap = {
+    2: "/employee",
+    3: "/head",
+};
+const baseRoute = routeMap[auth_user_type_id];
 
 // Initialization Logic
 const savedDraft = !isEditing
@@ -135,7 +142,7 @@ const removeRow = (index) => {
 const submit = () => {
     if (isEditing) {
         // Constructing URL manually since Ziggy is not used
-        form.put(`/employee/accomplishment-report/update/${report.id}`, {
+        form.put(`${baseRoute}/accomplishment-reports/update/${report.id}`, {
             preserveScroll: true,
             onSuccess: () => {
                 toastStore.show("Report updated successfully!", "success");
@@ -149,7 +156,7 @@ const submit = () => {
         });
     } else {
         // Constructing URL manually for store
-        form.post("/employee/accomplishment-report/store", {
+        form.post(`${baseRoute}/accomplishment-reports/store`, {
             preserveScroll: true,
             onSuccess: () => {
                 localStorage.removeItem(STORAGE_KEY);
@@ -157,7 +164,11 @@ const submit = () => {
                 form.period_from = "";
                 form.period_to = "";
                 form.activities = [
-                    { date: today, activity: "", status_id: getPendingId() },
+                    {
+                        date: today,
+                        activity: "",
+                        status_id: getPendingId(),
+                    },
                 ];
                 toastStore.show("Report submitted successfully!", "success");
             },
@@ -192,7 +203,9 @@ const submit = () => {
                 >
                     <span
                         class="hover:text-brand-blue cursor-pointer transition-colors"
-                        @click="router.get('/employee/accomplishment-report')"
+                        @click="
+                            router.get(`${baseRoute}/accomplishment-reports`)
+                        "
                     >
                         Reports
                     </span>
@@ -421,7 +434,7 @@ const submit = () => {
                 <Button
                     variant="ghost"
                     type="button"
-                    @click="router.get('/employee/accomplishment-report')"
+                    @click="router.get(`${baseRoute}/accomplishment-reports`)"
                     >Cancel</Button
                 >
 

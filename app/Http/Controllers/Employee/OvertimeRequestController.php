@@ -73,6 +73,7 @@ class OvertimeRequestController extends Controller
     return Inertia::render('management/Employee/OvertimeList', [
         'overtimes' => $overtimes,
         'statuses'  => $allStatuses,
+        'auth_user_type_id' => auth()->user()->user_type_id,
     ]);
 }
 
@@ -84,7 +85,8 @@ class OvertimeRequestController extends Controller
                 'name' => $user->first_name . ' ' . $user->last_name,
                 'department' => $user->department?->name ?? 'N/A',
                 'position' => $user->position?->name ?? 'N/A',
-            ]
+            ],
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
@@ -158,7 +160,8 @@ class OvertimeRequestController extends Controller
                 'name' => $request->user()->name,
                 'department' => $request->user()->department?->name ?? 'N/A',
                 'position' => $request->user()->position?->name ?? 'N/A',
-            ]
+            ],
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
@@ -201,6 +204,15 @@ class OvertimeRequestController extends Controller
             }
         });
 
-        return redirect()->route('employee.overtimerequest.index')->with('message', 'Overtime updated and reset for approval.');
+        $userTypeId = $request->user()->user_type_id;
+
+        $routeMap = [
+            2 => 'employee.overtimerequests.index',
+            3 => 'head.overtimerequests.index',
+        ];
+
+        $routeName = $routeMap[$userTypeId];
+
+        return redirect()->route($routeName)->with('message', 'Overtime updated and reset for approval.');
     }
 }

@@ -43,7 +43,8 @@ class LeaveController extends Controller
         });
 
         return Inertia::render('management/Employee/LeaveList', [
-            'leaves' => $leaves
+            'leaves' => $leaves,
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
@@ -59,6 +60,7 @@ class LeaveController extends Controller
             'isEditing' => false,
             'todayDate' => now()->toDateString(),
             'availableLeave' => 7,
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
@@ -105,14 +107,22 @@ class LeaveController extends Controller
 
         // 1. Fetch record or handle missing
         $leave = Leave::with(['approvalStatuses.status'])->find($id);
+        $userTypeId = $request->user()->user_type_id;
+
+        $routeMap = [
+            2 => 'employee.leaves.index',
+            3 => 'head.leaves.index',
+        ];
+
+        $routeName = $routeMap[$userTypeId];
 
         if (!$leave) {
-            return redirect()->route('employee.leave.index')->with('error', 'Leave record not found.');
+            return redirect()->route($routeName)->with('error', 'Leave record not found.');
         }
 
         // 2. Ownership Check
         if ($leave->user_id !== $user->id) {
-            return redirect()->route('employee.leave.index')->with('error', 'Unauthorized access.');
+            return redirect()->route($routeName)->with('error', 'Unauthorized access.');
         }
 
         // 3. Status Check Logic (Mirroring ChangeOff)
@@ -120,7 +130,7 @@ class LeaveController extends Controller
         $hasApproved = $leave->approvalStatuses->contains(fn($s) => $s->status_id === 2 || strtolower($s->status?->name) === 'approved');
 
         if ($hasApproved && !$hasRejected) {
-            return redirect()->route('employee.leave.index')->with('error', 'This request is approved and cannot be modified.');
+            return redirect()->route($routeName)->with('error', 'This request is approved and cannot be modified.');
         }
 
         return Inertia::render('management/Employee/Leave', [
@@ -133,6 +143,7 @@ class LeaveController extends Controller
             ],
             'availableLeave' => 7,
             'todayDate' => now()->toDateString(),
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
@@ -140,8 +151,17 @@ class LeaveController extends Controller
     {
         $leave = Leave::with('approvalStatuses.status')->find($id);
 
+        $userTypeId = $request->user()->user_type_id;
+
+        $routeMap = [
+            2 => 'employee.leaves.index',
+            3 => 'head.leaves.index',
+        ];
+
+        $routeName = $routeMap[$userTypeId];
+
         if (!$leave || $leave->user_id !== Auth::id()) {
-            return redirect()->route('employee.leave.index')->with('error', 'Unable to update request.');
+            return redirect()->route($routeName)->with('error', 'Unable to update request.');
         }
 
         // Lock check
@@ -149,7 +169,7 @@ class LeaveController extends Controller
         $hasApproved = $leave->approvalStatuses->contains(fn($s) => $s->status_id === 2 || strtolower($s->status?->name) === 'approved');
 
         if ($hasApproved && !$hasRejected) {
-            return redirect()->route('employee.leave.index')->with('error', 'Cannot update an approved request.');
+            return redirect()->route($routeName)->with('error', 'Cannot update an approved request.');
         }
 
         $validated = $request->validate([
@@ -185,6 +205,6 @@ class LeaveController extends Controller
                 ]);
         });
 
-        return redirect()->route('employee.leave.index')->with('message', 'Leave request updated and resubmitted.');
+        return redirect()->route($routeName)->with('message', 'Leave request updated and resubmitted.');
     }
 }

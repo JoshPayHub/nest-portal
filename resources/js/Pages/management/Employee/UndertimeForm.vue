@@ -20,7 +20,13 @@ const props = defineProps({
     authUser: Object,
     report: Object,
     isEditing: Boolean,
+    auth_user_type_id: Number,
 });
+
+const routeMap = {
+    2: "/employee",
+    3: "/head",
+};
 
 const today = new Date().toISOString().split("T")[0];
 const STORAGE_KEY = "pending_undertime_request";
@@ -92,19 +98,54 @@ onMounted(() => {
 });
 
 const submit = () => {
-    const url = props.isEditing
-        ? `/employee/undertime-form/update/${props.report.id}`
-        : "/employee/undertime-form/store";
-
-    const method = props.isEditing ? "put" : "post";
-
-    form[method](url, {
-        preserveScroll: true,
-        onSuccess: () => {
-            if (!props.isEditing) localStorage.removeItem(STORAGE_KEY);
-            toastStore.show("Success!", "success");
-        },
-    });
+    if (props.isEditing) {
+        // Constructing URL manually since Ziggy is not used
+        form.put(
+            `${routeMap[props.auth_user_type_id]}/undertime-forms/update/${props.report.id}`,
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toastStore.show(
+                        "Undertime updated successfully!",
+                        "success",
+                    );
+                },
+                onError: () => {
+                    toastStore.show(
+                        "Please fix the errors and try again.",
+                        "error",
+                    );
+                },
+            },
+        );
+    } else {
+        // Constructing URL manually for store
+        form.post(
+            `${routeMap[props.auth_user_type_id]}/undertime-forms/store`,
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    localStorage.removeItem(STORAGE_KEY);
+                    form.reset();
+                    form.undertime_date = "";
+                    form.from_time = "";
+                    form.to_time = "";
+                    form.total_time = "";
+                    form.reason = "";
+                    toastStore.show(
+                        "Undertime submitted successfully!",
+                        "success",
+                    );
+                },
+                onError: () => {
+                    toastStore.show(
+                        "Please fix the errors and try again.",
+                        "error",
+                    );
+                },
+            },
+        );
+    }
 };
 </script>
 
@@ -128,7 +169,11 @@ const submit = () => {
                 >
                     <span
                         class="hover:text-brand-blue cursor-pointer"
-                        @click="router.get('/employee/undertime-form')"
+                        @click="
+                            router.get(
+                                `${routeMap[props.auth_user_type_id]}/undertime-forms`,
+                            )
+                        "
                         >Undertime List</span
                     >
                     <span class="text-slate-300">/</span>
@@ -233,7 +278,11 @@ const submit = () => {
             >
                 <Button
                     variant="ghost"
-                    @click="router.get('/employee/undertime-form')"
+                    @click="
+                        router.get(
+                            `${routeMap[props.auth_user_type_id]}/undertime-forms`,
+                        )
+                    "
                     >Cancel</Button
                 >
                 <Button

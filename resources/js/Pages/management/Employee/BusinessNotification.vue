@@ -20,7 +20,13 @@ const props = defineProps({
     authUser: Object,
     report: Object,
     isEditing: Boolean,
+    auth_user_type_id: Number,
 });
+
+const routeMap = {
+    2: "/employee",
+    3: "/head",
+};
 
 const today = new Date().toISOString().split("T")[0];
 const STORAGE_KEY = "pending_business_notification";
@@ -94,42 +100,48 @@ const submit = () => {
     if (isLocked.value) return;
 
     if (props.isEditing) {
-        form.put(`/employee/business-notification/update/${props.report.id}`, {
-            preserveScroll: true,
-            onSuccess: () => {
-                toastStore.show(
-                    "Business notification updated successfully!",
-                    "success",
-                );
+        form.put(
+            `${routeMap[props.auth_user_type_id]}/business-notifications/update/${props.report.id}`,
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toastStore.show(
+                        "Business notification updated successfully!",
+                        "success",
+                    );
+                },
+                onError: () => {
+                    toastStore.show(
+                        "Please fix the errors and try again.",
+                        "error",
+                    );
+                },
             },
-            onError: () => {
-                toastStore.show(
-                    "Please fix the errors and try again.",
-                    "error",
-                );
-            },
-        });
+        );
     } else {
-        form.post("/employee/business-notification/store", {
-            preserveScroll: true,
-            onSuccess: () => {
-                localStorage.removeItem(STORAGE_KEY);
-                form.reset();
-                form.purposes = "";
-                form.location = "";
-                form.reason = "";
-                toastStore.show(
-                    "Business notification submitted successfully!",
-                    "success",
-                );
+        form.post(
+            `${routeMap[props.auth_user_type_id]}/business-notifications/store`,
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    localStorage.removeItem(STORAGE_KEY);
+                    form.reset();
+                    form.purposes = "";
+                    form.location = "";
+                    form.reason = "";
+                    toastStore.show(
+                        "Business notification submitted successfully!",
+                        "success",
+                    );
+                },
+                onError: () => {
+                    toastStore.show(
+                        "Please fix the errors and try again.",
+                        "error",
+                    );
+                },
             },
-            onError: () => {
-                toastStore.show(
-                    "Please fix the errors and try again.",
-                    "error",
-                );
-            },
-        });
+        );
     }
 };
 </script>
@@ -154,7 +166,11 @@ const submit = () => {
                 >
                     <span
                         class="hover:text-brand-blue cursor-pointer"
-                        @click="router.get('/employee/business-notification')"
+                        @click="
+                            router.get(
+                                `${routeMap[props.auth_user_type_id]}/business-notifications`,
+                            )
+                        "
                         >Notification List</span
                     >
                     <span class="text-slate-300">/</span>
@@ -313,7 +329,11 @@ const submit = () => {
             >
                 <Button
                     variant="ghost"
-                    @click="router.get('/employee/business-notification')"
+                    @click="
+                        router.get(
+                            `${routeMap[props.auth_user_type_id]}/business-notifications`,
+                        )
+                    "
                     >Cancel</Button
                 >
                 <Button

@@ -32,7 +32,6 @@ class AccomplishmentReportController extends Controller
 
                 return [
                     'id' => $report->id,
-                    // Use the report's own dates or fall back to activity dates safely
                     'report_date' => $report->created_at->format('M d, Y'),
                     'period_from' => $report->from_date ? Carbon::parse($report->from_date)->format('M d, Y') : '',
                     'period_to'   => $report->to_date ? Carbon::parse($report->to_date)->format('M d, Y') : '',
@@ -57,6 +56,7 @@ class AccomplishmentReportController extends Controller
         return Inertia::render('management/Employee/AccomplishmentListReport', [
             'reports' => $reports,
             'statuses' => $allStatuses,
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
@@ -73,7 +73,8 @@ class AccomplishmentReportController extends Controller
                 'department' => $user->department?->name ?? 'N/A',
                 'position' => $user->position?->name ?? 'N/A',
             ],
-            'statuses' => $statuses
+            'statuses' => $statuses,
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
@@ -144,11 +145,12 @@ class AccomplishmentReportController extends Controller
                 'position' => $user->position?->name ?? 'N/A',
             ],
             'statuses' => $statuses,
-            'isEditing' => true
+            'isEditing' => true,
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
-    public function update(Request $request, $id)
+   public function update(Request $request, $id)
     {
         $report = AccomplishReport::with('approvalStatuses')->findOrFail($id);
 
@@ -171,7 +173,6 @@ class AccomplishmentReportController extends Controller
                 'to_date' => $validated['period_to'],
             ]);
 
-            // Reset all approval statuses to Pending (Status 4) because the report was edited
             DB::table('accomplish_report_statuses')
                 ->where('accomplish_report_id', $report->id)
                 ->update([
@@ -190,7 +191,16 @@ class AccomplishmentReportController extends Controller
             }
         });
 
-        return redirect()->route('employee.accomplishmentreport.index')
+        $userTypeId = $request->user()->user_type_id;
+
+        $routeMap = [
+            2 => 'employee.accomplishmentreports.index',
+            3 => 'head.accomplishmentreports.index',
+        ];
+
+        $routeName = $routeMap[$userTypeId];
+
+        return redirect()->route($routeName)
             ->with('message', 'Report updated successfully and reset to pending for all approvers.');
     }
 }

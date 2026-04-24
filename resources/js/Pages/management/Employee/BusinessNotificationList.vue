@@ -47,7 +47,13 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    auth_user_type_id: Number,
 });
+
+const routeMap = {
+    2: "/employee",
+    3: "/head",
+};
 
 const search = ref("");
 const isViewOpen = ref(false);
@@ -104,7 +110,9 @@ const getStatusClass = (status) => {
                             out-of-office notifications.</CardDescription
                         >
                     </div>
-                    <Link href="/employee/business-notification/create">
+                    <Link
+                        :href="`${routeMap[props.auth_user_type_id]}/business-notifications/create`"
+                    >
                         <Button
                             class="bg-brand-blue hover:bg-brand-blue/90 h-12 px-8 font-bold shadow-md transition-all active:scale-95"
                         >
@@ -223,7 +231,7 @@ const getStatusClass = (status) => {
                                             size="sm"
                                             @click="
                                                 router.get(
-                                                    `/employee/business-notification/edit/${item.id}`,
+                                                    `${routeMap[props.auth_user_type_id]}/business-notifications/edit/${item.id}`,
                                                 )
                                             "
                                             class="h-8 w-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"

@@ -21,15 +21,23 @@ import {
 
 // custom store
 import { toastStore } from "@/stores/toast";
+import { AlertCircle } from "lucide-vue-next";
 
 const page = usePage();
 const authUser = page.props.authUser;
+const auth_user_type_id = page.props.auth_user_type_id;
 const days = page.props.days || [];
 const report = page.props.report;
 const isEditing = page.props.isEditing ?? false;
 const today = page.props.todayDate || new Date().toISOString().split("T")[0];
 
 const STORAGE_KEY = "change_off_form_draft";
+
+const routeMap = {
+    2: "/employee",
+    3: "/head",
+};
+const baseRoute = routeMap[auth_user_type_id];
 
 // RESTORED: Status logic for HR and Leader checks
 const hasRejected = computed(() => {
@@ -53,12 +61,12 @@ const isLocked = computed(
 onMounted(() => {
     if (isEditing && !report) {
         toastStore.show("Request record not found.", "error");
-        router.replace("/employee/change-off");
+        router.replace(`${baseRoute}/change-offs`);
         return;
     }
     if (isLocked.value) {
         toastStore.show("This request is approved and locked.", "error");
-        router.replace("/employee/change-off");
+        router.replace(`${baseRoute}/change-offs`);
     }
 });
 
@@ -107,8 +115,8 @@ watch(
 
 const submit = () => {
     const url = isEditing
-        ? `/employee/change-off/update/${report.id}`
-        : "/employee/change-off/store";
+        ? `${baseRoute}/change-offs/update/${report.id}`
+        : `${baseRoute}/change-offs/store`;
     const method = isEditing ? "put" : "post";
 
     form[method](url, {
@@ -159,7 +167,7 @@ const typeOptions = computed(() =>
                 >
                     <span
                         class="hover:text-brand-blue cursor-pointer transition-colors"
-                        @click="router.get('/employee/change-off')"
+                        @click="router.get(`${baseRoute}/change-offs`)"
                         >Change Off</span
                     >
                     <span class="text-slate-300">/</span>
@@ -328,7 +336,7 @@ const typeOptions = computed(() =>
                 <Button
                     variant="ghost"
                     type="button"
-                    @click="router.get('/employee/change-off')"
+                    @click="router.get(`${baseRoute}/change-offs`)"
                     >Cancel</Button
                 >
                 <Button

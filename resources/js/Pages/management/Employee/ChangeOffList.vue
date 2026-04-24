@@ -37,6 +37,7 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    auth_user_type_id: Number,
 });
 
 const search = ref("");
@@ -51,6 +52,11 @@ const filteredRequests = computed(() => {
             req.leader_status.toLowerCase().includes(term),
     );
 });
+
+const routeMap = {
+    2: "/employee",
+    3: "/head",
+};
 
 const canEdit = (req) => {
     const leader = req.leader_status?.toLowerCase();
@@ -99,7 +105,9 @@ const formatScheduleSub = (day, time) => {
                             Manage and track your schedule change applications.
                         </CardDescription>
                     </div>
-                    <Link href="/employee/change-off/create">
+                    <Link
+                        :href="`${routeMap[props.auth_user_type_id]}/change-offs/create`"
+                    >
                         <Button
                             class="bg-brand-blue hover:bg-brand-blue/90 h-12 px-8 font-bold shadow-md transition-all active:scale-95"
                         >
@@ -258,7 +266,7 @@ const formatScheduleSub = (day, time) => {
                                             size="sm"
                                             @click="
                                                 router.get(
-                                                    `/employee/change-off/edit/${req.id}`,
+                                                    `${routeMap[props.auth_user_type_id]}/change-offs/edit/${req.id}`,
                                                 )
                                             "
                                             class="h-8 w-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"

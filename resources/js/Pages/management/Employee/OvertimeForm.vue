@@ -21,11 +21,20 @@ import {
 } from "@/Components/ui/table";
 import { Textarea } from "@/Components/ui/textarea";
 import { toastStore } from "@/stores/toast";
+import { AlertCircle } from "lucide-vue-next";
 
 const page = usePage();
 const authUser = page.props.authUser;
+const auth_user_type_id = page.props.auth_user_type_id;
 const overtime = page.props.overtime;
 const isEditing = page.props.isEditing ?? false;
+
+const routeMap = {
+    2: "/employee",
+    3: "/head",
+};
+
+const baseRoute = routeMap[auth_user_type_id];
 
 const today = new Date().toISOString().split("T")[0];
 const STORAGE_KEY = "overtime_request_draft";
@@ -114,7 +123,7 @@ const removeRow = (index) => {
 const submit = () => {
     if (isEditing) {
         // Constructing URL manually since Ziggy is not used
-        form.put(`/employee/overtime-request/update/${overtime.id}`, {
+        form.put(`${baseRoute}/overtime-requests/update/${overtime.id}`, {
             preserveScroll: true,
             onSuccess: () => {
                 toastStore.show("Overtime updated successfully!", "success");
@@ -128,7 +137,7 @@ const submit = () => {
         });
     } else {
         // Constructing URL manually for store
-        form.post("/employee/overtime-request/store", {
+        form.post(`${baseRoute}/overtime-requests/store`, {
             preserveScroll: true,
             onSuccess: () => {
                 localStorage.removeItem(STORAGE_KEY);
@@ -176,7 +185,7 @@ const submit = () => {
                 >
                     <span
                         class="hover:text-brand-blue cursor-pointer transition-colors"
-                        @click="router.get('/employee/overtime-request')"
+                        @click="router.get(`${baseRoute}/overtime-requests`)"
                     >
                         Overtime List
                     </span>
@@ -439,7 +448,7 @@ const submit = () => {
                 <Button
                     variant="ghost"
                     type="button"
-                    @click="router.get('/employee/overtime-request')"
+                    @click="router.get(`${baseRoute}/overtime-requests`)"
                     >Cancel</Button
                 >
                 <Button

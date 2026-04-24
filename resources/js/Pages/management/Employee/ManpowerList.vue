@@ -47,7 +47,13 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    auth_user_type_id: Number,
 });
+
+const routeMap = {
+    2: "/employee",
+    3: "/head",
+};
 
 const search = ref("");
 const isViewOpen = ref(false);
@@ -104,7 +110,9 @@ const getStatusClass = (status) => {
                             requests.</CardDescription
                         >
                     </div>
-                    <Link href="/employee/manpower/create">
+                    <Link
+                        :href="`${routeMap[props.auth_user_type_id]}/manpowers/create`"
+                    >
                         <Button class="bg-brand-blue h-12 px-8 font-bold">
                             <Plus class="mr-2" /> New Request
                         </Button>
@@ -218,7 +226,7 @@ const getStatusClass = (status) => {
                                             size="sm"
                                             @click="
                                                 router.get(
-                                                    `/employee/manpower/edit/${item.id}`,
+                                                    `${routeMap[props.auth_user_type_id]}/manpowers/edit/${item.id}`,
                                                 )
                                             "
                                             class="h-8 w-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"

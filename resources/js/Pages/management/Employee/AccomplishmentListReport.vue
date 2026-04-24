@@ -48,6 +48,7 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    auth_user_type_id: Number,
 });
 
 const search = ref("");
@@ -66,6 +67,11 @@ const filteredReports = computed(() => {
         );
     });
 });
+
+const routeMap = {
+    2: "/employee",
+    3: "/head",
+};
 
 /* =========================
    LOGIC
@@ -111,7 +117,9 @@ const getStatusClass = (status) => {
                             Review and manage your submitted activity logs.
                         </CardDescription>
                     </div>
-                    <Link href="/employee/accomplishment-report/create">
+                    <Link
+                        :href="`${routeMap[props.auth_user_type_id]}/accomplishment-reports/create`"
+                    >
                         <Button
                             class="bg-brand-blue hover:bg-brand-blue/90 h-12 px-8 font-bold shadow-md transition-all active:scale-95"
                         >
@@ -141,7 +149,8 @@ const getStatusClass = (status) => {
                             <TableRow>
                                 <TableHead
                                     class="w-[180px] font-bold text-slate-600 uppercase text-xs tracking-wider"
-                                    >DATE</TableHead
+                                    >DATE
+                                    {{ props.auth_user_type_id }}</TableHead
                                 >
                                 <TableHead
                                     class="w-[150px] font-bold text-slate-600 uppercase text-xs tracking-wider"
@@ -237,7 +246,7 @@ const getStatusClass = (status) => {
                                             size="sm"
                                             @click="
                                                 router.get(
-                                                    `/employee/accomplishment-report/edit/${report.id}`,
+                                                    `${routeMap[props.auth_user_type_id]}/accomplishment-reports/edit/${report.id}`,
                                                 )
                                             "
                                             class="h-8 w-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"

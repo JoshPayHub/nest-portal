@@ -46,7 +46,8 @@ class UndertimeFormController extends Controller
             });
 
         return Inertia::render('management/Employee/UndertimeFormList', [
-            'undertimes' => $undertimes
+            'undertimes' => $undertimes,
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
@@ -59,7 +60,8 @@ class UndertimeFormController extends Controller
                 'department' => $user->department?->name ?? 'N/A',
                 'position' => $user->position?->name ?? 'N/A',
             ],
-            'isEditing' => false
+            'isEditing' => false,
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
@@ -89,20 +91,28 @@ class UndertimeFormController extends Controller
         return redirect()->back()->with('message', 'Undertime submitted successfully!');
     }
 
-    public function edit($id)
+    public function edit(Request $request, $id)
     {
         $user = Auth::user()->load(['department', 'position']);
         $undertime = Undertime::with(['approvalStatuses.status'])->findOrFail($id);
+        $userTypeId = $request->user()->user_type_id;
+
+        $routeMap = [
+            2 => 'employee.undertimeforms.index',
+            3 => 'head.undertimeforms.index',
+        ];
+
+        $routeName = $routeMap[$userTypeId];
 
         if ($undertime->user_id !== $user->id) {
-            return redirect()->route('employee.undertimeform.index')->with('error', 'Unauthorized access.');
+            return redirect()->route($routeName)->with('error', 'Unauthorized access.');
         }
 
         $hasRejected = $undertime->approvalStatuses->contains(fn($s) => $s->status_id === 5 || strtolower($s->status?->name) === 'rejected');
         $hasApproved = $undertime->approvalStatuses->contains(fn($s) => $s->status_id === 2 || strtolower($s->status?->name) === 'approved');
 
         if ($hasApproved && !$hasRejected) {
-            return redirect()->route('employee.undertimeform.index')->with('error', 'This request is approved and cannot be modified.');
+            return redirect()->route($routeName)->with('error', 'This request is approved and cannot be modified.');
         }
 
         // Fixed: Use undertime_date instead of date_required
@@ -117,7 +127,8 @@ class UndertimeFormController extends Controller
                 'name' => $user->first_name . ' ' . $user->last_name,
                 'department' => $user->department?->name ?? 'N/A',
                 'position' => $user->position?->name ?? 'N/A'
-            ]
+            ],
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
@@ -125,8 +136,17 @@ class UndertimeFormController extends Controller
     {
         $undertime = Undertime::findOrFail($id);
 
+        $userTypeId = $request->user()->user_type_id;
+
+        $routeMap = [
+            2 => 'employee.undertimeforms.index',
+            3 => 'head.undertimeforms.index',
+        ];
+
+        $routeName = $routeMap[$userTypeId];
+
         if ($undertime->user_id !== Auth::id()) {
-            return redirect()->route('employee.undertimeform.index')->with('error', 'Unauthorized.');
+            return redirect()->route($routeName)->with('error', 'Unauthorized.');
         }
 
         $validated = $request->validate([
@@ -145,6 +165,6 @@ class UndertimeFormController extends Controller
                 ->update(['status_id' => 4, 'updated_at' => now()]);
         });
 
-        return redirect()->route('employee.undertimeform.index')->with('message', 'Undertime updated.');
+        return redirect()->route($routeName)->with('message', 'Undertime updated.');
     }
 }
