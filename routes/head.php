@@ -178,7 +178,7 @@ Route::middleware(['auth', 'user_type:Head'])->prefix('head')->name('head.')->gr
     // CutOff
     Route::controller(EmployeePayrollCutOffController::class)->group(function () {
         Route::get('/payroll-cut-offs', 'index')->name('payrollcutoffs.index');
-        Route::get('/payroll-cut-offs/{id}/attendance', 'attendancePage')->name('payrollcutoffs.attendance');
+        Route::get('/payroll-cut-offs/{id}/attendances', 'attendancePage')->name('payrollcutoffs.attendance');
     });
 
     // Attendance

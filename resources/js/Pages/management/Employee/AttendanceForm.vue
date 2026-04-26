@@ -39,7 +39,13 @@ const props = defineProps({
     isEditing: Boolean,
     isLocked: Boolean,
     authUser: Object,
+    auth_user_type_id: Number,
 });
+
+const routeMap = {
+    2: "/employee",
+    3: "/head",
+};
 
 const form = useForm({
     payroll_cut_off_id: props.cutoff.id,
@@ -49,7 +55,7 @@ const form = useForm({
 const submit = () => {
     if (props.isLocked) return;
 
-    form.post(`/employee/attendance/store`, {
+    form.post(`${routeMap[props.auth_user_type_id]}/attendances/store`, {
         preserveScroll: true,
         onSuccess: () => {
             toastStore.show(
@@ -110,7 +116,11 @@ const clearRow = (index) => {
                 >
                     <span
                         class="hover:text-brand-blue cursor-pointer"
-                        @click="router.get('/employee/payroll-cut-off')"
+                        @click="
+                            router.get(
+                                `${routeMap[props.auth_user_type_id]}/payroll-cut-offs`,
+                            )
+                        "
                     >
                         Payroll Cutoff
                     </span>
@@ -247,7 +257,11 @@ const clearRow = (index) => {
                 <Button
                     variant="ghost"
                     type="button"
-                    @click="router.get('/employee/payroll-cut-off')"
+                    @click="
+                        router.get(
+                            `${routeMap[props.auth_user_type_id]}/payroll-cut-offs`,
+                        )
+                    "
                     >Cancel</Button
                 >
 

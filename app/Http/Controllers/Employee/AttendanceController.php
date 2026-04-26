@@ -84,7 +84,16 @@ class AttendanceController extends Controller
             }
         });
 
-        return redirect()->route('employee.payrollcutoff.index')
+        $userTypeId = $request->user()->user_type_id;
+
+        $routeMap = [
+            2 => 'employee.payrollcutoffs.index',
+            3 => 'head.payrollcutoffs.index',
+        ];
+
+        $routeName = $routeMap[$userTypeId];
+
+        return redirect()->route($routeName)
             ->with('message', 'Attendance submitted and approval reset to pending.');
     }
 }

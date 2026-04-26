@@ -43,7 +43,13 @@ import { Badge } from "@/Components/ui/badge";
 const props = defineProps({
     cutoffs: Object,
     filters: Object,
+    auth_user_type_id: Number,
 });
+
+const routeMap = {
+    2: "/employee",
+    3: "/head",
+};
 
 const isViewOpen = ref(false);
 const selectedItem = ref(null);
@@ -51,14 +57,16 @@ const search = ref(props.filters.search || "");
 
 watch(search, (value) => {
     router.get(
-        "/employee/payroll-cut-off",
+        `${routeMap[props.auth_user_type_id]}/payroll-cut-offs`,
         { search: value },
         { preserveState: true, replace: true },
     );
 });
 
 const viewAttendance = (id) => {
-    router.get(`/employee/payroll-cut-off/${id}/attendance`);
+    router.get(
+        `${routeMap[props.auth_user_type_id]}/payroll-cut-offs/${id}/attendances`,
+    );
 };
 
 const formatDate = (dateString) => {
