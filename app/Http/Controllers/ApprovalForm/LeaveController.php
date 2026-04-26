@@ -15,17 +15,50 @@ use Illuminate\Support\Facades\DB;
 
 class LeaveController extends Controller
 {
+    /**
+     * 🔥 CHECK LEAVE BALANCE BEFORE APPROVAL
+     */
+    private function getLeaveBalance($user)
+    {
+        $currentYear = now()->year;
+        $totalLeaveCredits = $user->leave_credits ?? 7;
+
+        $leaves = Leave::where('user_id', $user->id)
+            ->where('with_pay', true)
+            ->whereYear('start_date', $currentYear)
+            ->with(['approvalStatuses.user'])
+            ->get();
+
+        $used = $leaves->filter(function ($leave) {
+
+            $hasHR = $leave->approvalStatuses->contains(fn ($s) =>
+                $s->status_id == 7 && $s->user?->user_type_id == 1
+            );
+
+            $hasHead = $leave->approvalStatuses->contains(fn ($s) =>
+                $s->status_id == 7 && $s->user?->user_type_id == 3
+            );
+
+            return $hasHR && $hasHead;
+
+        })->sum('total_days');
+
+        return [
+            'total' => $totalLeaveCredits,
+            'used' => $used,
+            'balance' => max($totalLeaveCredits - $used, 0),
+        ];
+    }
+
     public function index(Request $request)
     {
         $user = $request->user();
         $isHR = $user->user_type_id == 1;
         $allStatuses = Status::all();
 
-        // 1. Fetch Active Departments and Positions for filters
         $departments = Department::where('status_id', 1)->orderBy('name', 'asc')->get();
         $positions = Position::where('status_id', 1)->orderBy('name', 'asc')->get();
 
-        // 2. Fetch Employees for Filter: HR sees all, Head sees department only
         $employeesQuery = User::query()->select('id', 'first_name', 'last_name', 'username', 'department_id');
 
         if (!$isHR) {
@@ -36,20 +69,17 @@ class LeaveController extends Controller
 
         $employees = $employeesQuery->orderBy('first_name', 'asc')->get();
 
-        // 3. Build Leave Query
         $leavesQuery = Leave::with([
             'user.department',
             'approvalStatuses.user.userType',
             'approvalStatuses.status'
         ]);
 
-        // Access Logic: Head sees only their department. HR sees all (unless filtered).
         if (!$isHR) {
             $leavesQuery->whereHas('user', function ($q) use ($user) {
                 $q->where('department_id', $user->department_id);
             });
         } else {
-            // Apply Department Filter for HR
             if ($request->filled('department_id')) {
                 $leavesQuery->whereHas('user', function ($q) use ($request) {
                     $q->where('department_id', $request->department_id);
@@ -57,7 +87,6 @@ class LeaveController extends Controller
             }
         }
 
-        // Apply Search Filter (by name)
         if ($request->filled('search')) {
             $search = $request->search;
             $leavesQuery->whereHas('user', function ($q) use ($search) {
@@ -66,36 +95,33 @@ class LeaveController extends Controller
             });
         }
 
-        // Apply Employee Filter
         if ($request->filled('employee_id')) {
             $leavesQuery->where('user_id', $request->employee_id);
         }
 
-        // 4. Paginate and Map
         $leaves = $leavesQuery->orderBy('created_at', 'desc')
             ->paginate(10)
             ->withQueryString()
             ->through(function ($leave) {
-                // Find specific approval entries (Leader = ID 3, HR = ID 1)
+
                 $leaderEntry = $leave->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 3);
                 $hrEntry     = $leave->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 1);
 
                 return [
-                    'id'                 => $leave->id,
-                    'reference_no'       => $leave->reference_no,
-                    'employee_name'      => $leave->user->first_name . ' ' . $leave->user->last_name,
-                    'department_name'    => $leave->user->department->name ?? 'N/A',
-                    'date_filed'         => $leave->created_at->format('M d, Y'),
-                    'type_leave'         => $leave->type_leave,
-                    'pay_type'           => ($leave->pay_type === 'With Pay') ? 'With Pay' : 'Without Pay',
-                    'start_date'         => Carbon::parse($leave->start_date)->format('M d, Y'),
-                    'end_date'           => Carbon::parse($leave->end_date)->format('M d, Y'),
-                    'total_days'         => $leave->total_days,
-                    'reason'             => $leave->reason,
-                    // Status tracking
+                    'id'              => $leave->id,
+                    'reference_no'    => $leave->reference_no,
+                    'employee_name'   => $leave->user->first_name . ' ' . $leave->user->last_name,
+                    'department_name' => $leave->user->department->name ?? 'N/A',
+                    'date_filed'      => $leave->created_at->format('M d, Y'),
+                    'type_leave'      => $leave->type_leave,
+                    'pay_type'        => $leave->with_pay ? 'With Pay' : 'Without Pay',
+                    'start_date'      => Carbon::parse($leave->start_date)->format('M d, Y'),
+                    'end_date'        => Carbon::parse($leave->end_date)->format('M d, Y'),
+                    'total_days'      => $leave->total_days,
+                    'reason'          => $leave->reason,
                     'leader_status_name' => $leaderEntry?->status?->name ?? 'Pending',
                     'hr_status_name'     => $hrEntry?->status?->name ?? 'Pending',
-                    'status'             => $leaderEntry?->status?->name ?? 'Pending', // Default view status
+                    'status'             => $leaderEntry?->status?->name ?? 'Pending',
                 ];
             });
 
@@ -110,15 +136,36 @@ class LeaveController extends Controller
         ]);
     }
 
+    /**
+     * ✅ APPROVAL WITH LEAVE BALANCE VALIDATION
+     */
     public function approve(Request $request, $id)
     {
         $request->validate([
-            'status_id' => 'required|in:7,8', // 7=Approved, 8=Rejected
+            'status_id' => 'required|in:7,8',
         ]);
 
-        $leave = Leave::findOrFail($id);
+        $leave = Leave::with('user')->findOrFail($id);
 
-        // Record or Update the approval status for the current user
+        // 🔥 ONLY CHECK IF APPROVING (NOT REJECTING)
+        if ((int)$request->status_id === 7) {
+
+            $balance = $this->getLeaveBalance($leave->user);
+
+            if ($balance['balance'] <= 0) {
+                return back()->withErrors([
+                    'status' => 'Cannot approve. Employee has no remaining leave balance.'
+                ]);
+            }
+
+            // Optional strict validation per leave
+            if ($leave->total_days > $balance['balance']) {
+                return back()->withErrors([
+                    'status' => 'Leave exceeds remaining balance (' . $balance['balance'] . ').'
+                ]);
+            }
+        }
+
         DB::table('leave_statuses')->updateOrInsert(
             [
                 'leave_id' => $leave->id,

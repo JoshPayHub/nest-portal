@@ -55,7 +55,6 @@ const form = useForm({
     work_location: props.employee?.work_location || "",
     payroll_group: props.employee?.payroll_group || "",
     leave_pay: props.employee?.leave_pay || 0,
-
     // --- Personal Profile (Read-Only fields) ---
     profile_photo: props.employee?.profile_photo || null,
     first_name: props.employee?.first_name || "",
@@ -468,13 +467,31 @@ const submit = () => {
                             <div class="space-y-2">
                                 <label
                                     class="text-xs font-semibold mb-1 text-gray-500"
-                                    >Leave Pay Credits</label
                                 >
+                                    Leave Pay Credits (Total)
+                                </label>
                                 <Input
                                     v-model="form.leave_pay"
                                     type="number"
                                     step="0.5"
                                     class="bg-white"
+                                />
+                            </div>
+                            <div v-if="isEditing" class="space-y-2">
+                                <label
+                                    class="text-xs font-semibold mb-1 text-gray-500"
+                                >
+                                    Leave Pay Used ({{
+                                        new Date().getFullYear()
+                                    }})
+                                </label>
+
+                                <Input
+                                    :model-value="props.employee.leave_pay_used"
+                                    type="number"
+                                    step="0.5"
+                                    class="bg-gray-100"
+                                    readonly
                                 />
                             </div>
                         </div>

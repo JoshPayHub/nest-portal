@@ -9,7 +9,6 @@ use App\Http\Controllers\ApprovalForm\LeaveController;
 use App\Http\Controllers\ApprovalForm\ManpowerController;
 use App\Http\Controllers\ApprovalForm\OvertimeRequestController;
 use App\Http\Controllers\Head\PayrollCutOffController;
-use App\Http\Controllers\Head\ProfileController;
 use App\Http\Controllers\ApprovalForm\UndertimeFormController;
 
 // Head Form as Employee
@@ -97,6 +96,7 @@ Route::middleware(['auth', 'user_type:Head'])->prefix('head')->name('head.')->gr
     Route::controller(EmployeeProfileController::class)->group(function () {
         Route::get('/profile', 'index')->name('profile');
         Route::put('/profile/update', 'update')->name('profile.update');
+        Route::put('/profile/change-password', 'changePassword')->name('profile.change-password');
     });
 
     // Announcements

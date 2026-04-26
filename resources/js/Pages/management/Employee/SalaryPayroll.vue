@@ -201,20 +201,25 @@ const openView = (item) => {
                                     <TableCell>{{
                                         formatDate(item.to_cutoff_date)
                                     }}</TableCell>
+
                                     <TableCell class="text-center">
-                                        <Badge
-                                            :variant="
+                                        <span
+                                            :class="[
+                                                'px-3 py-1 text-xs rounded-full font-bold',
                                                 item.salary_payrolls[0]
                                                     ?.status_id === 7
-                                                    ? 'success'
-                                                    : 'secondary'
-                                            "
+                                                    ? 'bg-emerald-100 text-emerald-700'
+                                                    : item.salary_payrolls[0]
+                                                            ?.status_id === 8
+                                                      ? 'bg-red-100 text-red-700'
+                                                      : 'bg-amber-100 text-amber-700',
+                                            ]"
                                         >
                                             {{
                                                 item.salary_payrolls[0]?.status
                                                     ?.name || "Pending"
                                             }}
-                                        </Badge>
+                                        </span>
                                     </TableCell>
                                     <TableCell class="text-right px-6">
                                         <Button

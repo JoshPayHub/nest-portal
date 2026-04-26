@@ -39,8 +39,16 @@ class AuthenticatedSessionController extends Controller
         $user = Auth::user();
 
         // Check if employee is Pending (status_id 4)
+        // if ($user->user_type_id == 1 && $user->status_id == 4) {
+        //     return redirect()->route('hr.profile');
+        // }
+
         if ($user->user_type_id == 2 && $user->status_id == 4) {
             return redirect()->route('employee.profile');
+        }
+
+        if ($user->user_type_id == 3 && $user->status_id == 4) {
+            return redirect()->route('head.profile');
         }
 
         /**

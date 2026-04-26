@@ -3,7 +3,6 @@ import { ref, watch } from "vue";
 import { router } from "@inertiajs/vue3";
 import { Search, Eye } from "lucide-vue-next";
 
-// UI Components
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
 import {
@@ -28,28 +27,40 @@ const props = defineProps({
     filters: Object,
 });
 
-const search = ref(props.filters.search || "");
+const search = ref(props.filters?.search || "");
 
+// ✅ debounce
+let timeout = null;
 watch(search, (value) => {
-    router.get(
-        "/head/payroll-cut-off",
-        { search: value },
-        { preserveState: true, replace: true },
-    );
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+        router.get(
+            "/head/payroll-cut-off",
+            { search: value },
+            {
+                preserveState: true,
+                replace: true,
+                preserveScroll: true,
+            },
+        );
+    }, 400);
 });
 
-// Logic for the Eye Icon
 const openView = (item) => {
+    if (!item?.id) return;
     router.get(`/head/payroll-cut-off/${item.id}/attendance`);
 };
 
 const formatDate = (dateString) => {
-    if (!dateString) return "";
-    return new Date(dateString).toLocaleDateString("en-US", {
-        month: "short",
-        day: "2-digit",
-        year: "numeric",
-    });
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    return isNaN(date)
+        ? "-"
+        : date.toLocaleDateString("en-US", {
+              month: "short",
+              day: "2-digit",
+              year: "numeric",
+          });
 };
 </script>
 
@@ -75,6 +86,7 @@ const formatDate = (dateString) => {
             </CardHeader>
 
             <CardContent>
+                <!-- Search -->
                 <div
                     class="flex flex-col md:flex-row gap-3 mb-6 items-center pt-3"
                 >
@@ -84,12 +96,13 @@ const formatDate = (dateString) => {
                         />
                         <Input
                             v-model="search"
-                            placeholder="Search cut off..."
+                            placeholder="Search period from or period to..."
                             class="pl-10 h-12"
                         />
                     </div>
                 </div>
 
+                <!-- Table -->
                 <div class="rounded-md border border-slate-200 overflow-hidden">
                     <Table>
                         <TableHeader class="bg-slate-50/50">
@@ -116,8 +129,9 @@ const formatDate = (dateString) => {
                                 >
                             </TableRow>
                         </TableHeader>
+
                         <TableBody>
-                            <template v-if="cutoffs.data.length > 0">
+                            <template v-if="cutoffs?.data?.length">
                                 <TableRow
                                     v-for="item in cutoffs.data"
                                     :key="item.id"
@@ -138,6 +152,7 @@ const formatDate = (dateString) => {
                                         >
                                         <span v-else>{{ item.name }}</span>
                                     </TableCell>
+
                                     <TableCell>{{
                                         formatDate(item.from_cutoff_date)
                                     }}</TableCell>
@@ -146,26 +161,22 @@ const formatDate = (dateString) => {
                                     }}</TableCell>
 
                                     <TableCell class="text-center">
-                                        <p class="font-medium text-slate-700">
-                                            {{ item.attendances_count }}
-                                        </p>
+                                        {{ item.attendances_count ?? 0 }}
                                     </TableCell>
 
-                                    <TableCell
-                                        class="text-right px-6 space-x-1"
-                                    >
+                                    <TableCell class="text-right px-6">
                                         <Button
                                             variant="ghost"
                                             size="sm"
                                             @click="openView(item)"
                                             class="h-8 w-8 p-0 text-brand-blue hover:bg-blue-50"
-                                            title="View Attendance"
                                         >
                                             <Eye class="w-4 h-4" />
                                         </Button>
                                     </TableCell>
                                 </TableRow>
                             </template>
+
                             <TableRow v-else>
                                 <TableCell
                                     colspan="5"
@@ -177,6 +188,7 @@ const formatDate = (dateString) => {
                         </TableBody>
                     </Table>
                 </div>
+
                 <Pagination :links="cutoffs" />
             </CardContent>
         </Card>

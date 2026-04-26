@@ -45,12 +45,7 @@ const filteredRequests = computed(() => {
     const data = props.requests.data || [];
     if (!search.value) return data;
     const term = search.value.toLowerCase();
-    return data.filter(
-        (req) =>
-            req.date_filed.toLowerCase().includes(term) ||
-            req.original_date.toLowerCase().includes(term) ||
-            req.leader_status.toLowerCase().includes(term),
-    );
+    return data.filter((req) => req.date_filed.toLowerCase().includes(term));
 });
 
 const routeMap = {

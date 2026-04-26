@@ -25,15 +25,14 @@ import { AlertCircle } from "lucide-vue-next";
 
 const page = usePage();
 const authUser = page.props.authUser;
-const auth_user_type_id = page.props.auth_user_type_id;
 const overtime = page.props.overtime;
 const isEditing = page.props.isEditing ?? false;
 
+const auth_user_type_id = page.props.auth_user_type_id;
 const routeMap = {
     2: "/employee",
     3: "/head",
 };
-
 const baseRoute = routeMap[auth_user_type_id];
 
 const today = new Date().toISOString().split("T")[0];

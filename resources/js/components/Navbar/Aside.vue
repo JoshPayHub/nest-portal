@@ -19,8 +19,19 @@ import { Button } from "@/components/ui/button";
 const page = usePage();
 const user = page.props.auth.user;
 
+// ✅ FIX: normalize user type (important for HR / Head / Employee)
+const userType = computed(() => {
+    return user?.type?.toLowerCase();
+});
+
+// ✅ FIX: pending check (safe + consistent)
 const isPending = computed(() => {
-    return user?.type === "Employee" && page.props.auth.user.status_id == 4;
+    return (
+        (userType.value === "employee" ||
+            userType.value === "hr" ||
+            userType.value === "head") &&
+        page.props.auth.user.status_id == 4
+    );
 });
 
 // Tracking dialog state
@@ -37,7 +48,6 @@ const toggleCategory = (category) => {
 };
 
 // 3. Define the Menu Items mapped by Role Name
-// We use the exact key that matches your user type (e.g., "HR" or "Employee")
 const menuItems = {
     HR: [
         {
@@ -138,6 +148,7 @@ const menuItems = {
             icon: "fa-solid fa-user-plus",
         },
     ],
+
     Employee: [
         {
             label: "Dashboard",
@@ -214,7 +225,6 @@ const menuItems = {
     ],
 
     Head: [
-        // --- GENERAL ---
         {
             label: "Dashboard",
             href: "/head/dashboard",
@@ -231,7 +241,6 @@ const menuItems = {
             icon: "fa-solid fa-scroll",
         },
 
-        // --- STAFF MANAGEMENT SECTION ---
         { isHeading: true, label: "Staff Management" },
         {
             category: "Staff Forms",
@@ -274,6 +283,7 @@ const menuItems = {
                 },
             ],
         },
+
         {
             category: "Staff Payroll",
             icon: "fa-solid fa-file-invoice-dollar",
@@ -286,8 +296,8 @@ const menuItems = {
             ],
         },
 
-        // --- MY PERSONAL PORTAL SECTION ---
         { isHeading: true, label: "My Personal Portal" },
+
         {
             category: "My Forms",
             icon: "fa-solid fa-file-signature",
@@ -329,6 +339,7 @@ const menuItems = {
                 },
             ],
         },
+
         {
             category: "My Payroll",
             icon: "fa-solid fa-wallet",
@@ -348,19 +359,31 @@ const menuItems = {
     ],
 };
 
-// 4. Filter the menu based on the user's type
+// 4. Filter menu safely (FIXED)
 const filteredMenu = computed(() => {
     if (isPending.value) {
+        const profileRoutes = {
+            hr: "/hr/profile",
+            employee: "/employee/profile",
+            head: "/head/profile",
+        };
+
         return [
             {
                 label: "My Profile",
-                href: "/employee/profile", // Match your actual route
+                href: profileRoutes[userType.value],
                 icon: "fa-solid fa-user-gear",
             },
         ];
     }
 
-    return menuItems[user?.type] || [];
+    const map = {
+        hr: menuItems.HR,
+        employee: menuItems.Employee,
+        head: menuItems.Head,
+    };
+
+    return map[userType.value] || [];
 });
 
 // 5. Navigation handler

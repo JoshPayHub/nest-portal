@@ -23,13 +23,17 @@ import { toastStore } from "@/stores/toast";
 import { AlertCircle } from "lucide-vue-next";
 
 const page = usePage();
+
 const authUser = page.props.authUser;
 const auth_user_type_id = page.props.auth_user_type_id;
 const report = page.props.report;
 const isEditing = page.props.isEditing ?? false;
-const today = page.props.todayDate || new Date().toISOString().split("T")[0];
-const availableLeave = computed(() => Number(page.props.availableLeave) || 0);
-const STORAGE_KEY = "leave_form_draft";
+const today = page.props.todayDate;
+
+// ✅ BACKEND VALUES (AUTHORITATIVE)
+const availableLeave = computed(() => Number(page.props.availableLeave || 0));
+const leaveUsed = computed(() => Number(page.props.leaveUsed || 0));
+const leaveTotal = computed(() => Number(page.props.leaveTotal || 0));
 
 const routeMap = {
     2: "/employee",
@@ -37,96 +41,61 @@ const routeMap = {
 };
 const baseRoute = routeMap[auth_user_type_id];
 
-const formatDateForInput = (dateString) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    return date.toISOString().split("T")[0];
-};
-
 const form = useForm({
     name: authUser?.name ?? "",
     department_position: authUser
         ? `${authUser.department} / ${authUser.position}`
         : "",
-    report_date: report ? formatDateForInput(report.created_at) : today,
-    type_leave: report?.type_leave ?? "Birthday Leave",
-    start_date: "",
-    end_date: "",
+    report_date: report?.created_at
+        ? new Date(report.created_at).toISOString().split("T")[0]
+        : today,
+    type_leave: report?.type_leave ?? "Leave with Pay",
+    start_date: report?.start_date ?? "",
+    end_date: report?.end_date ?? "",
     reason: report?.reason ?? "",
 });
 
+// ✅ ONLY DISPLAY COMPUTATION (NO BUSINESS LOGIC)
 const totalDaysRequested = computed(() => {
     if (!form.start_date || !form.end_date) return 0;
+
     const start = new Date(form.start_date);
     const end = new Date(form.end_date);
-    const diffTime = end - start;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    return diffDays > 0 ? diffDays : 0;
+
+    const diff = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+    return diff > 0 ? diff : 0;
 });
 
-const balanceResult = computed(
-    () => availableLeave.value - totalDaysRequested.value,
-);
-const isBalanceInvalid = computed(
-    () => form.type_leave === "Leave with Pay" && balanceResult.value < 0,
-);
-
-const hasRejected = computed(() =>
-    (report?.statuses || []).some((s) => s.status_id === 5),
-);
-
-onMounted(() => {
-    if (isEditing && report) {
-        form.start_date = formatDateForInput(report.start_date);
-        form.end_date = formatDateForInput(report.end_date);
-    } else if (!isEditing) {
-        const savedDraft = JSON.parse(localStorage.getItem(STORAGE_KEY));
-        if (savedDraft) {
-            form.start_date = savedDraft.start_date;
-            form.end_date = savedDraft.end_date;
-            form.type_leave = savedDraft.type_leave;
-            form.reason = savedDraft.reason;
-        }
-    }
+// ❗ validation ONLY (not balance computation)
+const isBalanceInvalid = computed(() => {
+    return (
+        form.type_leave === "Leave with Pay" &&
+        totalDaysRequested.value > availableLeave.value
+    );
 });
 
 const submit = () => {
-    if (isEditing) {
-        form.put(`${baseRoute}/leaves/update/${report.id}`, {
-            preserveScroll: true,
-            onSuccess: () => {
-                toastStore.show(
-                    "Leave request submitted successfully!",
-                    "success",
-                );
-            },
-            onError: () => {
-                toastStore.show(
-                    "Please fix the errors and try again.",
-                    "error",
-                );
-            },
-        });
-    } else {
-        form.post(`${baseRoute}/leaves/store`, {
-            preserveScroll: true,
-            onSuccess: () => {
-                localStorage.removeItem(STORAGE_KEY);
-                form.reset();
-                form.report_date = today;
-                toastStore.show(
-                    "Leave request submitted successfully!",
-                    "success",
-                );
-            },
-            onError: () => {
-                toastStore.show(
-                    "Please fix the errors and try again.",
-                    "error",
-                );
-            },
-        });
+    if (isBalanceInvalid.value) {
+        toastStore.show("Insufficient leave balance.", "error");
+        return;
     }
+
+    const url = isEditing
+        ? `${baseRoute}/leaves/update/${report.id}`
+        : `${baseRoute}/leaves/store`;
+
+    const method = isEditing ? "put" : "post";
+
+    form[method](url, {
+        preserveScroll: true,
+        onSuccess: () => {
+            toastStore.show("Leave saved successfully!", "success");
+        },
+        onError: () => {
+            toastStore.show("Please fix errors.", "error");
+        },
+    });
 };
 </script>
 
@@ -137,10 +106,9 @@ const submit = () => {
             class="bg-amber-50 border border-amber-200 p-4 rounded-lg text-amber-800 text-sm flex items-center gap-2"
         >
             <AlertCircle class="h-4 w-4" />
-            <span
-                ><strong>Notice:</strong> Editing will reset status to
-                "Pending".</span
-            >
+            <span>
+                <strong>Notice:</strong> Editing will reset status to "Pending".
+            </span>
         </div>
 
         <Card class="border-blue-100 shadow-sm">
@@ -151,12 +119,13 @@ const submit = () => {
                     <span
                         class="hover:text-brand-blue cursor-pointer transition-colors"
                         @click="router.get(`${baseRoute}/leaves`)"
-                        >Leave List</span
                     >
+                        Leave List
+                    </span>
                     <span class="text-slate-300">/</span>
-                    <span class="font-bold text-brand-blue">{{
-                        isEditing ? "Edit Leave" : "New Application"
-                    }}</span>
+                    <span class="font-bold text-brand-blue">
+                        {{ isEditing ? "Edit Leave" : "New Application" }}
+                    </span>
                 </nav>
 
                 <div class="space-y-1">
@@ -169,12 +138,14 @@ const submit = () => {
                                 : "Application for Leave"
                         }}
                     </CardTitle>
-                    <CardDescription class="text-slate-500"
-                        >Manage your time off requests.</CardDescription
-                    >
+                    <CardDescription class="text-slate-500">
+                        Manage your time off requests.
+                    </CardDescription>
                 </div>
             </CardHeader>
+
             <CardContent class="grid grid-cols-12 gap-4 mt-6">
+                <!-- Employee -->
                 <div class="col-span-12 md:col-span-6">
                     <Label class="p-1">Employee Name</Label>
                     <Input
@@ -203,27 +174,14 @@ const submit = () => {
                     />
                 </div>
 
+                <!-- Leave Type -->
                 <div class="col-span-12 md:col-span-6">
                     <Label class="p-1">Type of Leave</Label>
-                    <Select
-                        v-model="form.type_leave"
-                        @update:modelValue="form.clearErrors('type_leave')"
-                    >
-                        <SelectTrigger
-                            :class="{
-                                'border-red-500': form.errors.type_leave,
-                            }"
-                            class="border-2 border-brand-blue"
-                        >
+                    <Select v-model="form.type_leave">
+                        <SelectTrigger class="border-2 border-brand-blue">
                             <SelectValue placeholder="Select Leave Type" />
                         </SelectTrigger>
                         <SelectContent>
-                            <!-- <SelectItem value="Birthday Leave"
-                                >Birthday Leave</SelectItem
-                            >
-                            <SelectItem value="Bereavement Leave"
-                                >Bereavement Leave</SelectItem
-                            > -->
                             <SelectItem value="Leave with Pay"
                                 >Leave with Pay</SelectItem
                             >
@@ -232,15 +190,28 @@ const submit = () => {
                             >
                         </SelectContent>
                     </Select>
-                    <div
-                        v-if="form.errors.type_leave"
-                        class="text-red-500 text-xs mt-1"
-                    >
-                        {{ form.errors.type_leave }}
-                    </div>
                 </div>
 
+                <!-- ✅ PRESERVED DESIGN (ONLY LABEL FIXED) -->
                 <template v-if="form.type_leave === 'Leave with Pay'">
+                    <div class="col-span-4">
+                        <Label class="p-1">Total Leave Pay</Label>
+                        <Input
+                            :model-value="leaveTotal"
+                            readonly
+                            class="bg-green-50 font-bold"
+                        />
+                    </div>
+
+                    <div class="col-span-4">
+                        <Label class="p-1">Used Leave Pay</Label>
+                        <Input
+                            :model-value="leaveUsed"
+                            readonly
+                            class="bg-slate-50 font-bold"
+                        />
+                    </div>
+
                     <div class="col-span-4">
                         <Label class="p-1">Available</Label>
                         <Input
@@ -249,59 +220,17 @@ const submit = () => {
                             class="bg-green-50 font-bold"
                         />
                     </div>
-                    <div class="col-span-4">
-                        <Label class="p-1">Less</Label>
-                        <Input
-                            :model-value="totalDaysRequested"
-                            readonly
-                            :class="{
-                                'text-red-600 font-bold': isBalanceInvalid,
-                            }"
-                        />
-                    </div>
-                    <div class="col-span-4">
-                        <Label class="p-1">Balance</Label>
-                        <Input
-                            :model-value="balanceResult"
-                            readonly
-                            :class="{
-                                'bg-red-100 text-red-700 font-bold':
-                                    isBalanceInvalid,
-                            }"
-                        />
-                    </div>
                 </template>
 
+                <!-- Dates -->
                 <div class="col-span-12 md:col-span-4">
                     <Label class="p-1">Leave Start Date</Label>
-                    <Input
-                        type="date"
-                        v-model="form.start_date"
-                        @input="form.clearErrors('start_date')"
-                        :class="{ 'border-red-500': form.errors.start_date }"
-                    />
-                    <div
-                        v-if="form.errors.start_date"
-                        class="text-red-500 text-xs mt-1"
-                    >
-                        {{ form.errors.start_date }}
-                    </div>
+                    <Input type="date" v-model="form.start_date" />
                 </div>
 
                 <div class="col-span-12 md:col-span-4">
                     <Label class="p-1">Leave End Date</Label>
-                    <Input
-                        type="date"
-                        v-model="form.end_date"
-                        @input="form.clearErrors('end_date')"
-                        :class="{ 'border-red-500': form.errors.end_date }"
-                    />
-                    <div
-                        v-if="form.errors.end_date"
-                        class="text-red-500 text-xs mt-1"
-                    >
-                        {{ form.errors.end_date }}
-                    </div>
+                    <Input type="date" v-model="form.end_date" />
                 </div>
 
                 <div class="col-span-12 md:col-span-4">
@@ -313,20 +242,10 @@ const submit = () => {
                     />
                 </div>
 
+                <!-- Reason -->
                 <div class="col-span-12">
                     <Label class="p-1">Reason for Leave</Label>
-                    <Textarea
-                        v-model="form.reason"
-                        @input="form.clearErrors('reason')"
-                        :class="{ 'border-red-500': form.errors.reason }"
-                        class="min-h-[100px]"
-                    />
-                    <div
-                        v-if="form.errors.reason"
-                        class="text-red-500 text-xs mt-1"
-                    >
-                        {{ form.errors.reason }}
-                    </div>
+                    <Textarea v-model="form.reason" class="min-h-[100px]" />
                 </div>
             </CardContent>
 
@@ -336,8 +255,10 @@ const submit = () => {
                 <Button
                     variant="ghost"
                     @click="router.get(`${baseRoute}/leaves`)"
-                    >Cancel</Button
                 >
+                    Cancel
+                </Button>
+
                 <Button
                     class="bg-brand-blue text-white"
                     :disabled="form.processing || isBalanceInvalid"

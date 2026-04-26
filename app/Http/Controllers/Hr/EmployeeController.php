@@ -8,6 +8,7 @@ use App\Models\Department;
 use App\Models\Position;
 use App\Models\Status;
 use App\Models\UserType;
+use App\Models\Leave; // ✅ ADD THIS
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -70,7 +71,7 @@ class EmployeeController extends Controller
 
     public function edit(User $user)
     {
-        // Format dates specifically for HTML5 date inputs (YYYY-MM-DD)
+        // Format dates for input
         $user->date_hired = $user->date_hired
             ? Carbon::parse($user->date_hired)->format('Y-m-d')
             : null;
@@ -78,6 +79,18 @@ class EmployeeController extends Controller
         $user->regularization_date = $user->regularization_date
             ? Carbon::parse($user->regularization_date)->format('Y-m-d')
             : null;
+
+        $currentYear = now()->year;
+
+        $leaveUsed = Leave::where('user_id', $user->id)
+            ->where('with_pay', true)
+            ->whereYear('start_date', $currentYear)
+            ->whereHas('approvalStatuses', function ($q) {
+                $q->where('status_id', 7);
+            }, '=', 2)
+            ->sum('total_days');
+
+        $user->leave_pay_used = $leaveUsed;
 
         return Inertia::render('management/HR/AddEmployee', [
             'employee' => $user,

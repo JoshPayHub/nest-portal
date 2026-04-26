@@ -332,15 +332,15 @@ const getStatusClass = (status) => {
                             From (Start)
                         </p>
                         <p class="text-sm font-semibold text-slate-700">
-                            {{ selectedUndertime?.from_date }}
+                            {{ selectedUndertime?.from_time }}
                         </p>
                     </div>
                     <div>
                         <p class="text-xs font-bold text-slate-400 uppercase">
-                            To (End)
+                            To (End) 213
                         </p>
                         <p class="text-sm font-semibold text-slate-700">
-                            {{ selectedUndertime?.to_date }}
+                            {{ selectedUndertime?.to_time }}
                         </p>
                     </div>
                     <div>
