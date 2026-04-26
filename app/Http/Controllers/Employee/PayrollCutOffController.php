@@ -31,7 +31,8 @@ class PayrollCutOffController extends Controller
 
         return Inertia::render('management/Employee/PayrollCutOff', [
             'cutoffs' => $cutoffs,
-            'filters' => $request->only(['search'])
+            'filters' => $request->only(['search']),
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
@@ -49,6 +50,15 @@ class PayrollCutOffController extends Controller
             ->where('payroll_cut_off_id', $id)
             ->first();
 
+        $userTypeId = $request->user()->user_type_id;
+
+        $routeMap = [
+            2 => 'employee.payrollcutoffs.index',
+            3 => 'head.payrollcutoffs.index',
+        ];
+
+        $routeName = $routeMap[$userTypeId];
+
         if ($attendance) {
             $approvals = $attendance->approvalStatuses;
 
@@ -56,7 +66,7 @@ class PayrollCutOffController extends Controller
             $hasRejection = $approvals->contains(fn($a) => in_array($a->status_id, [8, 9]));
 
             if ($hasApproval && !$hasRejection) {
-                return redirect()->route('employee.payrollcutoff.index')
+                return redirect()->route($routeName)
                     ->with('error', 'Attendance is currently under process or approved. Access denied.');
             }
         }
@@ -102,7 +112,8 @@ class PayrollCutOffController extends Controller
                 'approvals' => $attendance?->approvalStatuses ?? [],
             ],
             'isEditing' => (bool)$attendance,
-            'isLocked' => false, // Since they are allowed in, it's not locked
+            'isLocked' => false,
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
@@ -139,8 +150,17 @@ class PayrollCutOffController extends Controller
             // Reset approvals to Pending (4)
             $attendance->approvalStatuses()->update(['status_id' => 4]);
 
+            $userTypeId = $request->user()->user_type_id;
+
+            $routeMap = [
+                2 => 'employee.payrollcutoffs.index',
+                3 => 'head.payrollcutoffs.index',
+            ];
+
+            $routeName = $routeMap[$userTypeId];
+
             DB::commit();
-            return redirect()->route('employee.payrollcutoff.index')->with('success', 'Attendance updated.');
+            return redirect()->route($routeName)->with('success', 'Attendance updated.');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Error: ' . $e->getMessage());
