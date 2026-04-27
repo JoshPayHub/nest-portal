@@ -132,4 +132,12 @@ class User extends Authenticatable
     {
         return $this->hasOne(SalaryEmployee::class, 'user_id');
     }
+    public function otps()
+    {
+        return $this->hasMany(UserOtp::class);
+    }
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
 }

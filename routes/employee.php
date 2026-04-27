@@ -24,6 +24,7 @@ Route::middleware(['auth', 'user_type:Employee'])->prefix('employee')->name('emp
     Route::controller(ProfileController::class)->group(function () {
         Route::get('/profile', 'index')->name('profile');
         Route::put('/profile/update', 'update')->name('profile.update');
+        Route::put('/profile/change-password', 'changePassword')->name('profile.change-password');
     });
 
     // Announcements
