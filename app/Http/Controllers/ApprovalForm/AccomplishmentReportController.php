@@ -19,26 +19,21 @@ class AccomplishmentReportController extends Controller
         $user = $request->user();
         $isHR = $user->user_type_id == 1;
 
-        // 1. Fetch Active Departments and Positions
         $departments = Department::where('status_id', 1)->orderBy('name', 'asc')->get();
         $positions = Position::where('status_id', 1)->orderBy('name', 'asc')->get();
 
-        // 2. Fetch Employees for Filter
         $employeesQuery = User::query()->select('id', 'first_name', 'last_name', 'username', 'department_id');
 
         if (!$isHR) {
-            // Heads only see employees in their department
             $employeesQuery->where('department_id', $user->department_id);
         } elseif ($request->filled('department_id')) {
-            // HR filtering employees by department
             $employeesQuery->where('department_id', $request->department_id);
         }
 
         $employees = $employeesQuery->orderBy('first_name', 'asc')->get();
 
-        // 3. Build Reports Query
         $reportsQuery = AccomplishReport::with([
-            'user.department', // Load department relationship for the employee
+            'user.department',
             'activities.status',
             'approvalStatuses.user.userType',
             'approvalStatuses.status'

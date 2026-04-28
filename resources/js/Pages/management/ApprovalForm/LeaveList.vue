@@ -1,6 +1,6 @@
 <script setup>
-import { ref, watch } from "vue";
-import { router } from "@inertiajs/vue3";
+import { ref, computed, watch, onMounted } from "vue";
+import { router, usePage } from "@inertiajs/vue3";
 import {
     Search,
     Calendar,
@@ -46,9 +46,9 @@ import {
 } from "@/Components/ui/dialog";
 
 const props = defineProps({
-    items: Object, // Leaves data from Controller
-    departments: Array, // Mapped to 'departments' in Controller
-    employeeOptions: Array, // Mapped to 'employeeOptions' in Controller
+    items: Object,
+    departments: Array,
+    employeeOptions: Array,
     filters: Object,
     auth_user_type: Number,
 });
@@ -84,6 +84,12 @@ watch(
 const openView = (item) => {
     selectedItem.value = item;
     isViewOpen.value = true;
+
+    const url = new URL(window.location);
+    if (url.searchParams.has("open")) {
+        url.searchParams.delete("open");
+        window.history.replaceState({}, "", url);
+    }
 };
 
 const handleAction = (id, statusId) => {
@@ -110,10 +116,6 @@ const handleAction = (id, statusId) => {
     );
 };
 
-/**
- * Helper to determine current user's approval status
- * Logic matches the Controller's keys: leader_status_name / hr_status_name
- */
 const getRelevantStatus = (item) => {
     if (!item) return null;
     const isHR = props.auth_user_type === 1;
@@ -131,6 +133,31 @@ const getStatusClass = (status) => {
     if (s === "rejected") return "bg-red-100 text-red-700 border-red-200";
     return "bg-amber-100 text-amber-700 border-amber-200";
 };
+
+const checkUrlForModal = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const idToOpen = urlParams.get("open");
+
+    if (idToOpen && props.items?.data?.length > 0) {
+        const item = props.items.data.find((r) => r.id === parseInt(idToOpen));
+
+        if (item) {
+            openView(item);
+        }
+    }
+};
+
+onMounted(() => {
+    checkUrlForModal();
+});
+
+watch(
+    [() => usePage().url, () => props.items],
+    () => {
+        checkUrlForModal();
+    },
+    { deep: true },
+);
 </script>
 
 <template>

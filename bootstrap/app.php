@@ -28,8 +28,9 @@ return Application::configure(basePath: dirname(__DIR__))
                 if (!$user) return '/';
 
                 return match ((int) $user->user_type_id) {
-                    1 => route('hr.dashboard'),      // To /hr/dashboard
-                    2 => route('employee.dashboard'), // To /employee/dashboard
+                    1 => route('hr.dashboard'),
+                    2 => route('employee.dashboard'),
+                    3 => route('head.dashboard'),
                 };
             },
         );

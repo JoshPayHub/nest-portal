@@ -3,6 +3,7 @@
 use App\Http\Controllers\ApprovalForm\AccomplishmentReportController;
 use App\Http\Controllers\ApprovalForm\BusinessNotificationController;
 use App\Http\Controllers\ApprovalForm\ChangeOffController;
+use App\Http\Controllers\Employee\NotificationController;
 use App\Http\Controllers\Head\DashboardController;
 use App\Http\Controllers\ApprovalForm\LeaveAbsenceController;
 use App\Http\Controllers\ApprovalForm\LeaveController;
@@ -31,6 +32,7 @@ use Illuminate\Support\Facades\Route;
 // head.php
 Route::middleware(['auth', 'user_type:Head'])->prefix('head')->name('head.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/notification', [NotificationController::class, 'index'])->name('notification.index');
 
     // Accomplishment Report Form
     Route::controller(AccomplishmentReportController::class)->group(function () {

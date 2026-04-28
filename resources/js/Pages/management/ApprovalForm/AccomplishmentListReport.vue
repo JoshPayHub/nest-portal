@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { usePage, router } from "@inertiajs/vue3";
 import {
     Search,
@@ -100,6 +100,11 @@ const filteredReports = computed(() => {
 const openView = (report) => {
     selectedReport.value = report;
     isViewOpen.value = true;
+
+    // Clean the URL without reloading the page
+    const url = new URL(window.location);
+    url.searchParams.delete("open");
+    window.history.replaceState({}, "", url);
 };
 
 const handleAction = (reportId, statusId) => {
@@ -136,6 +141,31 @@ const getStatusClass = (status) => {
 const getRoleLabel = computed(() => {
     return props.auth_user_type === 1 ? "HR Status" : "Your Status";
 });
+
+const checkUrlForModal = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const reportIdToOpen = urlParams.get("open");
+
+    if (reportIdToOpen) {
+        const report = props.reports.data.find(
+            (r) => r.id === parseInt(reportIdToOpen),
+        );
+        if (report) {
+            openView(report);
+        }
+    }
+};
+
+onMounted(() => {
+    checkUrlForModal();
+});
+
+watch(
+    () => usePage().url,
+    () => {
+        checkUrlForModal();
+    },
+);
 </script>
 
 <template>

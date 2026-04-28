@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
 use App\Models\Leave;
+use App\Models\Notification;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Carbon\Carbon;
@@ -17,7 +19,7 @@ class LeaveController extends Controller
         $currentYear = now()->year;
         $totalLeaveCredits = $user->leave_pay;
 
-        // ✅ FIXED: Only count leaves where BOTH HR and HEAD are approved (status_id = 7)
+        // ✅ Only count leaves where BOTH HR and HEAD are approved (status_id = 7)
         $leaves = Leave::where('user_id', $user->id)
             ->where('with_pay', true)
             ->whereYear('start_date', $currentYear)
@@ -25,7 +27,6 @@ class LeaveController extends Controller
             ->get();
 
         $used = $leaves->filter(function ($leave) {
-
             $hasHRApproved = $leave->approvalStatuses->contains(function ($s) {
                 return $s->status_id == 7 && $s->user?->user_type_id == 1; // HR
             });
@@ -35,7 +36,6 @@ class LeaveController extends Controller
             });
 
             return $hasHRApproved && $hasHeadApproved;
-
         })->sum('total_days');
 
         return [
@@ -54,7 +54,6 @@ class LeaveController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(10)
             ->through(function ($leave) {
-
                 $leaderEntry = $leave->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 3);
                 $hrEntry     = $leave->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 1);
 
@@ -62,13 +61,14 @@ class LeaveController extends Controller
                     'id' => $leave->id,
                     'date_filed' => $leave->created_at->format('M d, Y'),
                     'type_leave' => $leave->type_leave,
-                    'start_date' => Carbon::parse($leave->start_date)->format('M d, Y'),
-                    'end_date'   => Carbon::parse($leave->end_date)->format('M d, Y'),
+                    'start_date' => Carbon::parse($leave->start_date)->format('Y-m-d'),
+                    'end_date'   => Carbon::parse($leave->end_date)->format('Y-m-d'),
                     'total_days' => $leave->total_days,
                     'reason' => $leave->reason,
-                    'pay_type'   => $leave->with_pay ? 'With Pay' : 'Without Pay',
+                    'pay_type'   => $leave->with_pay ? 'Leave with Pay' : 'Leave without Pay',
                     'leader_status' => $leaderEntry?->status?->name ?? 'Pending',
                     'hr_status'     => $hrEntry?->status?->name ?? 'Pending',
+                    'can_edit'      => !$leaderEntry && !$hrEntry,
                 ];
             });
 
@@ -121,13 +121,11 @@ class LeaveController extends Controller
 
         if ($request->type_leave === 'Leave with Pay') {
             if ($totalDays > $balance['balance']) {
-                return back()->withErrors([
-                    'end_date' => 'Insufficient leave balance. Available: ' . $balance['balance']
-                ]);
+                return back()->withErrors(['end_date' => 'Insufficient leave balance. Available: ' . $balance['balance']]);
             }
         }
 
-        Leave::create([
+        $leave = Leave::create([
             'user_id' => $user->id,
             'department_id' => $user->department_id,
             'position_id' => $user->position_id,
@@ -139,6 +137,125 @@ class LeaveController extends Controller
             'with_pay' => $request->type_leave === 'Leave with Pay'
         ]);
 
-        return redirect()->back()->with('message', 'Leave request submitted successfully!');
+        $this->notifyUsers(
+            $request,
+            $leave,
+            "New Leave Request",
+            $user->first_name . " has submitted a new Leave request."
+        );
+
+        return redirect()->route('employee.leaves.index')->with('message', 'Leave request submitted successfully!');
+    }
+
+    public function edit(Request $request, $id)
+    {
+        $user = Auth::user()->load(['department', 'position']);
+        // Fix: Use the relationship instead of DB::table to avoid "table not found" error
+        $leave = Leave::with(['approvalStatuses'])->where('user_id', $user->id)->findOrFail($id);
+
+        if ($leave->approvalStatuses->count() > 0) {
+            return redirect()->back()->with('error', 'Cannot edit a leave request that has already been processed.');
+        }
+
+        $balance = $this->getLeaveBalance($user);
+
+        return Inertia::render('management/Employee/Leave', [
+            'authUser' => [
+                'name' => $user->first_name . ' ' . $user->last_name,
+                'department' => $user->department?->name ?? 'N/A',
+                'position' => $user->position?->name ?? 'N/A',
+            ],
+            'report' => $leave, // Changed from 'leave' to 'report' to match your Manpower/Frontend logic
+            'isEditing' => true,
+            'todayDate' => now()->toDateString(),
+            'availableLeave' => $balance['balance'],
+            'leaveTotal' => $balance['total'],
+            'leaveUsed' => $balance['used'],
+            'auth_user_type_id' => $user->user_type_id,
+        ]);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $user = Auth::user();
+        $leave = Leave::where('user_id', $user->id)->findOrFail($id);
+
+        $validated = $request->validate([
+            'type_leave' => 'required|string',
+            'start_date' => 'required|date',
+            'end_date'   => 'required|date|after_or_equal:start_date',
+            'reason'     => 'required|string|min:10',
+        ]);
+
+        $start = Carbon::parse($request->start_date);
+        $end = Carbon::parse($request->end_date);
+        $totalDays = $start->diffInDays($end) + 1;
+
+        if ($request->type_leave === 'Leave with Pay') {
+            $balance = $this->getLeaveBalance($user);
+            if ($totalDays > $balance['balance']) {
+                return back()->withErrors(['end_date' => 'Insufficient leave balance.']);
+            }
+        }
+
+        DB::transaction(function () use ($request, $leave, $validated, $totalDays, $user) {
+            $leave->update([
+                'type_leave' => $validated['type_leave'],
+                'start_date' => $validated['start_date'],
+                'end_date'   => $validated['end_date'],
+                'reason'     => $validated['reason'],
+                'total_days' => $totalDays,
+                'with_pay'   => $request->type_leave === 'Leave with Pay'
+            ]);
+
+            // Optional: If you need to clear old approval logs when updated
+            // DB::table('approval_statuses')->where('leave_id', $leave->id)->delete();
+
+            $this->notifyUsers(
+                $request,
+                $leave,
+                "Leave Updated",
+                $user->first_name . " has updated their Leave request and is awaiting re-approval."
+            );
+        });
+
+        $routeMap = [
+            2 => 'employee.leaves.index',
+            3 => 'head.leaves.index',
+        ];
+
+        return redirect()->route($routeMap[$user->user_type_id])->with('message', 'Leave request updated successfully!');
+    }
+
+    private function notifyUsers(Request $request, $report, $title, $message)
+    {
+        $employeeId = $report->user_id;
+
+        $deptHeads = User::where('user_type_id', 3)
+            ->where('department_id', $report->department_id)
+            ->get();
+
+        foreach ($deptHeads as $head) {
+            Notification::create([
+                'user_id'         => $employeeId,
+                'user_type_id'    => 3,
+                'title'           => $title,
+                'message'         => $message,
+                'route'           => '/head/leave',
+                'data'            => json_encode(['leave_id' => $report->id]),
+            ]);
+        }
+
+        $hrUsers = User::where('user_type_id', 1)->get();
+        foreach ($hrUsers as $hr) {
+            Notification::create([
+                'user_id'         => $employeeId,
+                'user_type_id'    => 1,
+                'title'           => $title,
+                'message'         => $message,
+                'route'           => '/hr/leave',
+                'data'            => json_encode(['leave_id' => $report->id]),
+            ]);
+        }
     }
 }

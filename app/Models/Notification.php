@@ -11,6 +11,7 @@ class Notification extends Model
 
     protected $fillable = [
         'user_id',
+        'user_type_id',
         'title',
         'message',
         'route',
@@ -26,17 +27,17 @@ class Notification extends Model
         'read_at' => 'datetime',
     ];
 
-    /**
-     * Relation to user
-     */
+    // This is the missing relationship causing the error
+    public function employee()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Mark as read
-     */
     public function markAsRead(): void
     {
         $this->update([

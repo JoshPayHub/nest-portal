@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('user_id')
                 ->constrained('users')
                 ->onDelete('restrict');
+            $table->foreignId('user_type_id')->nullable()->constrained('user_types')->onDelete('restrict');
             $table->string('title');
             $table->text('message')->nullable();
             $table->string('route')->nullable();

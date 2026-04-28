@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
 use App\Models\ChangeOff;
+use App\Models\Notification;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -89,6 +91,12 @@ class ChangeOffController extends Controller
                 'original_day_id' => $validated['original_off_id'],
                 'new_day_id'      => $validated['new_off_id'],
             ]);
+            $this->notifyUsers(
+                $request,
+                $changeOff,
+                "New Change Off request",
+                "A new Change Off request has been submitted by " . $request->user()->first_name
+            );
         });
 
         return redirect()->back()->with('message', 'Change Off submitted successfully!');
@@ -170,7 +178,7 @@ class ChangeOffController extends Controller
             'new_off_id' => 'required|exists:offs,id',
         ]);
 
-        DB::transaction(function () use ($changeOff, $validated) {
+         DB::transaction(function () use ($request, $changeOff, $validated) {
             // Removed time and date from update
             $changeOff->label()->update([
                 'off_id'          => $validated['request_type'],
@@ -185,6 +193,13 @@ class ChangeOffController extends Controller
                     'status_id' => 4, // Pending
                     'updated_at' => now()
                 ]);
+
+            $this->notifyUsers(
+                $request,
+                $changeOff,
+                "Change Off Updated",
+                $request->user()->first_name . " has updated their Change Off and is awaiting re-approval."
+            );
         });
 
         $userTypeId = $request->user()->user_type_id;
@@ -198,4 +213,36 @@ class ChangeOffController extends Controller
 
         return redirect()->route($routeName)->with('message', 'Request updated and resubmitted.');
     }
+
+    private function notifyUsers(Request $request, $report, $title, $message)
+    {
+        $employeeId = $report->user_id;
+        $deptHeads = User::where('user_type_id', 3)
+            ->where('department_id', $report->department_id)
+            ->get();
+
+        foreach ($deptHeads as $head) {
+            Notification::create([
+                'user_id'         => $employeeId,
+                'user_type_id'    => 3,
+                'title'           => $title,
+                'message'         => $message,
+                'route'           => '/head/change-off',
+                'data'            => json_encode(['change_off_id' => $report->id]),
+            ]);
+        }
+
+        $hrUsers = User::where('user_type_id', 1)->get();
+        foreach ($hrUsers as $hr) {
+            Notification::create([
+                'user_id'         => $employeeId,
+                'user_type_id'    => 1,
+                'title'           => $title,
+                'message'         => $message,
+                'route'           => '/hr/change-off',
+                'data'            => json_encode(['change_off_id' => $report->id]),
+            ]);
+        }
+    }
+
 }

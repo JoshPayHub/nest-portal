@@ -8,6 +8,7 @@ use App\Http\Controllers\Employee\DashboardController;
 use App\Http\Controllers\Employee\LeaveAbsenceController;
 use App\Http\Controllers\Employee\LeaveController;
 use App\Http\Controllers\Employee\ManpowerController;
+use App\Http\Controllers\Employee\NotificationController;
 use App\Http\Controllers\Employee\OvertimeRequestController;
 use App\Http\Controllers\Employee\PayrollCutOffController;
 use App\Http\Controllers\Employee\AttendanceController;
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\Route;
 // hr.php
 Route::middleware(['auth', 'user_type:Employee'])->prefix('employee')->name('employee.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/notification', [NotificationController::class, 'index'])->name('notification.index');
 
      // Profile
     Route::controller(ProfileController::class)->group(function () {

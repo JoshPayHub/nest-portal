@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
 use App\Models\BusinessNotification;
+use App\Models\Notification;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Carbon\Carbon;
@@ -72,11 +74,18 @@ class BusinessNotificationController extends Controller
             'returned_time' => 'required',
         ]);
 
-        BusinessNotification::create(array_merge($validated, [
+        $manpower = BusinessNotification::create(array_merge($validated, [
             'user_id' => Auth::id(),
             'department_id' => Auth::user()->department_id,
             'position_id' => Auth::user()->position_id,
         ]));
+
+        $this->notifyUsers(
+            $request,
+            $manpower,
+            "New Business Notification request",
+            "A new Business Notification request has been submitted by " . $request->user()->first_name
+        );
 
         return redirect()->back()->with('message', 'Business notification submitted successfully');
     }
@@ -143,14 +152,52 @@ class BusinessNotificationController extends Controller
             'returned_time' => 'required',
         ]);
 
-        DB::transaction(function () use ($notification, $validated) {
+        DB::transaction(function () use ($request, $notification, $validated) {
             $notification->update($validated);
             // Reset statuses to Pending (Assumed ID 4)
             DB::table('business_notification_statuses')
                 ->where('business_notification_id', $notification->id)
                 ->update(['status_id' => 4, 'updated_at' => now()]);
+
+            $this->notifyUsers(
+                $request,
+                $notification,
+                "Business Notification Updated",
+                $request->user()->first_name . " has updated their Business Notification and is awaiting re-approval."
+            );
         });
 
         return redirect()->route($routeName)->with('message', 'Notification updated.');
+    }
+
+    private function notifyUsers(Request $request, $report, $title, $message)
+    {
+        $employeeId = $report->user_id;
+        $deptHeads = User::where('user_type_id', 3)
+            ->where('department_id', $report->department_id)
+            ->get();
+
+        foreach ($deptHeads as $head) {
+            Notification::create([
+                'user_id'         => $employeeId,
+                'user_type_id'    => 3,
+                'title'           => $title,
+                'message'         => $message,
+                'route'           => '/head/business-notification',
+                'data'            => json_encode(['business_notification_id' => $report->id]),
+            ]);
+        }
+
+        $hrUsers = User::where('user_type_id', 1)->get();
+        foreach ($hrUsers as $hr) {
+            Notification::create([
+                'user_id'         => $employeeId,
+                'user_type_id'    => 1,
+                'title'           => $title,
+                'message'         => $message,
+                'route'           => '/hr/business-notification',
+                'data'            => json_encode(['business_notification_id' => $report->id]),
+            ]);
+        }
     }
 }

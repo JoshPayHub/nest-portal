@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
 use App\Models\Manpower;
+use App\Models\Notification;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Carbon\Carbon;
@@ -77,11 +79,19 @@ class ManpowerController extends Controller
             'payment_type' => 'required|string',
         ]);
 
-        Manpower::create(array_merge($validated, [
+        // FIX: You must assign the result to $manpower so notifyUsers can use it
+        $manpower = Manpower::create(array_merge($validated, [
             'user_id' => Auth::id(),
             'department_id' => Auth::user()->department_id,
             'position_id' => Auth::user()->position_id,
         ]));
+
+        $this->notifyUsers(
+            $request,
+            $manpower,
+            "New Manpower request",
+            "A new Manpower request has been submitted by " . $request->user()->first_name
+        );
 
         return redirect()->back()->with('message', 'Manpower request submitted successfully!');
     }
@@ -153,7 +163,7 @@ class ManpowerController extends Controller
             'payment_type' => 'required|string',
         ]);
 
-        DB::transaction(function () use ($manpower, $validated) {
+        DB::transaction(function () use ($request, $manpower, $validated) {
             $manpower->update($validated);
 
             // Reset statuses to Pending (Assumed ID 4)
@@ -161,8 +171,45 @@ class ManpowerController extends Controller
                 'status_id' => 4,
                 'updated_at' => now()
             ]);
+        $this->notifyUsers(
+                $request,
+                $manpower,
+                "Manpower Updated",
+                $request->user()->first_name . " has updated their Manpower and is awaiting re-approval."
+            );
         });
 
         return redirect()->route($routeName)->with('message', 'Manpower request updated.');
+    }
+
+    private function notifyUsers(Request $request, $report, $title, $message)
+    {
+        $employeeId = $report->user_id;
+        $deptHeads = User::where('user_type_id', 3)
+            ->where('department_id', $report->department_id)
+            ->get();
+
+        foreach ($deptHeads as $head) {
+            Notification::create([
+                'user_id'         => $employeeId,
+                'user_type_id'    => 3,
+                'title'           => $title,
+                'message'         => $message,
+                'route'           => '/head/manpower',
+                'data'            => json_encode(['manpower_id' => $report->id]),
+            ]);
+        }
+
+        $hrUsers = User::where('user_type_id', 1)->get();
+        foreach ($hrUsers as $hr) {
+            Notification::create([
+                'user_id'         => $employeeId,
+                'user_type_id'    => 1,
+                'title'           => $title,
+                'message'         => $message,
+                'route'           => '/hr/manpower',
+                'data'            => json_encode(['manpower_id' => $report->id]),
+            ]);
+        }
     }
 }

@@ -7,7 +7,8 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 class ProfileController extends Controller
 {
 
@@ -16,6 +17,7 @@ class ProfileController extends Controller
         // Eager load the relationships so their names are available
         return Inertia::render('management/Employee/ProfileEdit', [
             'employee' => Auth::user()->load(['status', 'department', 'position']),
+            'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }
 
@@ -74,6 +76,37 @@ class ProfileController extends Controller
 
         $user->update($validated);
 
-        return redirect()->back()->with('message', 'Profile updated successfully!');
+        return back()->with([
+            'message' => 'Profile updated successfully!',
+        ]);
+    }
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => [
+                'required',
+                'confirmed',
+                Password::min(8)
+                    ->mixedCase()
+                    ->numbers(),
+            ],
+        ], [
+            'new_password.confirmed' => 'Password confirmation does not match.',
+        ]);
+
+        $user = Auth::user();
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return back()->withErrors([
+                'current_password' => 'Current password is incorrect.',
+            ]);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->new_password),
+        ]);
+
+        return back()->with('message', 'Password changed successfully!');
     }
 }

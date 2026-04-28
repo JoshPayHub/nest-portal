@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Employee\NotificationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -15,41 +16,9 @@ Route::get('/forgot-password', function () {
     return Inertia::render('Auth/Forgot_Password');
 });
 
-Route::get('/management/Recruitment', function () {
-    return Inertia::render('management/Recruitment');
-});
+Route::post('/notifications/{id}/mark-as-read', [NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
+Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead'])->name('notifications.markAllRead');
 
-Route::get('/management/AttendanceLeave', function () {
-    return Inertia::render('management/AttendanceLeave');
-});
-
-Route::get('/management/TrainingDevelopment', function () {
-    return Inertia::render('management/TrainingDevelopment');
-});
-
-Route::get('/management/MedicalWellness', function () {
-    return Inertia::render('management/MedicalWellness');
-});
-
-Route::get('/management/DisciplineCases', function () {
-    return Inertia::render('management/DisciplineCases');
-});
-
-Route::get('/management/Reports', function () {
-    return Inertia::render('management/Reports');
-});
-
-Route::get('/management/Notification', function () {
-    return Inertia::render('management/Notification');
-});
-
-Route::get('/management/Profile', function () {
-    return Inertia::render('management/Profile');
-});
-
-Route::get('/management/register', function () {
-    return Inertia::render('management/Register');
-});
 
 require __DIR__ . '/auth.php';
 require __DIR__ . '/hr.php';

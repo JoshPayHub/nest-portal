@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { Link, router } from "@inertiajs/vue3";
 import {
     Plus,
@@ -98,6 +98,19 @@ const getStatusClass = (status) => {
     if (s === "pending") return "bg-amber-100 text-amber-700";
     return "bg-slate-100 text-slate-600";
 };
+
+// trigger model for notification
+onMounted(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const reportIdToOpen = urlParams.get('open');
+
+    if (reportIdToOpen) {
+        const report = props.reports.data.find(r => r.id == reportIdToOpen);
+        if (report) {
+            openView(report);
+        }
+    }
+});
 </script>
 
 <template>

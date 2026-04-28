@@ -8,6 +8,7 @@ use App\Http\Controllers\ApprovalForm\LeaveController;
 use App\Http\Controllers\ApprovalForm\ManpowerController;
 use App\Http\Controllers\ApprovalForm\OvertimeRequestController;
 use App\Http\Controllers\ApprovalForm\UndertimeFormController;
+use App\Http\Controllers\Employee\NotificationController;
 use App\Http\Controllers\Hr\AnnouncementPolicyController;
 use App\Http\Controllers\Hr\DashboardController;
 use App\Http\Controllers\Hr\DepartmentController;
@@ -25,6 +26,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth', 'user_type:HR'])->prefix('hr')->name('hr.')->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/notification', [NotificationController::class, 'index'])->name('notification.index');
 
     Route::controller(AnnouncementPolicyController::class)->group(function () {
         Route::get('/announcements-policies', 'index')->name('announcementpolicy.index');

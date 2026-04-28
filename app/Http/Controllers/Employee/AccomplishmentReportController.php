@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
 use App\Models\AccomplishReport;
+use App\Models\Notification;
 use App\Models\Status;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -105,9 +107,14 @@ class AccomplishmentReportController extends Controller
                     'status_id' => $activity['status_id'],
                 ]);
             }
+            $this->notifyUsers(
+                $request,
+                $report,
+                "New Accomplishment Report",
+                "A new Accomplishment Report has been submitted by " . $request->user()->first_name
+            );
         });
-
-        return redirect()->back()->with('message', 'Accomplishment report submitted successfully!');
+        return redirect()->back()->with('message', 'Accomplishment Report submitted successfully!');
     }
 
     public function edit(Request $request, $id)
@@ -126,10 +133,6 @@ class AccomplishmentReportController extends Controller
         $isHRApproved = $approvals->contains(fn($a) => $a->user->user_type_id == 1 && $a->status_id == 7);
         $hasAnyRejection = $approvals->contains(fn($a) => $a->status_id == 8);
 
-        /**
-         * LOCK LOGIC UPDATED:
-         * If AT LEAST ONE person has approved AND no one has rejected, lock it.
-         */
         if (($isLeaderApproved || $isHRApproved) && !$hasAnyRejection) {
             return redirect()->back()->with('error', 'Reports cannot be edited once approval has started. It must be rejected first.');
         }
@@ -167,7 +170,7 @@ class AccomplishmentReportController extends Controller
             'activities.*.status_id' => ['required', 'exists:statuses,id'],
         ]);
 
-        DB::transaction(function () use ($report, $validated) {
+        DB::transaction(function () use ($request, $report, $validated) {
             $report->update([
                 'from_date' => $validated['period_from'],
                 'to_date' => $validated['period_to'],
@@ -189,6 +192,13 @@ class AccomplishmentReportController extends Controller
                     'status_id' => $activity['status_id'],
                 ]);
             }
+
+            $this->notifyUsers(
+                $request,
+                $report,
+                "Accomplishment Report Updated",
+                $request->user()->first_name . " has updated their Accomplishment Report and is awaiting re-approval."
+            );
         });
 
         $userTypeId = $request->user()->user_type_id;
@@ -202,5 +212,36 @@ class AccomplishmentReportController extends Controller
 
         return redirect()->route($routeName)
             ->with('message', 'Report updated successfully and reset to pending for all approvers.');
+    }
+
+    private function notifyUsers(Request $request, $report, $title, $message)
+    {
+        $employeeId = $report->user_id;
+        $deptHeads = User::where('user_type_id', 3)
+            ->where('department_id', $report->department_id)
+            ->get();
+
+        foreach ($deptHeads as $head) {
+            Notification::create([
+                'user_id'         => $employeeId,
+                'user_type_id'    => 3,
+                'title'           => $title,
+                'message'         => $message,
+                'route'           => '/head/accomplishment-report',
+                'data'            => json_encode(['report_id' => $report->id]),
+            ]);
+        }
+
+        $hrUsers = User::where('user_type_id', 1)->get();
+        foreach ($hrUsers as $hr) {
+            Notification::create([
+                'user_id'         => $employeeId,
+                'user_type_id'    => 1,
+                'title'           => $title,
+                'message'         => $message,
+                'route'           => '/hr/accomplishment-report',
+                'data'            => json_encode(['report_id' => $report->id]),
+            ]);
+        }
     }
 }

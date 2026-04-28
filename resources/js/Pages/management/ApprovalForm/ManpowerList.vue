@@ -1,6 +1,6 @@
 <script setup>
-import { ref, watch, computed } from "vue";
-import { router } from "@inertiajs/vue3";
+import { ref, computed, watch, onMounted } from "vue";
+import { router, usePage } from "@inertiajs/vue3";
 import {
     Search,
     Eye,
@@ -47,9 +47,9 @@ import {
 const props = defineProps({
     items: Object,
     employeeOptions: Array,
-    departments: Array, // Added departments prop
+    departments: Array,
     filters: Object,
-    auth_user_type: Number, // Added user type prop
+    auth_user_type: Number,
 });
 
 const search = ref("");
@@ -79,6 +79,12 @@ watch([search, selectedEmployee, selectedDepartment], ([s, emp, dept]) => {
 const openView = (item) => {
     selectedItem.value = item;
     isViewOpen.value = true;
+
+    const url = new URL(window.location);
+    if (url.searchParams.has("open")) {
+        url.searchParams.delete("open");
+        window.history.replaceState({}, "", url);
+    }
 };
 
 // APPROVE / REJECT
@@ -125,6 +131,31 @@ const canUserApprove = (item) => {
 
     return false;
 };
+
+const checkUrlForModal = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const idToOpen = urlParams.get("open");
+
+    if (idToOpen && props.items?.data?.length > 0) {
+        const item = props.items.data.find((r) => r.id === parseInt(idToOpen));
+
+        if (item) {
+            openView(item);
+        }
+    }
+};
+
+onMounted(() => {
+    checkUrlForModal();
+});
+
+watch(
+    [() => usePage().url, () => props.items],
+    () => {
+        checkUrlForModal();
+    },
+    { deep: true },
+);
 </script>
 
 <template>

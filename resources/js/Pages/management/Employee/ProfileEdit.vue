@@ -1,6 +1,6 @@
 <script setup>
-import { ref, onMounted } from "vue"; // watch removed as onMounted is sufficient here
-import { useForm, usePage } from "@inertiajs/vue3";
+import { ref, onMounted, computed } from "vue"; // ✅ added computed
+import { useForm, usePage, router } from "@inertiajs/vue3";
 import { toastStore } from "@/stores/toast";
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
@@ -20,98 +20,212 @@ import {
     Info,
     CheckCircle,
     ExternalLink,
+    Lock,
+    Eye,
+    EyeOff,
 } from "lucide-vue-next";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/Components/ui/dialog";
 
-const { props } = usePage();
-const employee = props.employee;
+const page = usePage();
+const employee = computed(() => page.props.employee);
+
+const auth_user_type_id = page.props.auth_user_type_id;
+
+const routeMap = {
+    2: "employee",
+    3: "head",
+};
+
+const baseRoute = routeMap[auth_user_type_id];
 
 const form = useForm({
     _method: "put",
 
     // employee edit
-    status_id: employee.status_id,
-    first_name: employee.first_name ?? "",
-    middle_name: employee.middle_name ?? "",
-    last_name: employee.last_name ?? "",
-    suffix: employee.suffix ?? "",
-    gender: employee.gender ?? "",
-    date_birth: employee.date_birth ?? "",
-    civil_status: employee.civil_status ?? "",
-    nationality: employee.nationality ?? "",
-    personal_email: employee.personal_email ?? "",
-    mobile_number: employee.mobile_number ?? "",
-    telephone_number: employee.telephone_number ?? "",
-    present_address: employee.present_address ?? "",
-    permanent_address: employee.permanent_address ?? "",
-    sss_number: employee.sss_number ?? "",
-    philhealth_number: employee.philhealth_number ?? "",
-    pagibig_number: employee.pagibig_number ?? "",
-    tin_number: employee.tin_number ?? "",
-    contact_person: employee.contact_person ?? "",
-    relationship: employee.relationship ?? "",
-    contact_number: employee.contact_number ?? "",
-    address: employee.address ?? "",
+    status_id: employee.value.status_id,
+    first_name: employee.value.first_name ?? "",
+    middle_name: employee.value.middle_name ?? "",
+    last_name: employee.value.last_name ?? "",
+    suffix: employee.value.suffix ?? "",
+    gender: employee.value.gender ?? "",
+    date_birth: employee.value.date_birth ?? "",
+    civil_status: employee.value.civil_status ?? "",
+    nationality: employee.value.nationality ?? "",
+    personal_email: employee.value.personal_email ?? "",
+    mobile_number: employee.value.mobile_number ?? "",
+    telephone_number: employee.value.telephone_number ?? "",
+    present_address: employee.value.present_address ?? "",
+    permanent_address: employee.value.permanent_address ?? "",
+    sss_number: employee.value.sss_number ?? "",
+    philhealth_number: employee.value.philhealth_number ?? "",
+    pagibig_number: employee.value.pagibig_number ?? "",
+    tin_number: employee.value.tin_number ?? "",
+    contact_person: employee.value.contact_person ?? "",
+    relationship: employee.value.relationship ?? "",
+    contact_number: employee.value.contact_number ?? "",
+    address: employee.value.address ?? "",
     resume: null,
     profile_photo: null,
 
     // view only
-    department_name: employee.department?.name || "N/A",
-    position_name: employee.position?.name || "N/A",
-    department_id: employee.department_id,
-    position_id: employee.position_id,
+    department_name: employee.value.department?.name || "N/A",
+    position_name: employee.value.position?.name || "N/A",
+    department_id: employee.value.department_id,
+    position_id: employee.value.position_id,
 
-    employee_id: employee.employee_id,
-    username: employee.username,
-    company_email: employee.company_email,
-    date_hired: employee.date_hired,
-    regularization_date: employee.regularization_date,
-    immediate_supervisor: employee.immediate_supervisor,
-    work_location: employee.work_location,
-    payroll_group: employee.payroll_group,
-    leave_pay: employee.leave_pay,
-    employment_status: employee.employment_status,
-    employment_type: employee.employment_type,
+    employee_id: employee.value.employee_id,
+    username: employee.value.username,
+    company_email: employee.value.company_email,
+    date_hired: employee.value.date_hired,
+    regularization_date: employee.value.regularization_date,
+    immediate_supervisor: employee.value.immediate_supervisor,
+    work_location: employee.value.work_location,
+    payroll_group: employee.value.payroll_group,
+    leave_pay: employee.value.leave_pay,
+    employment_status: employee.value.employment_status,
+    employment_type: employee.value.employment_type,
 });
 
 const preview = ref(null);
-const existingPhoto = employee.profile_photo
-    ? `/storage/${employee.profile_photo}`
-    : null;
-const existingResume = employee.resume ? `/storage/${employee.resume}` : null;
+
+// ✅ FIX: now reactive (NO MORE refresh issue)
+const existingPhoto = computed(() =>
+    employee.value?.profile_photo
+        ? `/storage/${employee.value.profile_photo}`
+        : null,
+);
+
+const existingResume = computed(() =>
+    employee.value?.resume ? `/storage/${employee.value.resume}` : null,
+);
+
 const loading = ref(false);
 
 const previewImage = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
     form.profile_photo = file;
     preview.value = URL.createObjectURL(file);
+
+    clearError("profile_photo");
+};
+
+const handleResume = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    form.resume = file;
+    clearError("resume");
 };
 
 // 1. Trigger the reload on success
 const submit = () => {
     loading.value = true;
-    form.post("/employee/profile/update", {
+
+    form.transform((data) => {
+        const fd = new FormData();
+
+        Object.keys(data).forEach((key) => {
+            if (data[key] !== null && data[key] !== undefined) {
+                fd.append(key, data[key]);
+            }
+        });
+
+        return fd;
+    }).post(`/${baseRoute}/profile/update`, {
+        forceFormData: true, // 🔥 IMPORTANT FIX
         preserveScroll: true,
+
         onSuccess: () => {
-            employee.status_id = 1;
             toastStore.show("Profile updated successfully!", "success");
+
+            router.reload({
+                only: ["employee"],
+                preserveScroll: true,
+            });
+
             loading.value = false;
         },
-        onError: () => {
+
+        onError: (errors) => {
+            console.log("VALIDATION ERRORS:", errors); // 🔥 DEBUG
             toastStore.show("Please fix the errors and try again.", "error");
+            loading.value = false;
+        },
+
+        onFinish: () => {
             loading.value = false;
         },
     });
 };
 
 onMounted(() => {
-    if (usePage().props.flash?.message) {
-        toastStore.show(usePage().props.flash.message, "success");
+    if (page.props.flash?.message) {
+        toastStore.show(page.props.flash.message, "success");
     }
 });
 
 const clearError = (field) => {
     if (form.errors[field]) form.errors[field] = null;
+};
+
+// password updates
+const passwordRules = computed(() => {
+    const v = passwordForm.new_password || "";
+
+    return {
+        length: v.length >= 8,
+        upper: /[A-Z]/.test(v),
+        lower: /[a-z]/.test(v),
+        number: /[0-9]/.test(v),
+    };
+});
+
+const isPasswordValid = computed(() =>
+    Object.values(passwordRules.value).every(Boolean),
+);
+
+const isPasswordModalOpen = ref(false);
+const showNewPassword = ref(false);
+const showConfirmPassword = ref(false);
+const showCurrentPassword = ref(false);
+
+const passwordForm = useForm({
+    current_password: "",
+    new_password: "",
+    new_password_confirmation: "",
+});
+
+const passwordLoading = ref(false);
+const submitPassword = () => {
+    passwordLoading.value = true;
+
+    passwordForm.clearErrors();
+
+    passwordForm.put(`/${baseRoute}/profile/change-password`, {
+        preserveScroll: true,
+
+        onSuccess: () => {
+            toastStore.show("Password updated successfully!", "success");
+            isPasswordModalOpen.value = false;
+            passwordForm.reset();
+        },
+
+        onError: () => {
+            toastStore.show("Please check your password fields.", "error");
+        },
+
+        onFinish: () => {
+            passwordLoading.value = false;
+        },
+    });
 };
 </script>
 
@@ -141,13 +255,26 @@ const clearError = (field) => {
             </div>
 
             <CardHeader>
-                <CardTitle class="text-2xl font-bold text-brand-blue"
-                    >Update Your Profile</CardTitle
-                >
-                <CardDescription
-                    >Edit your details. If files already exist, you don't need
-                    to re-upload them.</CardDescription
-                >
+                <div class="flex justify-between">
+                    <div>
+                        <CardTitle class="text-2xl font-bold text-brand-blue"
+                            >Update Your Profile {{ baseRoute }}</CardTitle
+                        >
+                        <CardDescription
+                            >Edit your details. If files already exist, you
+                            don't need to re-upload them.</CardDescription
+                        >
+                    </div>
+                    <div>
+                        <Button
+                            class="bg-gray-900 text-white flex items-center gap-2"
+                            @click="isPasswordModalOpen = true"
+                        >
+                            <Lock class="w-4 h-4" />
+                            Change Password
+                        </Button>
+                    </div>
+                </div>
             </CardHeader>
 
             <CardContent>
@@ -159,6 +286,7 @@ const clearError = (field) => {
                             <User class="w-5 h-5" />
                             <h3>Profile Photo</h3>
                         </div>
+
                         <div class="flex items-center gap-4">
                             <div
                                 class="w-28 h-28 rounded-full bg-gray-100 overflow-hidden border-2 grid place-items-center"
@@ -175,17 +303,20 @@ const clearError = (field) => {
                                 />
                                 <User v-else class="text-gray-400 w-12 h-12" />
                             </div>
+
                             <div class="flex flex-col flex-1">
                                 <Input
                                     type="file"
                                     accept="image/png, image/jpeg, image/jpg"
                                     @change="previewImage"
                                 />
+
                                 <span
                                     v-if="form.errors.profile_photo"
                                     class="text-red-500 text-sm"
-                                    >{{ form.errors.profile_photo }}</span
                                 >
+                                    {{ form.errors.profile_photo }}
+                                </span>
                                 <p
                                     v-if="existingPhoto"
                                     class="text-xs text-green-600 mt-1 font-medium"
@@ -193,7 +324,11 @@ const clearError = (field) => {
                                     ✓ Photo is already saved. Upload only if
                                     changing.
                                 </p>
-                                <p v-else class="text-xs text-red-500 mt-1">
+
+                                <p
+                                    v-else-if="!form.profile_photo"
+                                    class="text-xs text-red-500 mt-1"
+                                >
                                     Photo is required.
                                 </p>
                             </div>
@@ -497,9 +632,7 @@ const clearError = (field) => {
                                 type="file"
                                 accept=".pdf,.doc,.docx"
                                 class="bg-white"
-                                @change="
-                                    (e) => (form.resume = e.target.files[0])
-                                "
+                                @change="handleResume"
                             />
 
                             <span
@@ -510,20 +643,22 @@ const clearError = (field) => {
                             </span>
 
                             <div class="mt-2">
+                                <!-- ✅ FIXED LOGIC -->
                                 <p
                                     v-if="existingResume"
                                     class="text-xs text-green-600 font-medium flex items-center gap-1"
                                 >
-                                    <CheckCircle class="w-3 h-3" /> Already
-                                    uploaded. Upload a new file only to replace
-                                    it.
+                                    <CheckCircle class="w-3 h-3" />
+                                    Already uploaded. Upload a new file only to
+                                    replace it.
                                 </p>
+
                                 <p
-                                    v-else
+                                    v-else-if="!form.resume"
                                     class="text-xs text-red-500 flex items-center gap-1"
                                 >
-                                    <AlertCircle class="w-3 h-3" /> Resume is
-                                    required.
+                                    <AlertCircle class="w-3 h-3" />
+                                    Resume is required.
                                 </p>
                             </div>
                         </div>
@@ -703,6 +838,205 @@ const clearError = (field) => {
                     </section>
                 </div>
             </div>
+            <Dialog v-model:open="isPasswordModalOpen">
+                <DialogContent class="w-[420px]">
+                    <DialogHeader>
+                        <DialogTitle>Change Password</DialogTitle>
+                    </DialogHeader>
+
+                    <!-- CURRENT PASSWORD -->
+                    <div class="pt-3">
+                        <label class="p-1">Current Password</label>
+                        <div class="relative">
+                            <Input
+                                :type="
+                                    showCurrentPassword ? 'text' : 'password'
+                                "
+                                v-model="passwordForm.current_password"
+                                placeholder="Current Password"
+                                :class="
+                                    passwordForm.errors.current_password
+                                        ? 'border-red-500'
+                                        : ''
+                                "
+                                @input="
+                                    passwordForm.clearErrors('current_password')
+                                "
+                            />
+
+                            <button
+                                type="button"
+                                class="absolute right-3 top-2"
+                                @click="
+                                    showCurrentPassword = !showCurrentPassword
+                                "
+                            >
+                                <Eye v-if="!showCurrentPassword" />
+                                <EyeOff v-else />
+                            </button>
+
+                            <!-- ERROR -->
+                            <p
+                                v-if="passwordForm.errors.current_password"
+                                class="text-red-500 text-xs mt-1"
+                            >
+                                {{ passwordForm.errors.current_password }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- NEW PASSWORD -->
+                    <div>
+                        <label class="p-1">New Password</label>
+                        <div class="relative">
+                            <Input
+                                :type="showNewPassword ? 'text' : 'password'"
+                                v-model="passwordForm.new_password"
+                                placeholder="New Password"
+                                :class="
+                                    passwordForm.errors.new_password
+                                        ? 'border-red-500'
+                                        : ''
+                                "
+                                @input="
+                                    passwordForm.clearErrors('new_password')
+                                "
+                            />
+
+                            <button
+                                type="button"
+                                class="absolute right-3 top-2"
+                                @click="showNewPassword = !showNewPassword"
+                            >
+                                <Eye v-if="!showNewPassword" />
+                                <EyeOff v-else />
+                            </button>
+
+                            <!-- SERVER ERROR -->
+                            <p
+                                v-if="passwordForm.errors.new_password"
+                                class="text-red-500 text-xs mt-1"
+                            >
+                                {{ passwordForm.errors.new_password }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- PASSWORD RULES (ONLY WHEN INVALID AND USER TYPING NEW PASSWORD) -->
+                    <div
+                        v-if="
+                            passwordForm.new_password.length > 0 &&
+                            !isPasswordValid
+                        "
+                        class="text-xs space-y-1"
+                    >
+                        <p
+                            :class="
+                                passwordRules.length
+                                    ? 'text-green-600'
+                                    : 'text-red-500'
+                            "
+                        >
+                            • At least 8 characters
+                        </p>
+                        <p
+                            :class="
+                                passwordRules.upper
+                                    ? 'text-green-600'
+                                    : 'text-red-500'
+                            "
+                        >
+                            • One uppercase letter
+                        </p>
+                        <p
+                            :class="
+                                passwordRules.lower
+                                    ? 'text-green-600'
+                                    : 'text-red-500'
+                            "
+                        >
+                            • One lowercase letter
+                        </p>
+                        <p
+                            :class="
+                                passwordRules.number
+                                    ? 'text-green-600'
+                                    : 'text-red-500'
+                            "
+                        >
+                            • One number
+                        </p>
+                    </div>
+
+                    <!-- CONFIRM PASSWORD -->
+                    <div>
+                        <label class="p-1">Confirm Password</label>
+                        <div class="relative">
+                            <Input
+                                :type="
+                                    showConfirmPassword ? 'text' : 'password'
+                                "
+                                v-model="passwordForm.new_password_confirmation"
+                                placeholder="Confirm Password"
+                                :class="
+                                    passwordForm.errors
+                                        .new_password_confirmation
+                                        ? 'border-red-500'
+                                        : ''
+                                "
+                                @input="
+                                    passwordForm.clearErrors(
+                                        'new_password_confirmation',
+                                    )
+                                "
+                            />
+
+                            <button
+                                type="button"
+                                class="absolute right-3 top-2"
+                                @click="
+                                    showConfirmPassword = !showConfirmPassword
+                                "
+                            >
+                                <Eye v-if="!showConfirmPassword" />
+                                <EyeOff v-else />
+                            </button>
+
+                            <p
+                                v-if="
+                                    passwordForm.errors
+                                        .new_password_confirmation
+                                "
+                                class="text-red-500 text-xs mt-1"
+                            >
+                                {{
+                                    passwordForm.errors
+                                        .new_password_confirmation
+                                }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- FOOTER -->
+                    <DialogFooter class="flex justify-end gap-2 mt-3">
+                        <Button
+                            variant="secondary"
+                            @click="isPasswordModalOpen = false"
+                        >
+                            Cancel
+                        </Button>
+
+                        <Button
+                            class="bg-brand-blue text-white flex items-center gap-2"
+                            :disabled="!isPasswordValid || passwordLoading"
+                            @click="submitPassword"
+                        >
+                            <span v-if="passwordLoading">Updating...</span>
+                            <span v-else>Update Password</span>
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </Card>
     </div>
 </template>

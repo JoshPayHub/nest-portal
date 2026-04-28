@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed, watch } from "vue";
-import { router } from "@inertiajs/vue3";
+import { ref, computed, watch, onMounted } from "vue";
+import { router, usePage } from "@inertiajs/vue3";
 import {
     Search,
     Calendar,
@@ -88,6 +88,12 @@ const getRelevantStatus = (req) => {
 const openView = (req) => {
     selectedRequest.value = req;
     isViewOpen.value = true;
+
+    const url = new URL(window.location);
+    if (url.searchParams.has("open")) {
+        url.searchParams.delete("open");
+        window.history.replaceState({}, "", url);
+    }
 };
 
 const handleAction = (requestId, statusId) => {
@@ -127,6 +133,33 @@ const formatScheduleSub = (day, time) => {
     if (time && time !== "N/A") parts.push(time);
     return parts.join(" | ");
 };
+
+const checkUrlForModal = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const idToOpen = urlParams.get("open");
+
+    if (idToOpen && props.requests?.data?.length > 0) {
+        const request = props.requests.data.find(
+            (r) => r.id === parseInt(idToOpen),
+        );
+
+        if (request) {
+            openView(request);
+        }
+    }
+};
+
+onMounted(() => {
+    checkUrlForModal();
+});
+
+watch(
+    [() => usePage().url, () => props.requests],
+    () => {
+        checkUrlForModal();
+    },
+    { deep: true },
+);
 </script>
 
 <template>
