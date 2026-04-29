@@ -45,6 +45,9 @@ class NotificationController extends Controller
                     ?? $data['manpower_id']
                     ?? $data['business_notification_id']
                     ?? $data['leave_id']
+                    ?? $data['overtime_id']
+                    ?? $data['undertime_id']
+                    ?? $data['attendance_id']
                     ?? '';
 
         $url = $notification->link ?? $notification->route;

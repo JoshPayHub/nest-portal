@@ -421,10 +421,7 @@ watch(
                                 </span>
                             </div>
                             <div class="grid gap-1">
-                                <div class="text-sm font-bold text-slate-700">
-                                    {{ selectedRequest?.original_date }}
-                                </div>
-                                <div class="text-xs text-slate-500">
+                                <div class="text-xs pt-1 text-slate-500">
                                     {{
                                         formatScheduleSub(
                                             selectedRequest?.original_day,
@@ -450,10 +447,7 @@ watch(
                                 </span>
                             </div>
                             <div class="grid gap-1">
-                                <div class="text-sm font-bold text-slate-700">
-                                    {{ selectedRequest?.new_date }}
-                                </div>
-                                <div class="text-xs text-slate-500">
+                                <div class="text-xs pt-1 text-slate-500">
                                     {{
                                         formatScheduleSub(
                                             selectedRequest?.new_day,

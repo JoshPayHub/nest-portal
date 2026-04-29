@@ -44,7 +44,7 @@ class BusinessNotificationController extends Controller
             }); // Fixed: Closed the through function correctly
 
         return Inertia::render('management/Employee/BusinessNotificationList', [
-            'notifications' => $notifications,
+            'businessNotifications' => $notifications,
             'auth_user_type_id' => auth()->user()->user_type_id,
         ]);
     }

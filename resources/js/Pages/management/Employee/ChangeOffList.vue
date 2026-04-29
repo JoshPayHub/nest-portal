@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed } from "vue";
-import { router, Link } from "@inertiajs/vue3";
+import { ref, computed, watch, onMounted } from "vue";
+import { Link, usePage, router } from "@inertiajs/vue3";
 import {
     Plus,
     Search,
@@ -9,6 +9,7 @@ import {
     Lock,
     Clock,
     FileText,
+    Eye,
 } from "lucide-vue-next";
 
 // UI Components
@@ -32,6 +33,15 @@ import {
 import { Badge } from "@/Components/ui/badge";
 import Pagination from "@/Components/Pagination/Index.vue";
 
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "@/Components/ui/dialog";
+
 const props = defineProps({
     requests: {
         type: Object,
@@ -41,6 +51,9 @@ const props = defineProps({
 });
 
 const search = ref("");
+const isViewOpen = ref(false);
+const selectedRequest = ref(null);
+
 const filteredRequests = computed(() => {
     const data = props.requests.data || [];
     if (!search.value) return data;
@@ -53,6 +66,17 @@ const routeMap = {
     3: "/head",
 };
 
+const openView = (req) => {
+    selectedRequest.value = req;
+    isViewOpen.value = true;
+
+    const url = new URL(window.location);
+    if (url.searchParams.has("open")) {
+        url.searchParams.delete("open");
+        window.history.replaceState({}, "", url);
+    }
+};
+
 const canEdit = (req) => {
     const leader = req.leader_status?.toLowerCase();
     const hr = req.hr_status?.toLowerCase();
@@ -60,7 +84,7 @@ const canEdit = (req) => {
     if (leader === "rejected" || hr === "rejected") return true;
     if (leader === "approved" || hr === "approved") return false;
 
-    return true; // Default to true for Pending
+    return true;
 };
 
 const getStatusClass = (status) => {
@@ -71,16 +95,37 @@ const getStatusClass = (status) => {
     return "bg-slate-100 text-slate-600";
 };
 
-/**
- * Helper to join schedule parts (Day | Time)
- * Only shows the separator if both exist
- */
 const formatScheduleSub = (day, time) => {
     const parts = [];
     if (day && day !== "N/A") parts.push(day);
     if (time && time !== "N/A") parts.push(time);
     return parts.join(" | ");
 };
+
+const checkUrlForModal = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const requestIdToOpen = urlParams.get("open");
+
+    if (requestIdToOpen) {
+        const request = props.requests.data.find(
+            (r) => r.id === parseInt(requestIdToOpen),
+        );
+        if (request) {
+            openView(request);
+        }
+    }
+};
+
+onMounted(() => {
+    checkUrlForModal();
+});
+
+watch(
+    () => usePage().props,
+    () => {
+        checkUrlForModal();
+    },
+);
 </script>
 
 <template>
@@ -131,32 +176,32 @@ const formatScheduleSub = (day, time) => {
                         <TableHeader class="bg-slate-50/50">
                             <TableRow>
                                 <TableHead
-                                    class="w-[180px] font-bold text-slate-600 uppercase text-xs tracking-wider"
+                                    class="w-[180px] font-bold text-slate-600 uppercase text-xs"
                                     >DATE</TableHead
                                 >
                                 <TableHead
-                                    class="font-bold text-slate-600 uppercase text-xs tracking-wider"
+                                    class="font-bold text-slate-600 uppercase text-xs"
                                     >ORIGINAL DAY</TableHead
                                 >
                                 <TableHead
-                                    class="font-bold text-slate-600 uppercase text-xs tracking-wider"
+                                    class="font-bold text-slate-600 uppercase text-xs"
                                     >REQUESTED DAY</TableHead
                                 >
-
                                 <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs tracking-wider"
+                                    class="text-center font-bold text-slate-600 uppercase text-xs"
                                     >DEPT. HEAD</TableHead
                                 >
                                 <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs tracking-wider"
+                                    class="text-center font-bold text-slate-600 uppercase text-xs"
                                     >HR STATUS</TableHead
                                 >
                                 <TableHead
-                                    class="text-right font-bold text-slate-600 uppercase text-xs tracking-wider px-6"
+                                    class="text-right font-bold text-slate-600 uppercase text-xs px-6"
                                     >ACTIONS</TableHead
                                 >
                             </TableRow>
                         </TableHeader>
+
                         <TableBody>
                             <template v-if="filteredRequests.length > 0">
                                 <TableRow
@@ -243,6 +288,7 @@ const formatScheduleSub = (day, time) => {
                                             {{ req.leader_status }}
                                         </Badge>
                                     </TableCell>
+
                                     <TableCell class="text-center">
                                         <Badge
                                             variant="outline"
@@ -254,7 +300,10 @@ const formatScheduleSub = (day, time) => {
                                         </Badge>
                                     </TableCell>
 
-                                    <TableCell class="text-right px-6">
+                                    <TableCell
+                                        class="text-right px-6 space-x-1"
+                                    >
+                                        <!-- EDIT -->
                                         <Button
                                             v-if="canEdit(req)"
                                             variant="ghost"
@@ -266,9 +315,10 @@ const formatScheduleSub = (day, time) => {
                                             "
                                             class="h-8 w-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                                         >
-                                            <Pencil class="w-4 h-4 mr-1" />
+                                            <Pencil class="w-4 h-4" />
                                         </Button>
 
+                                        <!-- LOCK -->
                                         <Button
                                             v-else
                                             variant="ghost"
@@ -277,6 +327,16 @@ const formatScheduleSub = (day, time) => {
                                             disabled
                                         >
                                             <Lock class="w-4 h-4" />
+                                        </Button>
+
+                                        <!-- 👁️ VIEW -->
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            @click="openView(req)"
+                                            class="h-8 w-8 p-0 text-brand-blue hover:bg-blue-50"
+                                        >
+                                            <Eye class="w-4 h-4" />
                                         </Button>
                                     </TableCell>
                                 </TableRow>
@@ -297,9 +357,89 @@ const formatScheduleSub = (day, time) => {
                     </Table>
                 </div>
 
-                <!-- pagination import -->
                 <Pagination :links="requests" />
             </CardContent>
         </Card>
+
+        <!-- ✅ MODAL -->
+        <Dialog v-model:open="isViewOpen">
+            <DialogContent class="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <div class="pr-6">
+                        <DialogTitle class="text-2xl font-bold text-brand-blue"
+                            >Change Off Details</DialogTitle
+                        >
+                        <DialogDescription
+                            >Submitted on
+                            {{ selectedReport?.report_date }}</DialogDescription
+                        >
+                    </div>
+                </DialogHeader>
+                <div
+                    class="flex-1 overflow-y-auto py-4 border-t border-slate-100"
+                >
+                    <div class="space-y-3 mt-4">
+                        <div
+                            class="bg-white border border-slate-200 rounded-xl p-4"
+                        >
+                            <div
+                                class="flex items-center justify-between border-b pb-2 mb-2"
+                            >
+                                <span
+                                    class="text-sm font-bold text-slate-700 flex items-center gap-1"
+                                >
+                                    <Calendar
+                                        class="w-3.5 h-3.5 text-brand-blue"
+                                    />
+                                    Original Schedule
+                                </span>
+                            </div>
+                            <div class="grid gap-1">
+                                <div class="text-xs pt-1 text-slate-500">
+                                    {{
+                                        formatScheduleSub(
+                                            selectedRequest?.original_day,
+                                            selectedRequest?.original_time,
+                                        )
+                                    }}
+                                </div>
+                            </div>
+                        </div>
+                        <div
+                            class="bg-white border border-slate-200 rounded-xl p-4"
+                        >
+                            <div
+                                class="flex items-center justify-between border-b pb-2 mb-2"
+                            >
+                                <span
+                                    class="text-sm font-bold text-slate-700 flex items-center gap-1"
+                                >
+                                    <Calendar
+                                        class="w-3.5 h-3.5 text-brand-blue"
+                                    />
+                                    Requested Schedule
+                                </span>
+                            </div>
+                            <div class="grid gap-1">
+                                <div class="text-xs pt-1 text-slate-500">
+                                    {{
+                                        formatScheduleSub(
+                                            selectedRequest?.new_day,
+                                            selectedRequest?.new_time,
+                                        )
+                                    }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <DialogFooter class="print:hidden">
+                    <Button variant="secondary" @click="isViewOpen = false"
+                        >Close</Button
+                    >
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
 </template>

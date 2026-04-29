@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
+use App\Models\Notification;
 use App\Models\Overtime;
 use App\Models\OvertimeList;
 use App\Models\Status;
@@ -131,6 +132,12 @@ class OvertimeRequestController extends Controller
                     ]);
                 }
             }
+            $this->notifyUsers(
+                $request,
+                $overtime,
+                "New Overtime request",
+                "A new Overtime request has been submitted by " . $request->user()->first_name
+            );
         });
 
         return redirect()->back()->with('message', 'Overtime request submitted successfully!');
@@ -183,7 +190,7 @@ class OvertimeRequestController extends Controller
             'items.*.hours' => ['required', 'numeric'],
         ]);
 
-        DB::transaction(function () use ($overtime, $validated) {
+        DB::transaction(function () use ($request, $overtime, $validated) {
             $overtime->update(['cut_off_date' => $validated['cut_off_date']]);
 
             // Reset all approval statuses to Pending (Status 4)
@@ -202,6 +209,12 @@ class OvertimeRequestController extends Controller
                     'additional_hours_worked' => $item['hours'],
                 ]);
             }
+            $this->notifyUsers(
+                $request,
+                $overtime,
+                "Overtime Updated",
+                $request->user()->first_name . " has updated their Overtime and is awaiting re-approval."
+            );
         });
 
         $userTypeId = $request->user()->user_type_id;
@@ -214,5 +227,36 @@ class OvertimeRequestController extends Controller
         $routeName = $routeMap[$userTypeId];
 
         return redirect()->route($routeName)->with('message', 'Overtime updated and reset for approval.');
+    }
+
+    private function notifyUsers(Request $request, $report, $title, $message)
+    {
+        $employeeId = $report->user_id;
+        $deptHeads = User::where('user_type_id', 3)
+            ->where('department_id', $report->department_id)
+            ->get();
+
+        foreach ($deptHeads as $head) {
+            Notification::create([
+                'user_id'         => $employeeId,
+                'user_type_id'    => 3,
+                'title'           => $title,
+                'message'         => $message,
+                'route'           => '/head/overtime-request',
+                'data'            => json_encode(['overtime_id' => $report->id]),
+            ]);
+        }
+
+        $hrUsers = User::where('user_type_id', 1)->get();
+        foreach ($hrUsers as $hr) {
+            Notification::create([
+                'user_id'         => $employeeId,
+                'user_type_id'    => 1,
+                'title'           => $title,
+                'message'         => $message,
+                'route'           => '/hr/overtime-request',
+                'data'            => json_encode(['overtime_id' => $report->id]),
+            ]);
+        }
     }
 }

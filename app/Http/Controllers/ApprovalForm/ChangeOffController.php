@@ -4,6 +4,7 @@ namespace App\Http\Controllers\ApprovalForm;
 
 use App\Http\Controllers\Controller;
 use App\Models\ChangeOff;
+use App\Models\Notification;
 use App\Models\User;
 use App\Models\Department;
 use App\Models\Position; // Added Position model
@@ -99,13 +100,40 @@ class ChangeOffController extends Controller
     {
         $request->validate(['status_id' => 'required|in:7,8']);
 
+        $user = $request->user();
         $changeOff = ChangeOff::findOrFail($id);
 
-        DB::table('change_off_statuses')->updateOrInsert(
+         DB::table('change_off_statuses')->updateOrInsert(
             ['change_off_id' => $changeOff->id, 'user_id' => $request->user()->id],
             ['status_id' => $request->status_id, 'updated_at' => now(), 'created_at' => now()]
         );
 
+        $userTypeName = ($user->user_type_id == 1) ? 'HR' : 'Department Head';
+        $statusName = ($request->status_id == 7) ? 'Approved' : 'Rejected';
+
+        $title = "{$userTypeName} {$statusName} your Change Off Request";
+        $message = "Your change off request has been " . strtolower($statusName) . " by " . $user->first_name . ".";
+
+        $this->notifyUsers($changeOff, $title, $message);
+
         return redirect()->back()->with('message', 'Change Off request processed.');
+    }
+
+    private function notifyUsers($changeOff, $title, $message)
+    {
+        $employee = User::find($changeOff->user_id);
+
+        if ($employee) {
+            $userTypePrefix = ($employee->user_type_id == 3) ? 'head' : 'employee';
+
+            Notification::create([
+                'user_id'      => $employee->id,
+                'user_type_id' => null,
+                'title'        => $title,
+                'message'      => $message,
+                'route'        => "/{$userTypePrefix}/change-offs",
+                'data'         => json_encode(['change_off_id' => $changeOff->id]),
+            ]);
+        }
     }
 }

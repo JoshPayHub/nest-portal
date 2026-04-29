@@ -1,6 +1,6 @@
 <script setup>
-import { ref, watch } from "vue";
-import { router } from "@inertiajs/vue3";
+import { ref, watch, onMounted } from "vue";
+import { router, usePage } from "@inertiajs/vue3";
 import {
     Search,
     FileText,
@@ -47,9 +47,9 @@ import {
 const props = defineProps({
     undertimes: Object,
     employeeOptions: Array,
-    departments: Array, // Added from controller
+    departments: Array,
     filters: Object,
-    auth_user_type: Number, // Added from controller
+    auth_user_type: Number,
 });
 
 const search = ref(props.filters?.search || "");
@@ -79,6 +79,12 @@ watch([selectedEmployee, selectedDepartment, search], ([emp, dept, q]) => {
 const openView = (req) => {
     selectedUndertime.value = req;
     isViewOpen.value = true;
+
+    const url = new URL(window.location);
+    if (url.searchParams.has("open")) {
+        url.searchParams.delete("open");
+        window.history.replaceState({}, "", url);
+    }
 };
 
 // Helper to get status based on user role
@@ -117,6 +123,33 @@ const getStatusClass = (status) => {
     if (s === "rejected") return "bg-red-100 text-red-700 border-red-200";
     return "bg-amber-100 text-amber-700 border-amber-200";
 };
+
+const checkUrlForModal = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const idToOpen = urlParams.get("open");
+
+    if (idToOpen && props.undertimes?.data?.length > 0) {
+        const req = props.undertimes.data.find(
+            (r) => r.id === parseInt(idToOpen),
+        );
+
+        if (req) {
+            openView(req);
+        }
+    }
+};
+
+onMounted(() => {
+    checkUrlForModal();
+});
+
+watch(
+    [() => usePage().url, () => props.undertimes],
+    () => {
+        checkUrlForModal();
+    },
+    { deep: true },
+);
 </script>
 
 <template>

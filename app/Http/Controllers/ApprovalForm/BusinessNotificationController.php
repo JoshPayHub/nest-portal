@@ -4,6 +4,7 @@ namespace App\Http\Controllers\ApprovalForm;
 
 use App\Http\Controllers\Controller;
 use App\Models\BusinessNotification;
+use App\Models\Notification;
 use App\Models\User;
 use App\Models\Department;
 use App\Models\Position;
@@ -105,14 +106,11 @@ class BusinessNotificationController extends Controller
 
     public function approve(Request $request, $id)
     {
-        // 7 = Approved, 8 = Rejected
-        $request->validate([
-            'status_id' => 'required|in:7,8',
-        ]);
+        $request->validate(['status_id' => 'required|in:7,8']);
 
+        $user = $request->user();
         $notification = BusinessNotification::findOrFail($id);
 
-        // Update or insert the approval status for the current logged-in user
         DB::table('business_notification_statuses')->updateOrInsert(
             [
                 'business_notification_id' => $notification->id,
@@ -125,6 +123,32 @@ class BusinessNotificationController extends Controller
             ]
         );
 
-        return back()->with('message', 'Business notification request processed.');
+        $userTypeName = ($user->user_type_id == 1) ? 'HR' : 'Department Head';
+        $statusName = ($request->status_id == 7) ? 'Approved' : 'Rejected';
+
+        $title = "{$userTypeName} {$statusName} your Business Notification Request";
+        $message = "Your business notification request has been " . strtolower($statusName) . " by " . $user->first_name . ".";
+
+        $this->notifyUsers($notification, $title, $message);
+
+        return redirect()->back()->with('message', 'Business notification request processed.');
+    }
+
+    private function notifyUsers($notification, $title, $message)
+    {
+        $employee = User::find($notification->user_id);
+
+        if ($employee) {
+            $userTypePrefix = ($employee->user_type_id == 3) ? 'head' : 'employee';
+
+            Notification::create([
+                'user_id'      => $employee->id,
+                'user_type_id' => null,
+                'title'        => $title,
+                'message'      => $message,
+                'route'        => "/{$userTypePrefix}/business-notifications",
+                'data'         => json_encode(['business_notification_id' => $notification->id]),
+            ]);
+        }
     }
 }

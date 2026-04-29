@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
+use App\Models\Notification;
 use App\Models\Undertime;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Carbon\Carbon;
@@ -77,7 +79,7 @@ class UndertimeFormController extends Controller
             'total_time.min' => 'End time must be after start time.',
         ]);
 
-        Undertime::create([
+        $undertime = Undertime::create([
             'user_id'        => Auth::id(),
             'undertime_date' => $validated['undertime_date'],
             'from_time'      => $validated['from_time'],
@@ -87,6 +89,13 @@ class UndertimeFormController extends Controller
             'department_id'  => Auth::user()->department_id,
             'position_id'    => Auth::user()->position_id,
         ]);
+
+        $this->notifyUsers(
+                $request,
+                $undertime,
+                "New Undertime request",
+                "A new Undertime request has been submitted by " . $request->user()->first_name
+            );
 
         return redirect()->back()->with('message', 'Undertime submitted successfully!');
     }
@@ -157,14 +166,51 @@ class UndertimeFormController extends Controller
             'reason'         => 'required|string|min:10',
         ]);
 
-        DB::transaction(function () use ($undertime, $validated) {
+        DB::transaction(function () use ($request, $undertime, $validated) {
             $undertime->update($validated);
-            // Assuming status 4 is "Pending"
             DB::table('undertime_statuses')
                 ->where('undertime_id', $undertime->id)
                 ->update(['status_id' => 4, 'updated_at' => now()]);
+
+             $this->notifyUsers(
+                $request,
+                $undertime,
+                "Undertime Updated",
+                $request->user()->first_name . " has updated their Undertime and is awaiting re-approval."
+            );
         });
 
         return redirect()->route($routeName)->with('message', 'Undertime updated.');
+    }
+
+    private function notifyUsers(Request $request, $report, $title, $message)
+    {
+        $employeeId = $report->user_id;
+        $deptHeads = User::where('user_type_id', 3)
+            ->where('department_id', $report->department_id)
+            ->get();
+
+        foreach ($deptHeads as $head) {
+            Notification::create([
+                'user_id'         => $employeeId,
+                'user_type_id'    => 3,
+                'title'           => $title,
+                'message'         => $message,
+                'route'           => '/head/undertime-form',
+                'data'            => json_encode(['undertime_id' => $report->id]),
+            ]);
+        }
+
+        $hrUsers = User::where('user_type_id', 1)->get();
+        foreach ($hrUsers as $hr) {
+            Notification::create([
+                'user_id'         => $employeeId,
+                'user_type_id'    => 1,
+                'title'           => $title,
+                'message'         => $message,
+                'route'           => '/hr/undertime-form',
+                'data'            => json_encode(['undertime_id' => $report->id]),
+            ]);
+        }
     }
 }

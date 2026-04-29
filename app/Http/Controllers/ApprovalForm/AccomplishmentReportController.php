@@ -4,9 +4,10 @@ namespace App\Http\Controllers\ApprovalForm;
 
 use App\Http\Controllers\Controller;
 use App\Models\AccomplishReport;
+use App\Models\Notification;
 use App\Models\User;
 use App\Models\Department;
-use App\Models\Position; // Added Position model
+use App\Models\Position;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -47,7 +48,6 @@ class AccomplishmentReportController extends Controller
             }
         }
 
-        // Apply Employee Filter
         if ($request->filled('employee_id')) {
             $reportsQuery->where('user_id', $request->employee_id);
         }
@@ -56,7 +56,6 @@ class AccomplishmentReportController extends Controller
             ->paginate(10)
             ->withQueryString()
             ->through(function ($report) {
-                // Find specific approval entries based on user type roles
                 $leaderEntry = $report->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 3);
                 $hrEntry     = $report->approvalStatuses->first(fn ($log) => $log->user?->user_type_id == 1);
 
@@ -94,15 +93,16 @@ class AccomplishmentReportController extends Controller
     public function approve(Request $request, $id)
     {
         $request->validate([
-            'status_id' => 'required|in:7,8', // 7=Approved, 8=Rejected
+            'status_id' => 'required|in:7,8',
         ]);
 
+        $user = $request->user();
         $report = AccomplishReport::findOrFail($id);
 
         DB::table('accomplish_report_statuses')->updateOrInsert(
             [
                 'accomplish_report_id' => $report->id,
-                'user_id' => $request->user()->id,
+                'user_id' => $user->id,
             ],
             [
                 'status_id' => $request->status_id,
@@ -111,6 +111,32 @@ class AccomplishmentReportController extends Controller
             ]
         );
 
+        $userTypeName = ($user->user_type_id == 1) ? 'HR' : 'Department Head';
+        $statusName = ($request->status_id == 7) ? 'Approved' : 'Rejected';
+
+        $title = "{$userTypeName} {$statusName} your Accomplishment Report";
+        $message = "Your accomplishment report has been " . strtolower($statusName) . " by " . $user->first_name . ".";
+
+        $this->notifyUsers($report, $title, $message);
+
         return redirect()->back()->with('message', 'Action processed successfully.');
+    }
+
+    private function notifyUsers($report, $title, $message)
+    {
+        $employee = User::find($report->user_id);
+
+        if ($employee) {
+            $userTypePrefix = ($employee->user_type_id == 3) ? 'head' : 'employee';
+
+            Notification::create([
+                'user_id'      => $employee->id,
+                'user_type_id' => null,
+                'title'        => $title,
+                'message'      => $message,
+                'route'        => "/{$userTypePrefix}/accomplishment-reports",
+                'data'         => json_encode(['report_id' => $report->id]),
+            ]);
+        }
     }
 }

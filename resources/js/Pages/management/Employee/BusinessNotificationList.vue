@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed } from "vue";
-import { router, Link } from "@inertiajs/vue3";
+import { ref, computed, watch, onMounted } from "vue";
+import { Link, usePage, router } from "@inertiajs/vue3";
 import {
     Plus,
     Search,
@@ -43,7 +43,7 @@ import {
 } from "@/Components/ui/dialog";
 
 const props = defineProps({
-    notifications: {
+    businessNotifications: {
         type: Object,
         required: true,
     },
@@ -60,7 +60,7 @@ const isViewOpen = ref(false);
 const selectedNotification = ref(null);
 
 const filteredData = computed(() => {
-    const data = props.notifications.data || [];
+    const data = props.businessNotifications.data || [];
     if (!search.value) return data;
     const term = search.value.toLowerCase();
     return data.filter(
@@ -74,6 +74,12 @@ const filteredData = computed(() => {
 const openView = (req) => {
     selectedNotification.value = req;
     isViewOpen.value = true;
+
+    const url = new URL(window.location);
+    if (url.searchParams.has("open")) {
+        url.searchParams.delete("open");
+        window.history.replaceState({}, "", url);
+    }
 };
 
 const canEdit = (req) => {
@@ -93,6 +99,31 @@ const getStatusClass = (status) => {
     if (s === "pending") return "bg-amber-100 text-amber-700";
     return "bg-slate-100 text-slate-600";
 };
+
+const checkUrlForModal = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const notificationIdToOpen = urlParams.get("open");
+
+    if (notificationIdToOpen) {
+        const notification = props.businessNotifications.data.find(
+            (r) => r.id === parseInt(notificationIdToOpen),
+        );
+        if (notification) {
+            openView(notification);
+        }
+    }
+};
+
+onMounted(() => {
+    checkUrlForModal();
+});
+
+watch(
+    () => usePage().props,
+    () => {
+        checkUrlForModal();
+    },
+);
 </script>
 
 <template>
@@ -275,7 +306,7 @@ const getStatusClass = (status) => {
                     </Table>
                 </div>
 
-                <Pagination :links="notifications" />
+                <Pagination :links="businessNotifications" />
             </CardContent>
         </Card>
 

@@ -1,6 +1,6 @@
 <script setup>
-import { ref, watch } from "vue";
-import { router } from "@inertiajs/vue3";
+import { ref, watch, onMounted } from "vue";
+import { router, usePage } from "@inertiajs/vue3";
 import {
     Search,
     FileText,
@@ -46,7 +46,7 @@ import {
 } from "@/Components/ui/dialog";
 
 const props = defineProps({
-    reports: Object, // Changed from 'items' to 'reports' to match your Controller
+    reports: Object,
     employeeOptions: Array,
     departments: Array,
     filters: Object,
@@ -61,7 +61,6 @@ const isViewOpen = ref(false);
 const selectedItem = ref(null);
 const processingId = ref(null);
 
-// Combined Watcher for Filters
 watch(
     [search, selectedEmployee, selectedDepartment],
     ([newSearch, newEmp, newDept]) => {
@@ -84,6 +83,12 @@ watch(
 const openView = (item) => {
     selectedItem.value = item;
     isViewOpen.value = true;
+
+    const url = new URL(window.location);
+    if (url.searchParams.has("open")) {
+        url.searchParams.delete("open");
+        window.history.replaceState({}, "", url);
+    }
 };
 
 const handleAction = (id, statusId) => {
@@ -129,6 +134,33 @@ const getStatusClass = (status) => {
     if (s === "rejected") return "bg-red-100 text-red-700 border-red-200";
     return "bg-amber-100 text-amber-700 border-amber-200";
 };
+
+const checkUrlForModal = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const idToOpen = urlParams.get("open");
+
+    if (idToOpen && props.reports?.data?.length > 0) {
+        const item = props.reports.data.find(
+            (r) => r.id === parseInt(idToOpen),
+        );
+
+        if (item) {
+            openView(item);
+        }
+    }
+};
+
+onMounted(() => {
+    checkUrlForModal();
+});
+
+watch(
+    [() => usePage().url, () => props.reports],
+    () => {
+        checkUrlForModal();
+    },
+    { deep: true },
+);
 </script>
 
 <template>

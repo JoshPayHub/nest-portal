@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
-import { Link, router } from "@inertiajs/vue3";
+import { ref, computed, watch, onMounted } from "vue";
+import { Link, usePage, router } from "@inertiajs/vue3";
 import {
     Plus,
     Search,
@@ -79,6 +79,12 @@ const routeMap = {
 const openView = (report) => {
     selectedReport.value = report;
     isViewOpen.value = true;
+
+    const url = new URL(window.location);
+    if (url.searchParams.has("open")) {
+        url.searchParams.delete("open");
+        window.history.replaceState({}, "", url);
+    }
 };
 
 const canEdit = (report) => {
@@ -99,18 +105,30 @@ const getStatusClass = (status) => {
     return "bg-slate-100 text-slate-600";
 };
 
-// trigger model for notification
-onMounted(() => {
+const checkUrlForModal = () => {
     const urlParams = new URLSearchParams(window.location.search);
-    const reportIdToOpen = urlParams.get('open');
+    const reportIdToOpen = urlParams.get("open");
 
     if (reportIdToOpen) {
-        const report = props.reports.data.find(r => r.id == reportIdToOpen);
+        const report = props.reports.data.find(
+            (r) => r.id === parseInt(reportIdToOpen),
+        );
         if (report) {
             openView(report);
         }
     }
+};
+
+onMounted(() => {
+    checkUrlForModal();
 });
+
+watch(
+    () => usePage().props,
+    () => {
+        checkUrlForModal();
+    },
+);
 </script>
 
 <template>

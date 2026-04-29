@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Employee;
 use App\Http\Controllers\Controller;
 use App\Models\AttendanceEmployee;
 use App\Models\AttendanceList;
+use App\Models\Notification;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -26,16 +28,22 @@ class AttendanceController extends Controller
             'attendances.*.time_out' => ['nullable', 'regex:/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/'],
         ]);
 
-        // 2. Fetch existing record with approval statuses
+        // 2. Fetch existing record
         $attendanceEmployee = AttendanceEmployee::with(['approvalStatuses.user'])
             ->where('user_id', $user->id)
             ->where('payroll_cut_off_id', $validated['payroll_cut_off_id'])
             ->first();
 
-        if ($attendanceEmployee) {
-            $approvals = $attendanceEmployee->approvalStatuses;
+        // --- LOGIC TO DETECT STORE VS UPDATE ---
+        if (!$attendanceEmployee) {
+            $notifTitle = "New Attendance request";
+            $notifMessage = "A new Attendance request has been submitted by " . $user->first_name;
+        } else {
+            $notifTitle = "Attendance Updated";
+            $notifMessage = $user->first_name . " has updated their Attendance and is awaiting re-approval.";
 
-            // Logic: 7 = Approved, 8 = Rejected (Matching Accomplishment Report)
+            // Check if locked
+            $approvals = $attendanceEmployee->approvalStatuses;
             $isLeaderApproved = $approvals->contains(fn($a) => $a->user?->user_type_id == 3 && $a->status_id == 7);
             $isHRApproved     = $approvals->contains(fn($a) => $a->user?->user_type_id == 1 && $a->status_id == 7);
             $hasAnyRejection  = $approvals->contains(fn($a) => $a->status_id == 8);
@@ -48,7 +56,7 @@ class AttendanceController extends Controller
         }
 
         // 3. Database Transaction
-        DB::transaction(function () use ($user, $validated, &$attendanceEmployee) {
+        DB::transaction(function () use ($request, $user, $validated, &$attendanceEmployee, $notifTitle, $notifMessage) {
 
             if (!$attendanceEmployee) {
                 $attendanceEmployee = AttendanceEmployee::create([
@@ -61,10 +69,6 @@ class AttendanceController extends Controller
                 // Delete old lists
                 $attendanceEmployee->attendanceLists()->delete();
 
-                /**
-                 * UPDATED TABLE NAME:
-                 * Based on your SQL logs, the table is 'attendance_statuses'
-                 */
                 DB::table('attendance_statuses')
                     ->where('attendance_employee_id', $attendanceEmployee->id)
                     ->update([
@@ -82,18 +86,51 @@ class AttendanceController extends Controller
                     'time_out' => $att['time_out'] ?? null,
                 ]);
             }
+
+            // Trigger notification with the dynamic title and message
+            $this->notifyUsers($request, $attendanceEmployee, $notifTitle, $notifMessage);
         });
 
-        $userTypeId = $request->user()->user_type_id;
-
+        $userTypeId = $user->user_type_id;
         $routeMap = [
             2 => 'employee.payrollcutoffs.index',
             3 => 'head.payrollcutoffs.index',
         ];
 
-        $routeName = $routeMap[$userTypeId];
-
-        return redirect()->route($routeName)
+        return redirect()->route($routeMap[$userTypeId])
             ->with('message', 'Attendance submitted and approval reset to pending.');
+    }
+
+    private function notifyUsers(Request $request, $report, $title, $message)
+    {
+        $employeeId = $report->user_id;
+        $cutOffId = $report->payroll_cut_off_id;
+
+        $deptHeads = User::where('user_type_id', 3)
+            ->where('department_id', $report->department_id)
+            ->get();
+
+        foreach ($deptHeads as $head) {
+            Notification::create([
+                'user_id'         => $employeeId,
+                'user_type_id'    => 3,
+                'title'           => $title,
+                'message'         => $message,
+                'route'           => "/head/payroll-cut-off/{$cutOffId}/attendance",
+                'data'            => json_encode(['attendance_id' => $report->id]),
+            ]);
+        }
+
+        $hrUsers = User::where('user_type_id', 1)->get();
+        foreach ($hrUsers as $hr) {
+            Notification::create([
+                'user_id'         => $employeeId,
+                'user_type_id'    => 1,
+                'title'           => $title,
+                'message'         => $message,
+                'route'           => "/hr/payroll-cut-off/{$cutOffId}/attendance",
+                'data'            => json_encode(['attendance_id' => $report->id]),
+            ]);
+        }
     }
 }

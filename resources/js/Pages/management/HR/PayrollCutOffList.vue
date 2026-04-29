@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed, watch } from "vue";
-import { router } from "@inertiajs/vue3";
+import { ref, watch, onMounted, computed } from "vue";
+import { router, usePage } from "@inertiajs/vue3";
 import {
     Search,
     Calendar,
@@ -132,6 +132,12 @@ const formatTime = (timeString) => {
 const openView = (report) => {
     selectedItem.value = report;
     isViewOpen.value = true;
+
+    const url = new URL(window.location);
+    if (url.searchParams.has("open")) {
+        url.searchParams.delete("open");
+        window.history.replaceState({}, "", url);
+    }
 };
 
 const handleAction = (reportId, statusId) => {
@@ -176,6 +182,33 @@ const getStatusClass = (status) => {
 };
 
 const goBack = () => router.get("/hr/payroll-cut-off");
+
+const checkUrlForModal = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const idToOpen = urlParams.get("open");
+
+    if (idToOpen && props.reports?.data?.length > 0) {
+        const report = props.reports.data.find(
+            (r) => r.id === parseInt(idToOpen),
+        );
+
+        if (report) {
+            openView(report);
+        }
+    }
+};
+
+onMounted(() => {
+    checkUrlForModal();
+});
+
+watch(
+    [() => usePage().url, () => props.reports],
+    () => {
+        checkUrlForModal();
+    },
+    { deep: true },
+);
 </script>
 <template>
     <div class="p-6 space-y-8">

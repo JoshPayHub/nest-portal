@@ -4,6 +4,7 @@ namespace App\Http\Controllers\ApprovalForm;
 
 use App\Http\Controllers\Controller;
 use App\Models\Manpower;
+use App\Models\Notification;
 use App\Models\User;
 use App\Models\Department;
 use App\Models\Position;
@@ -101,10 +102,9 @@ class ManpowerController extends Controller
 
     public function approve(Request $request, $id)
     {
-        $request->validate([
-            'status_id' => 'required|in:7,8', // 7=Approved, 8=Rejected
-        ]);
+        $request->validate(['status_id' => 'required|in:7,8']);
 
+        $user = $request->user();
         $manpower = Manpower::findOrFail($id);
 
         DB::table('manpower_statuses')->updateOrInsert(
@@ -119,6 +119,32 @@ class ManpowerController extends Controller
             ]
         );
 
-        return back()->with('message', 'Manpower request updated.');
+        $userTypeName = ($user->user_type_id == 1) ? 'HR' : 'Department Head';
+        $statusName = ($request->status_id == 7) ? 'Approved' : 'Rejected';
+
+        $title = "{$userTypeName} {$statusName} your Manpower Request";
+        $message = "Your manpower request has been " . strtolower($statusName) . " by " . $user->first_name . ".";
+
+        $this->notifyUsers($manpower, $title, $message);
+
+        return redirect()->back()->with('message', 'Manpower request processed.');
+    }
+
+    private function notifyUsers($manpower, $title, $message)
+    {
+        $employee = User::find($manpower->user_id);
+
+        if ($employee) {
+            $userTypePrefix = ($employee->user_type_id == 3) ? 'head' : 'employee';
+
+            Notification::create([
+                'user_id'      => $employee->id,
+                'user_type_id' => null,
+                'title'        => $title,
+                'message'      => $message,
+                'route'        => "/{$userTypePrefix}/manpowers",
+                'data'         => json_encode(['manpower_id' => $manpower->id]),
+            ]);
+        }
     }
 }
