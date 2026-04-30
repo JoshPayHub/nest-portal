@@ -61,8 +61,8 @@ class LeaveController extends Controller
                     'id' => $leave->id,
                     'date_filed' => $leave->created_at->format('M d, Y'),
                     'type_leave' => $leave->type_leave,
-                    'start_date' => Carbon::parse($leave->start_date)->format('Y-m-d'),
-                    'end_date'   => Carbon::parse($leave->end_date)->format('Y-m-d'),
+                    'start_date' => Carbon::parse($leave->start_date)->format('M d, Y'),
+                    'end_date'   => Carbon::parse($leave->end_date)->format('M d, Y'),
                     'total_days' => $leave->total_days,
                     'reason' => $leave->reason,
                     'pay_type'   => $leave->with_pay ? 'Leave with Pay' : 'Leave without Pay',
@@ -144,7 +144,12 @@ class LeaveController extends Controller
             $user->first_name . " has submitted a new Leave request."
         );
 
-        return redirect()->route('employee.leaves.index')->with('message', 'Leave request submitted successfully!');
+        $routeMap = [
+            2 => 'employee.leaves.create',
+            3 => 'head.leaves.create',
+        ];
+
+        return redirect()->route($routeMap[$user->user_type_id])->with('message', 'Leave request submitted successfully!');
     }
 
     public function edit(Request $request, $id)
@@ -207,9 +212,6 @@ class LeaveController extends Controller
                 'total_days' => $totalDays,
                 'with_pay'   => $request->type_leave === 'Leave with Pay'
             ]);
-
-            // Optional: If you need to clear old approval logs when updated
-            // DB::table('approval_statuses')->where('leave_id', $leave->id)->delete();
 
             $this->notifyUsers(
                 $request,

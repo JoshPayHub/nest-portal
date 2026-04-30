@@ -1,6 +1,7 @@
 <script setup>
-import { ref, computed } from "vue";
-import { router, Link } from "@inertiajs/vue3";
+import { ref, computed, watch, onMounted } from "vue";
+import { Link, usePage, router } from "@inertiajs/vue3";
+
 import {
     Plus,
     Search,
@@ -72,6 +73,12 @@ const filteredData = computed(() => {
 const openView = (req) => {
     selectedUndertime.value = req;
     isViewOpen.value = true;
+
+    const url = new URL(window.location);
+    if (url.searchParams.has("open")) {
+        url.searchParams.delete("open");
+        window.history.replaceState({}, "", url);
+    }
 };
 
 const canEdit = (req) => {
@@ -91,6 +98,31 @@ const getStatusClass = (status) => {
     if (s === "pending") return "bg-amber-100 text-amber-700";
     return "bg-slate-100 text-slate-600";
 };
+
+const checkUrlForModal = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const undertimeIdToOpen = urlParams.get("open");
+
+    if (undertimeIdToOpen) {
+        const undertime = props.undertimes.data.find(
+            (r) => r.id === parseInt(undertimeIdToOpen),
+        );
+        if (undertime) {
+            openView(undertime);
+        }
+    }
+};
+
+onMounted(() => {
+    checkUrlForModal();
+});
+
+watch(
+    () => usePage().props,
+    () => {
+        checkUrlForModal();
+    },
+);
 </script>
 
 <template>

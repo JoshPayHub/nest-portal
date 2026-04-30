@@ -4,6 +4,7 @@ namespace App\Http\Controllers\ApprovalForm;
 
 use App\Http\Controllers\Controller;
 use App\Models\Leave;
+use App\Models\Notification;
 use App\Models\Status;
 use App\Models\User;
 use App\Models\Department;
@@ -136,18 +137,15 @@ class LeaveController extends Controller
         ]);
     }
 
-    /**
-     * ✅ APPROVAL WITH LEAVE BALANCE VALIDATION
-     */
-    public function approve(Request $request, $id)
+     public function approve(Request $request, $id)
     {
         $request->validate([
             'status_id' => 'required|in:7,8',
         ]);
 
+        $user = $request->user();
         $leave = Leave::with('user')->findOrFail($id);
 
-        // 🔥 ONLY CHECK IF APPROVING (NOT REJECTING)
         if ((int)$request->status_id === 7) {
 
             $balance = $this->getLeaveBalance($leave->user);
@@ -158,7 +156,6 @@ class LeaveController extends Controller
                 ]);
             }
 
-            // Optional strict validation per leave
             if ($leave->total_days > $balance['balance']) {
                 return back()->withErrors([
                     'status' => 'Leave exceeds remaining balance (' . $balance['balance'] . ').'
@@ -166,7 +163,7 @@ class LeaveController extends Controller
             }
         }
 
-        DB::table('leave_statuses')->updateOrInsert(
+         DB::table('leave_statuses')->updateOrInsert(
             [
                 'leave_id' => $leave->id,
                 'user_id'  => $request->user()->id,
@@ -178,6 +175,34 @@ class LeaveController extends Controller
             ]
         );
 
-        return redirect()->back()->with('message', 'Leave action processed successfully.');
+
+        $userTypeName = ($user->user_type_id == 1) ? 'HR' : 'Department Head';
+        $statusName = ($request->status_id == 7) ? 'Approved' : 'Rejected';
+
+        $title = "{$userTypeName} {$statusName} your Leave Request";
+        $message = "Your leave request has been " . strtolower($statusName) . " by " . $user->first_name . ".";
+
+        $this->notifyUsers($leave, $title, $message);
+
+         return redirect()->back()->with('message', 'Leave action processed successfully.');
     }
+
+    private function notifyUsers($leave, $title, $message)
+    {
+        $employee = User::find($leave->user_id);
+
+        if ($employee) {
+            $userTypePrefix = ($employee->user_type_id == 3) ? 'head' : 'employee';
+
+            Notification::create([
+                'user_id'      => $employee->id,
+                'user_type_id' => null,
+                'title'        => $title,
+                'message'      => $message,
+                'route'        => "/{$userTypePrefix}/leaves",
+                'data'         => json_encode(['leave_id' => $leave->id]),
+            ]);
+        }
+    }
+
 }

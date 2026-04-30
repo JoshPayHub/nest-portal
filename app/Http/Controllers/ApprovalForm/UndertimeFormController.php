@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\ApprovalForm;
 
 use App\Http\Controllers\Controller;
+use App\Models\Notification;
 use App\Models\Undertime;
 use App\Models\Status;
 use App\Models\User;
@@ -120,6 +121,8 @@ class UndertimeFormController extends Controller
             'status_id' => 'required|in:7,8',
         ]);
 
+        $user = $request->user();
+
         $undertime = Undertime::findOrFail($id);
 
         DB::table('undertime_statuses')->updateOrInsert(
@@ -134,6 +137,32 @@ class UndertimeFormController extends Controller
             ]
         );
 
-        return redirect()->back()->with('message', 'Undertime request processed.');
+        $userTypeName = ($user->user_type_id == 1) ? 'HR' : 'Department Head';
+        $statusName = ($request->status_id == 7) ? 'Approved' : 'Rejected';
+
+        $title = "{$userTypeName} {$statusName} your Undertime Request";
+        $message = "Your undertime request has been " . strtolower($statusName) . " by " . $user->first_name . ".";
+
+        $this->notifyUsers($undertime, $title, $message);
+
+         return redirect()->back()->with('message', 'Undertime request processed.');
+    }
+
+    private function notifyUsers($undertime, $title, $message)
+    {
+        $employee = User::find($undertime->user_id);
+
+        if ($employee) {
+            $userTypePrefix = ($employee->user_type_id == 3) ? 'head' : 'employee';
+
+            Notification::create([
+                'user_id'      => $employee->id,
+                'user_type_id' => null,
+                'title'        => $title,
+                'message'      => $message,
+                'route'        => "/{$userTypePrefix}/undertime-forms",
+                'data'         => json_encode(['undertime_id' => $undertime->id]),
+            ]);
+        }
     }
 }

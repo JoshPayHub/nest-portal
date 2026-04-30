@@ -1,6 +1,7 @@
 <script setup>
-import { ref, computed } from "vue";
-import { Link, router } from "@inertiajs/vue3";
+import { ref, computed, watch, onMounted } from "vue";
+import { Link, usePage, router } from "@inertiajs/vue3";
+
 import { Plus, Search, Calendar, Eye, Pencil, Timer } from "lucide-vue-next";
 
 import { Button } from "@/Components/ui/button";
@@ -69,6 +70,12 @@ const filteredOvertimes = computed(() => {
 const openView = (ot) => {
     selectedOvertime.value = ot;
     isViewOpen.value = true;
+
+    const url = new URL(window.location);
+    if (url.searchParams.has("open")) {
+        url.searchParams.delete("open");
+        window.history.replaceState({}, "", url);
+    }
 };
 
 const canEdit = (ot) => {
@@ -88,6 +95,31 @@ const getStatusClass = (status) => {
     if (s === "pending") return "bg-amber-100 text-amber-700";
     return "bg-slate-100 text-slate-600";
 };
+
+const checkUrlForModal = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const overtimeIdToOpen = urlParams.get("open");
+
+    if (overtimeIdToOpen) {
+        const overtime = props.overtimes.data.find(
+            (r) => r.id === parseInt(overtimeIdToOpen),
+        );
+        if (overtime) {
+            openView(overtime);
+        }
+    }
+};
+
+onMounted(() => {
+    checkUrlForModal();
+});
+
+watch(
+    () => usePage().props,
+    () => {
+        checkUrlForModal();
+    },
+);
 </script>
 
 <template>

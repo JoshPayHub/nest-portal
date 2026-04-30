@@ -8,6 +8,7 @@ use App\Models\AttendanceEmployee;
 use App\Models\ChangeOff;
 use App\Models\Holiday;
 use App\Models\Leave;
+use App\Models\Notification;
 use App\Models\Overtime;
 use App\Models\OvertimeList;
 use App\Models\PayrollCutOff;
@@ -52,13 +53,23 @@ class PayrollCutOffController extends Controller
             'status_id' => 'required|exists:statuses,id'
         ]);
 
-        $this->checkForOverlap($validated['from_cutoff_date'], $validated['to_cutoff_date']);
+        $this->checkForOverlap(
+            $validated['from_cutoff_date'],
+            $validated['to_cutoff_date']
+        );
 
-        PayrollCutOff::create($validated);
+        $cutoff = PayrollCutOff::create($validated);
+
+        $this->notifyUsers(
+            $cutoff,
+            'New Payroll Cutoff',
+            'A new cutoff has been created'
+        );
+
         return redirect()->back();
     }
 
-    public function update(Request $request, $id)
+   public function update(Request $request, $id)
     {
         $cutoff = PayrollCutOff::findOrFail($id);
 
@@ -69,10 +80,48 @@ class PayrollCutOffController extends Controller
             'status_id' => 'required|exists:statuses,id'
         ]);
 
-        $this->checkForOverlap($validated['from_cutoff_date'], $validated['to_cutoff_date'], $id);
+        $this->checkForOverlap(
+            $validated['from_cutoff_date'],
+            $validated['to_cutoff_date'],
+            $id
+        );
 
         $cutoff->update($validated);
+
+        Notification::whereRaw("JSON_EXTRACT(data, '$.cut_off_id') = ?", [$cutoff->id])
+            ->update([
+                'title'      => 'Updated Payroll Cutoff',
+                'message'    => 'A cutoff has been updated',
+                'is_read'    => 0,
+                'read_at'    => null,
+                'updated_at' => now(),
+            ]);
+
         return redirect()->back();
+    }
+
+     private function notifyUsers($cutoff, $title, $message)
+    {
+        $users = User::whereIn('user_type_id', [2, 3])->pluck('id');
+
+        $notifications = [];
+
+        foreach ($users as $userId) {
+            $notifications[] = [
+                'user_id'      => $userId,
+                'user_type_id' => null,
+                'title'        => $title,
+                'message'      => $message,
+                'route'        => '/user/payroll-cut-offs',
+                'data'         => json_encode([
+                    'cut_off_id' => $cutoff->id
+                ]),
+                'created_at'   => now(),
+                'updated_at'   => now(),
+            ];
+        }
+
+        Notification::insert($notifications);
     }
 
     private function checkForOverlap($from, $to, $excludeId = null)

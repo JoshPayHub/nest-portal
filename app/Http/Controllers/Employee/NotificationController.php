@@ -18,7 +18,7 @@ class NotificationController extends Controller
         // Apply shared filtering logic
         $this->applyUserFilters($query, $user);
 
-        $notifications = $query->with('employee')->latest()->paginate(10);
+        $notifications = $query->with('employee')->orderBy('updated_at', 'desc')->paginate(10);
 
         return Inertia::render('management/Employee/Notification', [
             'notifications' => $notifications,
@@ -82,21 +82,30 @@ class NotificationController extends Controller
      * Centralized logic to filter notifications based on user role and department
      */
     private function applyUserFilters($query, $user)
-    {
-        if (in_array($user->user_type_id, [1, 3])) {
-            // HR (1) and Head (3) see notifications sent to their user_type
-            $query->where('user_type_id', $user->user_type_id);
+{
+    if ($user->user_type_id == 1) {
+        $query->where('user_type_id', 1);
 
-            if ($user->user_type_id == 3) {
-                // Heads only see their specific department
-                $query->whereHas('employee', function ($q) use ($user) {
-                    $q->where('department_id', $user->department_id);
-                });
-            }
-        } else {
-            // Regular employees see their personal notifications
-            $query->where('user_id', $user->id)
-                  ->whereNull('user_type_id');
-        }
+    } elseif ($user->user_type_id == 3) {
+        $query->where(function ($q) use ($user) {
+
+            $q->where(function ($sub) use ($user) {
+                $sub->where('user_type_id', 3)
+                    ->whereHas('employee', function ($emp) use ($user) {
+                        $emp->where('department_id', $user->department_id);
+                    });
+            })
+
+            ->orWhere(function ($sub) use ($user) {
+                $sub->where('user_id', $user->id)
+                    ->whereNull('user_type_id');
+            });
+
+        });
+
+    } else {
+        $query->where('user_id', $user->id)
+              ->whereNull('user_type_id');
     }
+}
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\ApprovalForm;
 
 use App\Http\Controllers\Controller;
+use App\Models\Notification;
 use App\Models\Overtime;
 use App\Models\Status;
 use App\Models\User;
@@ -123,9 +124,11 @@ class OvertimeRequestController extends Controller
 
     public function approve(Request $request, $id)
     {
-        $request->validate([
-            'status_id' => 'required|in:7,8', // 7=Approved, 8=Rejected
+         $request->validate([
+            'status_id' => 'required|in:7,8',
         ]);
+
+        $user = $request->user();
 
         $overtime = Overtime::findOrFail($id);
 
@@ -141,6 +144,32 @@ class OvertimeRequestController extends Controller
             ]
         );
 
+        $userTypeName = ($user->user_type_id == 1) ? 'HR' : 'Department Head';
+        $statusName = ($request->status_id == 7) ? 'Approved' : 'Rejected';
+
+        $title = "{$userTypeName} {$statusName} your Overtime Request";
+        $message = "Your overtime request has been " . strtolower($statusName) . " by " . $user->first_name . ".";
+
+        $this->notifyUsers($overtime, $title, $message);
+
         return redirect()->back()->with('message', 'Action processed successfully.');
+    }
+
+    private function notifyUsers($overtime, $title, $message)
+    {
+        $employee = User::find($overtime->user_id);
+
+        if ($employee) {
+            $userTypePrefix = ($employee->user_type_id == 3) ? 'head' : 'employee';
+
+            Notification::create([
+                'user_id'      => $employee->id,
+                'user_type_id' => null,
+                'title'        => $title,
+                'message'      => $message,
+                'route'        => "/{$userTypePrefix}/overtime-requests",
+                'data'         => json_encode(['overtime_id' => $overtime->id]),
+            ]);
+        }
     }
 }

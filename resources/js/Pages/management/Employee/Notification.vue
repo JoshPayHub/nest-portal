@@ -147,7 +147,7 @@ const formatDate = (dateString) => {
                                         class="flex items-center gap-1.5 text-xs font-bold text-slate-400 uppercase whitespace-nowrap"
                                     >
                                         <Calendar class="w-3.5 h-3.5" />
-                                        {{ formatDate(notif.created_at) }}
+                                        {{ formatDate(notif.updated_at) }}
                                     </span>
                                 </div>
 

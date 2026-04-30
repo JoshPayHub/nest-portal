@@ -90,6 +90,21 @@ const submit = () => {
     form[method](url, {
         preserveScroll: true,
         onSuccess: () => {
+            if (!isEditing) {
+                form.clearErrors();
+
+                form.name = authUser?.name ?? "";
+                form.department_position = authUser
+                    ? `${authUser.department} / ${authUser.position}`
+                    : "";
+                form.report_date = today;
+
+                form.type_leave = "Leave with Pay"; // or "" if you want blank
+                form.start_date = "";
+                form.end_date = "";
+                form.reason = "";
+            }
+
             toastStore.show("Leave saved successfully!", "success");
         },
         onError: () => {

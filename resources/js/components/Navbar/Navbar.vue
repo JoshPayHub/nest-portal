@@ -169,7 +169,7 @@ const closeDropdownOnly = () => {
                                     <p
                                         class="text-[10px] text-gray-400 uppercase font-bold"
                                     >
-                                        {{ formatDate(notif.created_at) }}
+                                        {{ formatDate(notif.updated_at) }}
                                     </p>
                                 </div>
                                 <span

@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed } from "vue";
-import { router, Link } from "@inertiajs/vue3";
+import { useForm, usePage, router, Link } from "@inertiajs/vue3";
+import { ref, computed, watch, onMounted } from "vue";
 import {
     Plus,
     Search,
@@ -76,6 +76,12 @@ const filteredLeaves = computed(() => {
 const openView = (req) => {
     selectedLeave.value = req;
     isViewOpen.value = true;
+
+    const url = new URL(window.location);
+    if (url.searchParams.has("open")) {
+        url.searchParams.delete("open");
+        window.history.replaceState({}, "", url);
+    }
 };
 
 const canEdit = (req) => {
@@ -95,6 +101,31 @@ const getStatusClass = (status) => {
     if (s === "pending") return "bg-amber-100 text-amber-700";
     return "bg-slate-100 text-slate-600";
 };
+
+const checkUrlForModal = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const leaveIdToOpen = urlParams.get("open");
+
+    if (leaveIdToOpen) {
+        const leave = props.leaves.data.find(
+            (r) => r.id === parseInt(leaveIdToOpen),
+        );
+        if (leave) {
+            openView(leave);
+        }
+    }
+};
+
+onMounted(() => {
+    checkUrlForModal();
+});
+
+watch(
+    () => usePage().props,
+    () => {
+        checkUrlForModal();
+    },
+);
 </script>
 
 <template>

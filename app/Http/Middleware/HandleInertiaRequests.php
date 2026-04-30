@@ -22,29 +22,40 @@ class HandleInertiaRequests extends Middleware
         $user = $request->user();
         $notifications = [];
 
-        if ($user) {
-            $query = Notification::query();
+    if ($user) {
+        $query = Notification::query();
 
-            // Logic for HR (1) and Dept Head (3)
-            if (in_array($user->user_type_id, [1, 3])) {
-                $query->where('user_type_id', $user->user_type_id);
+        if ($user->user_type_id == 1) {
+            $query->where('user_type_id', 1);
 
-                // If user is a Department Head, filter by their department
-                if ($user->user_type_id == 3) {
-                    $query->whereHas('employee', function ($q) use ($user) {
-                        $q->where('department_id', $user->department_id);
-                    });
-                }
-            } else {
-                // Logic for regular Employee (2)
-                // They only see notifications where they are the owner and user_type_id is null
-                $query->where('user_id', $user->id)
-                      ->whereNull('user_type_id');
-            }
+        } elseif ($user->user_type_id == 3) {
+            $query->where(function ($q) use ($user) {
 
-            // Get the 10 latest notifications for the bell icon
-            $notifications = $query->with('employee')->latest()->take(10)->get();
+                $q->where(function ($sub) use ($user) {
+                    $sub->where('user_type_id', 3)
+                        ->whereHas('employee', function ($emp) use ($user) {
+                            $emp->where('department_id', $user->department_id);
+                        });
+                })
+
+                ->orWhere(function ($sub) use ($user) {
+                    $sub->where('user_id', $user->id)
+                        ->whereNull('user_type_id');
+                });
+
+            });
+
+        } else {
+            $query->where('user_id', $user->id)
+                ->whereNull('user_type_id');
         }
+
+        $notifications = $query
+            ->with('employee')
+            ->orderBy('updated_at', 'desc')
+            ->take(10)
+            ->get();
+    }
 
         return array_merge(parent::share($request), [
             'auth' => [
