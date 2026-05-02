@@ -39,11 +39,11 @@ class EmployeeController extends Controller
             'employment_status' => 'required|in:Regular,Probationary,Contractual,Casual',
             'employment_type' => 'required|in:Full-Time,Part-Time',
             'date_hired' => 'required|date',
-            'regularization_date' => 'nullable|date',
-            'immediate_supervisor' => 'nullable|string|max:255',
-            'work_location' => 'nullable|string|max:255',
-            'payroll_group' => 'nullable|string|max:255',
-            'leave_pay' => 'nullable|numeric|min:0',
+            'regularization_date' => 'required|date',
+            'immediate_supervisor' => 'required|string|max:255',
+            'work_location' => 'required|string|max:255',
+            'payroll_group' => 'required|string|max:255',
+            'leave_pay' => 'required|numeric|min:0',
         ]);
 
         User::create([
@@ -115,11 +115,11 @@ class EmployeeController extends Controller
             'employment_status' => 'required|in:Regular,Probationary,Contractual,Casual',
             'employment_type' => 'required|in:Full-Time,Part-Time',
             'date_hired' => 'required|date',
-            'regularization_date' => 'nullable|date',
-            'immediate_supervisor' => 'nullable|string|max:255',
-            'work_location' => 'nullable|string|max:255',
-            'payroll_group' => 'nullable|string|max:255',
-            'leave_pay' => 'nullable|numeric|min:0',
+            'regularization_date' => 'required|date',
+            'immediate_supervisor' => 'required|string|max:255',
+            'work_location' => 'required|string|max:255',
+            'payroll_group' => 'required|string|max:255',
+            'leave_pay' => 'required|numeric|min:0',
         ]);
 
         $user->update($validated);

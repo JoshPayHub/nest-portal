@@ -101,13 +101,11 @@ const existingResume = computed(() => {
 
 const preview = ref(null);
 
-// Load draft from localStorage on refresh
 onMounted(() => {
     const savedData = localStorage.getItem(STORAGE_KEY);
     if (savedData) {
         try {
             const parsedData = JSON.parse(savedData);
-            // Sync saved data into the form object
             Object.assign(form, parsedData);
         } catch (e) {
             console.error("Could not parse saved form data", e);
@@ -115,10 +113,14 @@ onMounted(() => {
     }
 });
 
-// Watch for changes and save to localStorage
 watch(
     () => form.data(),
-    (newData) => {
+    (newData, oldData) => {
+        for (const key in newData) {
+            if (newData[key] !== oldData[key]) {
+                form.clearErrors(key);
+            }
+        }
         localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
     },
     { deep: true },
@@ -134,9 +136,7 @@ const submit = () => {
     form[method](url, {
         preserveScroll: true,
         onSuccess: () => {
-            // Remove from storage only on success
             localStorage.removeItem(STORAGE_KEY);
-
             if (!props.isEditing) {
                 form.reset();
                 form.clearErrors();
@@ -198,6 +198,7 @@ const submit = () => {
                     id="employeeForm"
                     class="space-y-10"
                 >
+                    <!-- Section: Basic Identification -->
                     <section class="space-y-5">
                         <div
                             class="flex items-center gap-3 text-brand-blue font-bold border-l-4 border-brand-blue pl-3"
@@ -208,6 +209,7 @@ const submit = () => {
                         <div
                             class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-200"
                         >
+                            <!-- Employee ID -->
                             <div class="flex flex-col">
                                 <label
                                     class="text-xs font-semibold mb-1 text-gray-500"
@@ -227,11 +229,13 @@ const submit = () => {
                                 />
                                 <p
                                     v-if="form.errors.employee_id"
-                                    class="text-xs text-red-500"
+                                    class="text-xs text-red-500 mt-1"
                                 >
                                     {{ form.errors.employee_id }}
                                 </p>
                             </div>
+
+                            <!-- Username -->
                             <div class="flex flex-col">
                                 <label
                                     class="text-xs font-semibold mb-1 text-gray-500"
@@ -250,11 +254,13 @@ const submit = () => {
                                 />
                                 <p
                                     v-if="form.errors.username"
-                                    class="text-xs text-red-500"
+                                    class="text-xs text-red-500 mt-1"
                                 >
                                     {{ form.errors.username }}
                                 </p>
                             </div>
+
+                            <!-- Company Email -->
                             <div class="flex flex-col">
                                 <label
                                     class="text-xs font-semibold mb-1 text-gray-500"
@@ -276,7 +282,7 @@ const submit = () => {
                                 />
                                 <p
                                     v-if="form.errors.company_email"
-                                    class="text-xs text-red-500"
+                                    class="text-xs text-red-500 mt-1"
                                 >
                                     {{ form.errors.company_email }}
                                 </p>
@@ -284,6 +290,7 @@ const submit = () => {
                         </div>
                     </section>
 
+                    <!-- Section: Employment Details -->
                     <section class="space-y-5">
                         <div
                             class="flex items-center gap-2 text-brand-blue font-bold border-l-4 border-brand-blue pl-3"
@@ -294,6 +301,7 @@ const submit = () => {
                         <div
                             class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-200"
                         >
+                            <!-- User Type -->
                             <div class="flex flex-col">
                                 <label
                                     class="text-xs font-semibold mb-1 text-gray-500"
@@ -305,7 +313,13 @@ const submit = () => {
                                 >
                                 <select
                                     v-model="form.user_type_id"
-                                    class="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:border-brand-blue outline-none transition-colors"
+                                    class="flex h-10 w-full rounded-md border bg-white px-3 text-sm focus:border-brand-blue outline-none transition-colors"
+                                    :class="{
+                                        'border-red-500':
+                                            form.errors.user_type_id,
+                                        'border-slate-200':
+                                            !form.errors.user_type_id,
+                                    }"
                                 >
                                     <option value="">Select Role</option>
                                     <option
@@ -316,7 +330,15 @@ const submit = () => {
                                         {{ type.name }}
                                     </option>
                                 </select>
+                                <p
+                                    v-if="form.errors.user_type_id"
+                                    class="text-xs text-red-500 mt-1"
+                                >
+                                    {{ form.errors.user_type_id }}
+                                </p>
                             </div>
+
+                            <!-- Department -->
                             <div class="flex flex-col">
                                 <label
                                     class="text-xs font-semibold mb-1 text-gray-500"
@@ -328,7 +350,13 @@ const submit = () => {
                                 >
                                 <select
                                     v-model="form.department_id"
-                                    class="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:border-brand-blue outline-none"
+                                    class="flex h-10 w-full rounded-md border bg-white px-3 text-sm focus:border-brand-blue outline-none transition-colors"
+                                    :class="{
+                                        'border-red-500':
+                                            form.errors.department_id,
+                                        'border-slate-200':
+                                            !form.errors.department_id,
+                                    }"
                                 >
                                     <option value="">Select Dept</option>
                                     <option
@@ -339,7 +367,15 @@ const submit = () => {
                                         {{ dept.name }}
                                     </option>
                                 </select>
+                                <p
+                                    v-if="form.errors.department_id"
+                                    class="text-xs text-red-500 mt-1"
+                                >
+                                    {{ form.errors.department_id }}
+                                </p>
                             </div>
+
+                            <!-- Position -->
                             <div class="flex flex-col">
                                 <label
                                     class="text-xs font-semibold mb-1 text-gray-500"
@@ -350,7 +386,13 @@ const submit = () => {
                                 >
                                 <select
                                     v-model="form.position_id"
-                                    class="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:border-brand-blue outline-none"
+                                    class="flex h-10 w-full rounded-md border bg-white px-3 text-sm focus:border-brand-blue outline-none transition-colors"
+                                    :class="{
+                                        'border-red-500':
+                                            form.errors.position_id,
+                                        'border-slate-200':
+                                            !form.errors.position_id,
+                                    }"
                                 >
                                     <option value="">Select Position</option>
                                     <option
@@ -361,15 +403,33 @@ const submit = () => {
                                         {{ pos.name }}
                                     </option>
                                 </select>
+                                <p
+                                    v-if="form.errors.position_id"
+                                    class="text-xs text-red-500 mt-1"
+                                >
+                                    {{ form.errors.position_id }}
+                                </p>
                             </div>
+
+                            <!-- Employment Status -->
                             <div class="flex flex-col">
                                 <label
                                     class="text-xs font-semibold mb-1 text-gray-500"
+                                    :class="{
+                                        'text-red-500':
+                                            form.errors.employment_status,
+                                    }"
                                     >Employment Status</label
                                 >
                                 <select
                                     v-model="form.employment_status"
-                                    class="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:border-brand-blue outline-none"
+                                    class="flex h-10 w-full rounded-md border bg-white px-3 text-sm focus:border-brand-blue outline-none transition-colors"
+                                    :class="{
+                                        'border-red-500':
+                                            form.errors.employment_status,
+                                        'border-slate-200':
+                                            !form.errors.employment_status,
+                                    }"
                                 >
                                     <option value="">Select Status</option>
                                     <option value="Regular">Regular</option>
@@ -380,58 +440,129 @@ const submit = () => {
                                         Contractual
                                     </option>
                                 </select>
+                                <p
+                                    v-if="form.errors.employment_status"
+                                    class="text-xs text-red-500 mt-1"
+                                >
+                                    {{ form.errors.employment_status }}
+                                </p>
                             </div>
 
+                            <!-- Employment Type -->
                             <div class="flex flex-col">
                                 <label
                                     class="text-xs font-semibold mb-1 text-gray-500"
+                                    :class="{
+                                        'text-red-500':
+                                            form.errors.employment_type,
+                                    }"
                                     >Employment Type</label
                                 >
                                 <select
                                     v-model="form.employment_type"
-                                    class="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:border-brand-blue outline-none"
+                                    class="flex h-10 w-full rounded-md border bg-white px-3 text-sm focus:border-brand-blue outline-none transition-colors"
+                                    :class="{
+                                        'border-red-500':
+                                            form.errors.employment_type,
+                                        'border-slate-200':
+                                            !form.errors.employment_type,
+                                    }"
                                 >
                                     <option value="">Select Type</option>
                                     <option value="Full-Time">Full-Time</option>
                                     <option value="Part-Time">Part-Time</option>
                                 </select>
+                                <p
+                                    v-if="form.errors.employment_type"
+                                    class="text-xs text-red-500 mt-1"
+                                >
+                                    {{ form.errors.employment_type }}
+                                </p>
                             </div>
+
+                            <!-- Date Hired -->
                             <div class="flex flex-col">
                                 <label
                                     class="text-xs font-semibold mb-1 text-gray-500"
+                                    :class="{
+                                        'text-red-500': form.errors.date_hired,
+                                    }"
                                     >Date Hired</label
                                 >
                                 <Input
                                     v-model="form.date_hired"
                                     class="bg-white"
                                     type="date"
+                                    :class="{
+                                        'border-red-500':
+                                            form.errors.date_hired,
+                                    }"
                                 />
+                                <p
+                                    v-if="form.errors.date_hired"
+                                    class="text-xs text-red-500 mt-1"
+                                >
+                                    {{ form.errors.date_hired }}
+                                </p>
                             </div>
+
+                            <!-- Regularization Date -->
                             <div class="flex flex-col">
                                 <label
                                     class="text-xs font-semibold mb-1 text-gray-500"
+                                    :class="{
+                                        'text-red-500':
+                                            form.errors.regularization_date,
+                                    }"
                                     >Regularization Date</label
                                 >
                                 <Input
                                     v-model="form.regularization_date"
                                     class="bg-white"
                                     type="date"
+                                    :class="{
+                                        'border-red-500':
+                                            form.errors.regularization_date,
+                                    }"
                                 />
+                                <p
+                                    v-if="form.errors.regularization_date"
+                                    class="text-xs text-red-500 mt-1"
+                                >
+                                    {{ form.errors.regularization_date }}
+                                </p>
                             </div>
+
+                            <!-- Immediate Supervisor -->
                             <div class="flex flex-col">
                                 <label
                                     class="text-xs font-semibold mb-1 text-gray-500"
+                                    :class="{
+                                        'text-red-500':
+                                            form.errors.immediate_supervisor,
+                                    }"
                                     >Immediate Supervisor</label
                                 >
                                 <Input
                                     v-model="form.immediate_supervisor"
                                     class="bg-white"
                                     placeholder="Reports to..."
+                                    :class="{
+                                        'border-red-500':
+                                            form.errors.immediate_supervisor,
+                                    }"
                                 />
+                                <p
+                                    v-if="form.errors.immediate_supervisor"
+                                    class="text-xs text-red-500 mt-1"
+                                >
+                                    {{ form.errors.immediate_supervisor }}
+                                </p>
                             </div>
                         </div>
                     </section>
 
+                    <!-- Section: Work Settings & Payroll -->
                     <section class="space-y-5">
                         <div
                             class="flex items-center gap-2 text-brand-blue font-bold border-l-4 border-brand-blue pl-3"
@@ -442,50 +573,94 @@ const submit = () => {
                         <div
                             class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-200"
                         >
-                            <div class="space-y-2">
+                            <!-- Work Location -->
+                            <div class="flex flex-col">
                                 <label
                                     class="text-xs font-semibold mb-1 text-gray-500"
+                                    :class="{
+                                        'text-red-500':
+                                            form.errors.work_location,
+                                    }"
                                     >Work Location</label
                                 >
                                 <Input
                                     v-model="form.work_location"
                                     placeholder="Office Location"
                                     class="bg-white"
+                                    :class="{
+                                        'border-red-500':
+                                            form.errors.work_location,
+                                    }"
                                 />
+                                <p
+                                    v-if="form.errors.work_location"
+                                    class="text-xs text-red-500 mt-1"
+                                >
+                                    {{ form.errors.work_location }}
+                                </p>
                             </div>
-                            <div class="space-y-2">
+
+                            <!-- Payroll Group -->
+                            <div class="flex flex-col">
                                 <label
                                     class="text-xs font-semibold mb-1 text-gray-500"
+                                    :class="{
+                                        'text-red-500':
+                                            form.errors.payroll_group,
+                                    }"
                                     >Payroll Group</label
                                 >
                                 <Input
                                     v-model="form.payroll_group"
                                     placeholder="e.g. Weekly"
                                     class="bg-white"
+                                    :class="{
+                                        'border-red-500':
+                                            form.errors.payroll_group,
+                                    }"
                                 />
+                                <p
+                                    v-if="form.errors.payroll_group"
+                                    class="text-xs text-red-500 mt-1"
+                                >
+                                    {{ form.errors.payroll_group }}
+                                </p>
                             </div>
-                            <div class="space-y-2">
+
+                            <!-- Leave Pay Credits -->
+                            <div class="flex flex-col">
                                 <label
                                     class="text-xs font-semibold mb-1 text-gray-500"
+                                    :class="{
+                                        'text-red-500': form.errors.leave_pay,
+                                    }"
+                                    >Leave Pay Credits (Total)</label
                                 >
-                                    Leave Pay Credits (Total)
-                                </label>
                                 <Input
                                     v-model="form.leave_pay"
                                     type="number"
                                     step="0.5"
                                     class="bg-white"
+                                    :class="{
+                                        'border-red-500': form.errors.leave_pay,
+                                    }"
                                 />
+                                <p
+                                    v-if="form.errors.leave_pay"
+                                    class="text-xs text-red-500 mt-1"
+                                >
+                                    {{ form.errors.leave_pay }}
+                                </p>
                             </div>
-                            <div v-if="isEditing" class="space-y-2">
+
+                            <!-- Leave Pay Used (Read Only) -->
+                            <div v-if="isEditing" class="flex flex-col">
                                 <label
                                     class="text-xs font-semibold mb-1 text-gray-500"
-                                >
-                                    Leave Pay Used ({{
+                                    >Leave Pay Used ({{
                                         new Date().getFullYear()
-                                    }})
-                                </label>
-
+                                    }})</label
+                                >
                                 <Input
                                     :model-value="props.employee.leave_pay_used"
                                     type="number"

@@ -232,32 +232,35 @@ class LeaveController extends Controller
     private function notifyUsers(Request $request, $report, $title, $message)
     {
         $employeeId = $report->user_id;
+        $types = [
+            3 => '/head/leave',
+            1 => '/hr/leave'
+        ];
 
-        $deptHeads = User::where('user_type_id', 3)
-            ->where('department_id', $report->department_id)
-            ->get();
+        foreach ($types as $typeId => $route) {
+            $notification = Notification::where('user_id', $employeeId)
+                ->where('user_type_id', $typeId)
+                ->where('data', 'LIKE', '%leave_id%')
+                ->where('data', 'LIKE', '%' . $report->id . '%')
+                ->first();
 
-        foreach ($deptHeads as $head) {
-            Notification::create([
-                'user_id'         => $employeeId,
-                'user_type_id'    => 3,
-                'title'           => $title,
-                'message'         => $message,
-                'route'           => '/head/leave',
-                'data'            => json_encode(['leave_id' => $report->id]),
-            ]);
-        }
-
-        $hrUsers = User::where('user_type_id', 1)->get();
-        foreach ($hrUsers as $hr) {
-            Notification::create([
-                'user_id'         => $employeeId,
-                'user_type_id'    => 1,
-                'title'           => $title,
-                'message'         => $message,
-                'route'           => '/hr/leave',
-                'data'            => json_encode(['leave_id' => $report->id]),
-            ]);
+            if ($notification) {
+                $notification->update([
+                    'title'   => $title,
+                    'message' => $message,
+                    'is_read' => 0,
+                    'updated_at' => now(),
+                ]);
+            } else {
+                Notification::create([
+                    'user_id'      => $employeeId,
+                    'user_type_id' => $typeId,
+                    'title'        => $title,
+                    'message'      => $message,
+                    'route'        => $route,
+                    'data'         => json_encode(['leave_id' => $report->id]),
+                ]);
+            }
         }
     }
 }

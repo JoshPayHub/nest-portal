@@ -106,31 +106,35 @@ class AttendanceController extends Controller
         $employeeId = $report->user_id;
         $cutOffId = $report->payroll_cut_off_id;
 
-        $deptHeads = User::where('user_type_id', 3)
-            ->where('department_id', $report->department_id)
-            ->get();
+        $types = [
+            3 => "/head/payroll-cut-off/{$cutOffId}/attendance",
+            1 => "/hr/payroll-cut-off/{$cutOffId}/attendance"
+        ];
 
-        foreach ($deptHeads as $head) {
-            Notification::create([
-                'user_id'         => $employeeId,
-                'user_type_id'    => 3,
-                'title'           => $title,
-                'message'         => $message,
-                'route'           => "/head/payroll-cut-off/{$cutOffId}/attendance",
-                'data'            => json_encode(['attendance_id' => $report->id]),
-            ]);
-        }
+        foreach ($types as $typeId => $route) {
+            $notification = Notification::where('user_id', $employeeId)
+                ->where('user_type_id', $typeId)
+                ->where('data', 'LIKE', '%attendance_id%')
+                ->where('data', 'LIKE', '%' . $report->id . '%')
+                ->first();
 
-        $hrUsers = User::where('user_type_id', 1)->get();
-        foreach ($hrUsers as $hr) {
-            Notification::create([
-                'user_id'         => $employeeId,
-                'user_type_id'    => 1,
-                'title'           => $title,
-                'message'         => $message,
-                'route'           => "/hr/payroll-cut-off/{$cutOffId}/attendance",
-                'data'            => json_encode(['attendance_id' => $report->id]),
-            ]);
+            if ($notification) {
+                $notification->update([
+                    'title'   => $title,
+                    'message' => $message,
+                    'is_read' => 0,
+                    'updated_at' => now(),
+                ]);
+            } else {
+                Notification::create([
+                    'user_id'      => $employeeId,
+                    'user_type_id' => $typeId,
+                    'title'        => $title,
+                    'message'      => $message,
+                    'route'        => $route,
+                    'data'         => json_encode(['attendance_id' => $report->id]),
+                ]);
+            }
         }
     }
 }
