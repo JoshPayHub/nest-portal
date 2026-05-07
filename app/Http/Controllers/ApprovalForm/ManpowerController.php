@@ -136,15 +136,30 @@ class ManpowerController extends Controller
 
         if ($employee) {
             $userTypePrefix = ($employee->user_type_id == 3) ? 'head' : 'employee';
+            $notification = Notification::where('user_id', $employee->id)
+                ->whereNull('user_type_id')
+                ->where('data', 'LIKE', '%manpower_id%')
+                ->where('data', 'LIKE', '%' . $manpower->id . '%')
+                ->first();
 
-            Notification::create([
-                'user_id'      => $employee->id,
-                'user_type_id' => null,
-                'title'        => $title,
-                'message'      => $message,
-                'route'        => "/{$userTypePrefix}/manpowers",
-                'data'         => json_encode(['manpower_id' => $manpower->id]),
-            ]);
+            if ($notification) {
+                $notification->update([
+                    'title'      => $title,
+                    'message'    => $message,
+                    'is_read'    => 0,
+                    'read_at'    => null,
+                    'updated_at' => now(),
+                ]);
+            } else {
+                Notification::create([
+                    'user_id'      => $employee->id,
+                    'user_type_id' => null,
+                    'title'        => $title,
+                    'message'      => $message,
+                    'route'        => "/{$userTypePrefix}/leaves",
+                    'data'         => json_encode(['manpower_id' => $manpower->id]),
+                ]);
+            }
         }
     }
 }

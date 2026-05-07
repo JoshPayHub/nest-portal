@@ -109,11 +109,11 @@ class BusinessNotificationController extends Controller
         $request->validate(['status_id' => 'required|in:7,8']);
 
         $user = $request->user();
-        $notification = BusinessNotification::findOrFail($id);
+        $Businessnotification = BusinessNotification::findOrFail($id);
 
         DB::table('business_notification_statuses')->updateOrInsert(
             [
-                'business_notification_id' => $notification->id,
+                'business_notification_id' => $Businessnotification->id,
                 'user_id'                  => $request->user()->id,
             ],
             [
@@ -129,26 +129,41 @@ class BusinessNotificationController extends Controller
         $title = "{$userTypeName} {$statusName} your Business Notification Request";
         $message = "Your business notification request has been " . strtolower($statusName) . " by " . $user->first_name . ".";
 
-        $this->notifyUsers($notification, $title, $message);
+        $this->notifyUsers($Businessnotification, $title, $message);
 
         return redirect()->back()->with('message', 'Business notification request processed.');
     }
 
-    private function notifyUsers($notification, $title, $message)
+    private function notifyUsers($Businessnotification, $title, $message)
     {
-        $employee = User::find($notification->user_id);
+        $employee = User::find($Businessnotification->user_id);
 
         if ($employee) {
             $userTypePrefix = ($employee->user_type_id == 3) ? 'head' : 'employee';
+            $notification = Notification::where('user_id', $employee->id)
+                ->whereNull('user_type_id')
+                ->where('data', 'LIKE', '%business_notification_id%')
+                ->where('data', 'LIKE', '%' . $Businessnotification->id . '%')
+                ->first();
 
-            Notification::create([
-                'user_id'      => $employee->id,
-                'user_type_id' => null,
-                'title'        => $title,
-                'message'      => $message,
-                'route'        => "/{$userTypePrefix}/business-notifications",
-                'data'         => json_encode(['business_notification_id' => $notification->id]),
-            ]);
+            if ($notification) {
+                $notification->update([
+                    'title'      => $title,
+                    'message'    => $message,
+                    'is_read'    => 0,
+                    'read_at'    => null,
+                    'updated_at' => now(),
+                ]);
+            } else {
+                Notification::create([
+                    'user_id'      => $employee->id,
+                    'user_type_id' => null,
+                    'title'        => $title,
+                    'message'      => $message,
+                    'route'        => "/{$userTypePrefix}/business-notifications",
+                    'data'         => json_encode(['business_notification_id' => $Businessnotification->id]),
+                ]);
+            }
         }
     }
 }

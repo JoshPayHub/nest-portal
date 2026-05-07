@@ -234,6 +234,7 @@ class AccomplishmentReportController extends Controller
                     'title'   => $title,
                     'message' => $message,
                     'is_read' => 0,
+                    'read_at'    => null,
                     'updated_at' => now(),
                 ]);
             } else {

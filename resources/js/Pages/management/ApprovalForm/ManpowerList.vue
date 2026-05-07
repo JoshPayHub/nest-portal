@@ -506,7 +506,7 @@ watch(
                             class="bg-emerald-600 hover:bg-emerald-700 text-white"
                             @click="handleAction(selectedItem.id, 7)"
                         >
-                            <Check class="w-4 h-4 mr-1" /> Re-Approve
+                            <Check class="w-4 h-4 mr-1" /> Change to Approve
                         </Button>
                     </div>
                 </DialogFooter>

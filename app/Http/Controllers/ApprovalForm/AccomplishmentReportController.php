@@ -128,17 +128,18 @@ class AccomplishmentReportController extends Controller
 
         if ($employee) {
             $userTypePrefix = ($employee->user_type_id == 3) ? 'head' : 'employee';
-
             $notification = Notification::where('user_id', $employee->id)
                 ->whereNull('user_type_id')
-                ->where('data', 'LIKE', '%"report_id":' . $report->id . '%')
+                ->where('data', 'LIKE', '%report_id%')
+                ->where('data', 'LIKE', '%' . $report->id . '%')
                 ->first();
 
             if ($notification) {
                 $notification->update([
-                    'title'   => $title,
-                    'message' => $message,
-                    'is_read' => 0,
+                    'title'      => $title,
+                    'message'    => $message,
+                    'is_read'    => 0,
+                    'read_at'    => null,
                     'updated_at' => now(),
                 ]);
             } else {
