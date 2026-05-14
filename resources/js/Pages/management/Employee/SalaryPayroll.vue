@@ -1,6 +1,6 @@
 <script setup>
-import { ref, watch } from "vue";
-import { router } from "@inertiajs/vue3";
+import { ref, computed, watch, onMounted } from "vue";
+import { usePage, router } from "@inertiajs/vue3";
 import { Search, Eye, Lock } from "lucide-vue-next";
 
 // UI Components
@@ -35,6 +35,8 @@ const props = defineProps({
     cutoffs: Object,
     filters: Object,
 });
+
+const page = usePage();
 
 const search = ref(props.filters.search || "");
 const isViewOpen = ref(false);
@@ -91,12 +93,16 @@ watch(search, (value) => {
     router.get(
         "/employee/salary-payroll",
         { search: value },
-        { preserveState: true, replace: true },
+        {
+            preserveState: true,
+            replace: true,
+        },
     );
 });
 
 const formatDate = (dateString) => {
     if (!dateString) return "";
+
     return new Date(dateString).toLocaleDateString("en-US", {
         month: "short",
         day: "2-digit",
@@ -112,7 +118,8 @@ const formatCurrency = (value) => {
 };
 
 const openView = (item) => {
-    const payroll = item.salary_payrolls[0];
+    const payroll = item.salary_payrolls?.[0];
+
     if (!payroll) return;
 
     selectedCutoff.value = item;
@@ -121,7 +128,49 @@ const openView = (item) => {
     // Status 7 = Approved
     isLocked.value = payroll.status_id !== 7;
     isViewOpen.value = true;
+
+    // Remove ?open= from URL after opening modal
+    const url = new URL(window.location.href);
+
+    if (url.searchParams.has("open")) {
+        url.searchParams.delete("open");
+        window.history.replaceState({}, "", url);
+    }
 };
+
+const checkUrlForModal = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const openId = urlParams.get("open");
+
+    if (!openId) return;
+
+    const parsedId = parseInt(openId);
+
+    // Find by payroll_id from notification
+    const cutoff = props.cutoffs?.data?.find((cutoff) =>
+        cutoff.salary_payrolls?.some((payroll) => payroll.id === parsedId),
+    );
+
+    if (cutoff) {
+        openView(cutoff);
+
+        // Clean URL after opening
+        const url = new URL(window.location.href);
+        url.searchParams.delete("open");
+        window.history.replaceState({}, "", url);
+    }
+};
+
+onMounted(() => {
+    checkUrlForModal();
+});
+
+watch(
+    () => usePage().props,
+    () => {
+        checkUrlForModal();
+    },
+);
 </script>
 
 <template>

@@ -88,7 +88,8 @@ class PayrollCutOffController extends Controller
 
         $cutoff->update($validated);
 
-        Notification::whereRaw("JSON_EXTRACT(data, '$.cut_off_id') = ?", [$cutoff->id])
+        Notification::where('data', 'LIKE', '%cut_off_id%')
+            ->where('data', 'LIKE', '%' . $cutoff->id . '%')
             ->update([
                 'title'      => 'Updated Payroll Cutoff',
                 'message'    => 'A cutoff has been updated',
@@ -100,28 +101,42 @@ class PayrollCutOffController extends Controller
         return redirect()->back();
     }
 
-     private function notifyUsers($cutoff, $title, $message)
+    private function notifyUsers($cutoff, $title, $message)
     {
-        $users = User::whereIn('user_type_id', [2, 3])->pluck('id');
+        $users = User::whereIn('user_type_id', [2, 3])->get();
 
-        $notifications = [];
+        foreach ($users as $user) {
 
-        foreach ($users as $userId) {
-            $notifications[] = [
-                'user_id'      => $userId,
-                'user_type_id' => null,
-                'title'        => $title,
-                'message'      => $message,
-                'route'        => '/user/payroll-cut-offs',
-                'data'         => json_encode([
-                    'cut_off_id' => $cutoff->id
-                ]),
-                'created_at'   => now(),
-                'updated_at'   => now(),
-            ];
+            $userTypePrefix = ($user->user_type_id == 3)
+                ? 'head'
+                : 'employee';
+
+            $notification = Notification::where('user_id', $user->id)
+                ->where('data', 'LIKE', '%cut_off_id%')
+                ->where('data', 'LIKE', '%' . $cutoff->id . '%')
+                ->first();
+
+            if ($notification) {
+                $notification->update([
+                    'title'      => $title,
+                    'message'    => $message,
+                    'is_read'    => 0,
+                    'read_at'    => null,
+                    'updated_at' => now(),
+                ]);
+            } else {
+                Notification::create([
+                    'user_id'      => $user->id,
+                    'user_type_id' => $user->user_type_id,
+                    'title'        => $title,
+                    'message'      => $message,
+                    'route'        => "/{$userTypePrefix}/payroll-cut-offs",
+                    'data'         => json_encode([
+                        'cut_off_id' => $cutoff->id
+                    ]),
+                ]);
+            }
         }
-
-        Notification::insert($notifications);
     }
 
     private function checkForOverlap($from, $to, $excludeId = null)
@@ -701,23 +716,38 @@ class PayrollCutOffController extends Controller
     }
 
 
-  public function approve(Request $request, $id)
+    public function approve(Request $request, $id)
     {
         $request->validate([
             'status_id' => 'required|in:7,8',
         ]);
 
-        $report = AttendanceEmployee::with(['user.salaryEmployee', 'attendances', 'department'])->findOrFail($id);
+        $user = $request->user();
 
-        DB::transaction(function () use ($request, $report) {
-            // 1. Update or Create the approval status
+        $report = AttendanceEmployee::with([
+            'user.salaryEmployee',
+            'attendances',
+            'department'
+        ])->findOrFail($id);
+
+        DB::transaction(function () use ($request, $report, $user) {
+
+            // 1. Update or create approval status
             DB::table('attendance_statuses')->updateOrInsert(
-                ['attendance_employee_id' => $report->id, 'user_id' => $request->user()->id],
-                ['status_id' => $request->status_id, 'updated_at' => now(), 'created_at' => now()]
+                [
+                    'attendance_employee_id' => $report->id,
+                    'user_id' => $user->id
+                ],
+                [
+                    'status_id' => $request->status_id,
+                    'updated_at' => now(),
+                    'created_at' => now(),
+                ]
             );
 
-            // 2. Handle Payroll Insertion vs. Removal
+            // 2. Handle payroll insertion/removal
             if ($request->status_id == 7) {
+
                 $approvals = DB::table('attendance_statuses')
                     ->join('users', 'attendance_statuses.user_id', '=', 'users.id')
                     ->where('attendance_employee_id', $report->id)
@@ -725,17 +755,85 @@ class PayrollCutOffController extends Controller
                     ->pluck('users.user_type_id')
                     ->toArray();
 
-                // Only insert if BOTH HR (1) and Head (3) have approved
+                // Insert payroll only if BOTH HR (1) and Department Head (3) approved
                 if (in_array(1, $approvals) && in_array(3, $approvals)) {
-                    $this->calculateAndInsertPayroll($report);
+
+                    $payrollExists = DB::table('salary_payroll')
+                        ->where('attendance_employee_id', $report->id)
+                        ->exists();
+
+                    if (! $payrollExists) {
+                        $this->calculateAndInsertPayroll($report);
+                    }
                 }
+
             } else {
-                // Remove payroll record if rejected
-                DB::table('salary_payroll')->where('attendance_employee_id', $report->id)->delete();
+                // Remove payroll if rejected
+                DB::table('salary_payroll')
+                    ->where('attendance_employee_id', $report->id)
+                    ->delete();
             }
         });
 
+        $userTypeName = ($user->user_type_id == 1)
+            ? 'HR'
+            : 'Department Head';
+
+        $statusName = ($request->status_id == 7)
+            ? 'Approved'
+            : 'Rejected';
+
+        $title = "{$userTypeName} {$statusName} your Cut Off";
+
+        $message = "Your cut off has been " .
+            strtolower($statusName) .
+            " by " .
+            $user->first_name . ".";
+
+        $this->notifyUsersApproved($report, $title, $message);
+
         return redirect()->back();
+    }
+
+    private function notifyUsersApproved($cutoff, $title, $message)
+    {
+        // Notify only the employee owner of the cutoff
+        $users = User::where('id', $cutoff->user_id)->get();
+
+        foreach ($users as $user) {
+
+            $userTypePrefix = ($user->user_type_id == 3)
+                ? 'head'
+                : 'employee';
+
+            $notification = Notification::where('user_id', $user->id)
+                ->where('data', 'LIKE', '%' . $cutoff->id . '%')
+                ->first();
+
+            if ($notification) {
+
+                $notification->update([
+                    'title'      => $title,
+                    'message'    => $message,
+                    'is_read'    => 0,
+                    'read_at'    => null,
+                    'updated_at' => now(),
+                ]);
+
+            } else {
+
+                Notification::create([
+                    'user_id'      => $user->id,
+                    'user_type_id' => null,
+                    'title'        => $title,
+                    'message'      => $message,
+                    'route'        => "/{$userTypePrefix}/payroll-cut-offs",
+                    'data'         => [
+                        'cut_off_id' => $cutoff->id
+                    ],
+                ]);
+            }
+        }
     }
 
     private function calculateAndInsertPayroll($report)

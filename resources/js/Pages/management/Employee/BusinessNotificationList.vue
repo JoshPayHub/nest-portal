@@ -340,9 +340,10 @@ watch(
                             <p
                                 class="text-xs font-bold text-slate-400 uppercase"
                             >
-                                Leader Status
+                                DEPT. HEAD
                             </p>
                             <Badge
+                                variant="outline"
                                 :class="
                                     getStatusClass(
                                         selectedNotification?.leader_status,
@@ -356,9 +357,10 @@ watch(
                             <p
                                 class="text-xs font-bold text-slate-400 uppercase"
                             >
-                                HR Status
+                                HR STATUS
                             </p>
                             <Badge
+                                variant="outline"
                                 :class="
                                     getStatusClass(
                                         selectedNotification?.hr_status,

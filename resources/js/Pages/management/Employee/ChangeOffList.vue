@@ -371,10 +371,48 @@ watch(
                         >
                         <DialogDescription
                             >Submitted on
-                            {{ selectedReport?.report_date }}</DialogDescription
+                            {{ selectedRequest?.date_filed }}</DialogDescription
                         >
                     </div>
                 </DialogHeader>
+
+                <div class="py-4 border-y border-slate-100 mt-4">
+                    <div class="flex justify-end gap-6">
+                        <div class="md:text-right">
+                            <p
+                                class="text-xs font-bold text-slate-400 uppercase"
+                            >
+                                DEPT. HEAD
+                            </p>
+                            <Badge
+                                variant="outline"
+                                :class="
+                                    getStatusClass(
+                                        selectedRequest?.leader_status,
+                                    )
+                                "
+                            >
+                                {{ selectedRequest?.leader_status }}
+                            </Badge>
+                        </div>
+                        <div class="md:text-right">
+                            <p
+                                class="text-xs font-bold text-slate-400 uppercase"
+                            >
+                                HR STATUS
+                            </p>
+                            <Badge
+                                variant="outline"
+                                :class="
+                                    getStatusClass(selectedRequest?.hr_status)
+                                "
+                            >
+                                {{ selectedRequest?.hr_status }}
+                            </Badge>
+                        </div>
+                    </div>
+                </div>
+
                 <div
                     class="flex-1 overflow-y-auto py-4 border-t border-slate-100"
                 >

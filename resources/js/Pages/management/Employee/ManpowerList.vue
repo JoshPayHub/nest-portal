@@ -335,9 +335,10 @@ watch(
                             <p
                                 class="text-xs font-bold text-slate-400 uppercase"
                             >
-                                Leader Status
+                                DEPT. HEAD
                             </p>
                             <Badge
+                                variant="outline"
                                 :class="
                                     getStatusClass(
                                         selectedManpower?.leader_status,
@@ -351,9 +352,10 @@ watch(
                             <p
                                 class="text-xs font-bold text-slate-400 uppercase"
                             >
-                                HR Status
+                                HR STATUS
                             </p>
                             <Badge
+                                variant="outline"
                                 :class="
                                     getStatusClass(selectedManpower?.hr_status)
                                 "

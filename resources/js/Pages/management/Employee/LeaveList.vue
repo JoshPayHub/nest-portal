@@ -250,6 +250,7 @@ watch(
 
                                     <TableCell class="text-center">
                                         <Badge
+                                            variant="outline"
                                             :class="
                                                 getStatusClass(
                                                     leave.leader_status,
@@ -262,6 +263,7 @@ watch(
 
                                     <TableCell class="text-center">
                                         <Badge
+                                            variant="outline"
                                             :class="
                                                 getStatusClass(leave.hr_status)
                                             "
@@ -357,14 +359,15 @@ watch(
                         </p>
                     </div>
 
-                    <div class="flex md:justify-end gap-6">
+                    <div class="flex justify-end gap-6">
                         <div class="md:text-right">
                             <p
                                 class="text-xs font-bold text-slate-400 uppercase"
                             >
-                                Leader Status
+                                DEPT. HEAD
                             </p>
                             <Badge
+                                variant="outline"
                                 :class="
                                     getStatusClass(selectedLeave?.leader_status)
                                 "
@@ -376,9 +379,10 @@ watch(
                             <p
                                 class="text-xs font-bold text-slate-400 uppercase"
                             >
-                                HR Status
+                                HR STATUS
                             </p>
                             <Badge
+                                variant="outline"
                                 :class="
                                     getStatusClass(selectedLeave?.hr_status)
                                 "

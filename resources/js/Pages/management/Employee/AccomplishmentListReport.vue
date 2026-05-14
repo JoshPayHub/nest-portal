@@ -352,42 +352,41 @@ watch(
                             {{ selectedReport?.period_to }}
                         </p>
                     </div>
-                    <div class="flex justify-end gap-4">
-                        <div class="text-right">
+
+                    <div class="flex justify-end gap-6">
+                        <div class="md:text-right">
                             <p
                                 class="text-xs font-bold text-slate-400 uppercase"
                             >
-                                Leader Status
+                                DEPT. HEAD
                             </p>
-                            <p
-                                class="text-sm font-bold uppercase"
+                            <Badge
+                                variant="outline"
                                 :class="
-                                    selectedReport?.leader_status_name?.toLowerCase() ===
-                                    'rejected'
-                                        ? 'text-red-600'
-                                        : 'text-brand-blue'
+                                    getStatusClass(
+                                        selectedReport?.leader_status_name,
+                                    )
                                 "
                             >
                                 {{ selectedReport?.leader_status_name }}
-                            </p>
+                            </Badge>
                         </div>
-                        <div class="text-right">
+                        <div class="md:text-right">
                             <p
                                 class="text-xs font-bold text-slate-400 uppercase"
                             >
-                                HR Status
+                                HR STATUS
                             </p>
-                            <p
-                                class="text-sm font-bold uppercase"
+                            <Badge
+                                variant="outline"
                                 :class="
-                                    selectedReport?.hr_status_name?.toLowerCase() ===
-                                    'rejected'
-                                        ? 'text-red-600'
-                                        : 'text-brand-blue'
+                                    getStatusClass(
+                                        selectedReport?.hr_status_name,
+                                    )
                                 "
                             >
                                 {{ selectedReport?.hr_status_name }}
-                            </p>
+                            </Badge>
                         </div>
                     </div>
                 </div>

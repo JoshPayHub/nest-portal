@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Hr;
 
 use App\Http\Controllers\Controller;
 use App\Models\Department;
+use App\Models\Notification;
 use App\Models\PayrollCutOff;
 use App\Models\SalaryPayroll;
 use App\Models\Status;
@@ -90,52 +91,129 @@ class SalaryPayrollController extends Controller
     ]);
 }
     /* =========================
-       UPDATE PAYROLL
-    ========================= */
-    public function update(Request $request, $id)
-    {
-        $payroll = SalaryPayroll::findOrFail($id);
+   UPDATE PAYROLL
+========================= */
+public function update(Request $request, $id)
+{
+    $payroll = SalaryPayroll::findOrFail($id);
 
-        if ($payroll->status_id === 7) {
-            return back()->with('error', 'Approved payrolls are locked and cannot be edited.');
-        }
-
-        $validated = $request->validate([
-            'status_id' => 'required|integer',
-            'regular_pay' => 'numeric',
-            'absence_with_pay' => 'numeric',
-            'regular_ot' => 'numeric',
-            'rdot' => 'numeric',
-            'regular_holiday_ot' => 'numeric',
-            'special_holiday_ot' => 'numeric',
-            'rd_regular_holiday_ot' => 'numeric',
-            'rd_special_holiday_ot' => 'numeric',
-            'night_differential' => 'numeric',
-            'regular_holiday' => 'numeric',
-            'special_holiday' => 'numeric',
-            'rd_regular_holiday' => 'numeric',
-            'rd_special_holiday' => 'numeric',
-            'adjustment' => 'numeric',
-            'allowance' => 'numeric',
-            'sss' => 'numeric',
-            'pag_ibig' => 'numeric',
-            'philhealth' => 'numeric',
-            'tax' => 'numeric',
-            'salary_loan' => 'numeric',
-            'cash_advance' => 'numeric',
-            'undertime' => 'numeric',
-            'absence_without_pay' => 'numeric',
-            'flu_vaccine' => 'numeric',
-            'food' => 'numeric',
-            'total_earning' => 'required|numeric',
-            'total_deduction' => 'required|numeric',
-            'total_home_pay' => 'required|numeric',
-        ]);
-
-        $payroll->update($validated);
-
-        return back()->with('success', 'Payroll status and values updated.');
+    // Lock approved payrolls
+    if ($payroll->status_id === 7) {
+        return back()->with(
+            'error',
+            'Approved payrolls are locked and cannot be edited.'
+        );
     }
+
+    $validated = $request->validate([
+        'status_id' => 'required|integer',
+        'regular_pay' => 'numeric',
+        'absence_with_pay' => 'numeric',
+        'regular_ot' => 'numeric',
+        'rdot' => 'numeric',
+        'regular_holiday_ot' => 'numeric',
+        'special_holiday_ot' => 'numeric',
+        'rd_regular_holiday_ot' => 'numeric',
+        'rd_special_holiday_ot' => 'numeric',
+        'night_differential' => 'numeric',
+        'regular_holiday' => 'numeric',
+        'special_holiday' => 'numeric',
+        'rd_regular_holiday' => 'numeric',
+        'rd_special_holiday' => 'numeric',
+        'adjustment' => 'numeric',
+        'allowance' => 'numeric',
+        'sss' => 'numeric',
+        'pag_ibig' => 'numeric',
+        'philhealth' => 'numeric',
+        'tax' => 'numeric',
+        'salary_loan' => 'numeric',
+        'cash_advance' => 'numeric',
+        'undertime' => 'numeric',
+        'absence_without_pay' => 'numeric',
+        'flu_vaccine' => 'numeric',
+        'food' => 'numeric',
+        'total_earning' => 'required|numeric',
+        'total_deduction' => 'required|numeric',
+        'total_home_pay' => 'required|numeric',
+    ]);
+
+    // Update payroll
+    $payroll->update($validated);
+
+    $user = $request->user();
+
+    $userTypeName = ($user->user_type_id == 1)
+        ? 'HR'
+        : 'Department Head';
+
+    // APPROVED
+    if ($request->status_id == 7) {
+
+        $title = "{$userTypeName} Approved your Payroll";
+
+        $message = "Your payroll has been approved by " .
+            $user->first_name . ".";
+
+        $this->notifyUsers($payroll, $title, $message);
+    }
+
+    // REJECTED
+    if ($request->status_id == 8) {
+
+        $title = "{$userTypeName} Rejected your Payroll";
+
+        $message = "Your payroll has been rejected by " .
+            $user->first_name . ".";
+
+        $this->notifyUsers($payroll, $title, $message);
+    }
+
+    return back()->with(
+        'success',
+        'Payroll status and values updated.'
+    );
+}
+
+private function notifyUsers($payroll, $title, $message)
+{
+    $users = User::where('id', $payroll->user_id)->get();
+
+    foreach ($users as $user) {
+
+        $userTypePrefix = ($user->user_type_id == 3)
+            ? 'head'
+            : 'employee';
+
+        $notification = Notification::where('user_id', $user->id)
+            ->where('data', 'LIKE', '%payroll_id%')
+            ->where('data', 'LIKE', '%' . $payroll->id . '%')
+            ->first();
+
+        if ($notification) {
+
+            $notification->update([
+                'title'      => $title,
+                'message'    => $message,
+                'is_read'    => 0,
+                'read_at'    => null,
+                'updated_at' => now(),
+            ]);
+
+        } else {
+
+            Notification::create([
+                'user_id'      => $user->id,
+                'user_type_id' => null,
+                'title'        => $title,
+                'message'      => $message,
+                'route'        => "/{$userTypePrefix}/salary-payrolls",
+                'data'         => json_encode([
+                    'payroll_id' => $payroll->id
+                ]),
+            ]);
+        }
+    }
+}
 
    public function export(Request $request, $id)
     {

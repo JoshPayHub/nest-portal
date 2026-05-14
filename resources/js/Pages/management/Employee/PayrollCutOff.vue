@@ -1,6 +1,6 @@
 <script setup>
-import { ref, watch } from "vue";
-import { useForm, router } from "@inertiajs/vue3";
+import { ref, watch, onMounted } from "vue";
+import { Link, usePage, useForm, router } from "@inertiajs/vue3";
 import {
     Pencil,
     Search,
@@ -65,7 +65,7 @@ watch(search, (value) => {
 
 const viewAttendance = (id) => {
     router.get(
-        `${routeMap[props.auth_user_type_id]}/payroll-cut-offs/${id}/attendances`,
+        `${routeMap[props.auth_user_type_id]}/payroll-cut-offs/${id}/attendance`,
     );
 };
 
@@ -81,6 +81,12 @@ const formatDate = (dateString) => {
 const openView = (item) => {
     selectedItem.value = item;
     isViewOpen.value = true;
+
+    const url = new URL(window.location);
+    if (url.searchParams.has("open")) {
+        url.searchParams.delete("open");
+        window.history.replaceState({}, "", url);
+    }
 };
 
 const canEdit = (item) => {
@@ -116,6 +122,31 @@ const formatTime = (timeString) => {
         hour12: true,
     });
 };
+
+const checkUrlForModal = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const cutoffIdToOpen = urlParams.get("open");
+
+    if (cutoffIdToOpen) {
+        const cutoff = props.cutoffs.data.find(
+            (r) => r.id === parseInt(cutoffIdToOpen),
+        );
+        if (cutoff) {
+            openView(cutoff);
+        }
+    }
+};
+
+onMounted(() => {
+    checkUrlForModal();
+});
+
+watch(
+    () => usePage().props,
+    () => {
+        checkUrlForModal();
+    },
+);
 </script>
 
 <template>
@@ -282,8 +313,8 @@ const formatTime = (timeString) => {
                         >
                         <DialogDescription
                             >Submitted on
-                            {{ selectedItem?.report_date }}</DialogDescription
-                        >
+                            {{ formatDate(selectedItem?.created_at) }}
+                        </DialogDescription>
                     </div>
                 </DialogHeader>
 
@@ -304,42 +335,39 @@ const formatTime = (timeString) => {
                             {{ formatDate(selectedItem?.to_cutoff_date) }})
                         </p>
                     </div>
-                    <div class="flex justify-end gap-4">
-                        <div class="text-right">
+
+                    <div class="flex justify-end gap-6">
+                        <div class="md:text-right">
                             <p
                                 class="text-xs font-bold text-slate-400 uppercase"
                             >
-                                Leader Status
+                                DEPT. HEAD
                             </p>
-                            <p
-                                class="text-sm font-bold uppercase"
+                            <Badge
+                                variant="outline"
                                 :class="
-                                    selectedItem?.leader_status_name?.toLowerCase() ===
-                                    'rejected'
-                                        ? 'text-red-600'
-                                        : 'text-brand-blue'
+                                    getStatusClass(
+                                        selectedItem?.leader_status_name,
+                                    )
                                 "
                             >
                                 {{ selectedItem?.leader_status_name }}
-                            </p>
+                            </Badge>
                         </div>
-                        <div class="text-right">
+                        <div class="md:text-right">
                             <p
                                 class="text-xs font-bold text-slate-400 uppercase"
                             >
-                                HR Status
+                                HR STATUS
                             </p>
-                            <p
-                                class="text-sm font-bold uppercase"
+                            <Badge
+                                variant="outline"
                                 :class="
-                                    selectedItem?.hr_status_name?.toLowerCase() ===
-                                    'rejected'
-                                        ? 'text-red-600'
-                                        : 'text-brand-blue'
+                                    getStatusClass(selectedItem?.hr_status_name)
                                 "
                             >
                                 {{ selectedItem?.hr_status_name }}
-                            </p>
+                            </Badge>
                         </div>
                     </div>
                 </div>
@@ -403,9 +431,12 @@ const formatTime = (timeString) => {
                     class="py-12 flex flex-col items-center justify-center text-slate-400 bg-slate-50 rounded-lg border-2 border-dashed border-slate-200"
                 >
                     <AlertCircle class="w-12 h-12 mb-2 opacity-20" />
-                    <p class="font-medium italic">
-                        No attendance record has been submitted for this period.
-                    </p>
+                    <div class="text-center">
+                        <p class="font-medium italic">
+                            No attendance record has been submitted for this
+                            period.
+                        </p>
+                    </div>
                 </div>
 
                 <DialogFooter>

@@ -330,6 +330,7 @@ watch(
                                 Leader Status
                             </p>
                             <Badge
+                                variant="outline"
                                 :class="
                                     getStatusClass(
                                         selectedUndertime?.leader_status,
@@ -346,6 +347,7 @@ watch(
                                 HR Status
                             </p>
                             <Badge
+                                variant="outline"
                                 :class="
                                     getStatusClass(selectedUndertime?.hr_status)
                                 "

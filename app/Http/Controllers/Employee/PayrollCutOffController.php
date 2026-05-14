@@ -181,6 +181,7 @@ class PayrollCutOffController extends Controller
                 'hr_status_name' => 'No Record',
                 'attendance_list' => [],
                 'has_record' => false,
+                'created_at' => null,
             ];
         }
 
@@ -196,6 +197,7 @@ class PayrollCutOffController extends Controller
             'hr_status_name' => $hr?->status?->name ?? 'Pending',
             'attendance_list' => $attendance->attendances,
             'has_record' => true,
+            'created_at' => $attendance->created_at,
         ];
     }
 }

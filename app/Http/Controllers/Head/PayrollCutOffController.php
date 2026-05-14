@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Head;
 
 use App\Http\Controllers\Controller;
 use App\Models\AttendanceEmployee;
+use App\Models\Notification;
 use App\Models\PayrollCutOff;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -164,6 +165,48 @@ class PayrollCutOffController extends Controller
             ]
         );
 
-        return redirect()->back();
+        $userTypeName = ($user->user_type_id == 1) ? 'HR' : 'Department Head';
+        $statusName = ($request->status_id == 7) ? 'Approved' : 'Rejected';
+
+        $title = "{$userTypeName} {$statusName} your Cut Off";
+        $message = "Your cut off has been " . strtolower($statusName) . " by " . $user->first_name . ".";
+
+        $this->notifyUsers($report, $title, $message);
+
+         return redirect()->back()->with('message', 'Cut Off request processed.');
     }
+
+    private function notifyUsers($report, $title, $message)
+    {
+        $employee = User::find($report->user_id);
+
+        if ($employee) {
+            $userTypePrefix = ($employee->user_type_id == 3) ? 'head' : 'employee';
+            $notification = Notification::where('user_id', $employee->id)
+                ->whereNull('user_type_id')
+                ->where('data', 'LIKE', '%cut_off_id%')
+                ->where('data', 'LIKE', '%' . $report->id . '%')
+                ->first();
+
+            if ($notification) {
+                $notification->update([
+                    'title'      => $title,
+                    'message'    => $message,
+                    'is_read'    => 0,
+                    'read_at'    => null,
+                    'updated_at' => now(),
+                ]);
+            } else {
+                Notification::create([
+                    'user_id'      => $employee->id,
+                    'user_type_id' => null,
+                    'title'        => $title,
+                    'message'      => $message,
+                    'route'        => "/{$userTypePrefix}/payroll-cut-offs",
+                    'data'         => json_encode(['cut_off_id' => $report->id]),
+                ]);
+            }
+        }
+    }
+
 }
