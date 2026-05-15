@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'user_type' => \App\Http\Middleware\CheckUserType::class,
+            'user.status' => \App\Http\Middleware\CheckUserStatus::class,
         ]);
 
         // STRICT NAMED ROUTE REDIRECTS

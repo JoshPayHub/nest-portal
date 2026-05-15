@@ -30,7 +30,7 @@ use App\Http\Controllers\Employee\UndertimeFormController as EmployeeUndertimeFo
 use Illuminate\Support\Facades\Route;
 
 // head.php
-Route::middleware(['auth', 'user_type:Head'])->prefix('head')->name('head.')->group(function () {
+Route::middleware(['auth', 'user.status', 'user_type:Head'])->prefix('head')->name('head.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/notification', [NotificationController::class, 'index'])->name('notification.index');
 

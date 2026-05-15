@@ -29,7 +29,7 @@ class AuthenticatedSessionController extends Controller
             'password' => ['required'],
         ]);
 
-        if (! Auth::attempt($credentials, $request->boolean('remember'))) {
+        if (!Auth::attempt($credentials, $request->boolean('remember'))) {
             return back()->withErrors([
                 'username' => 'The provided credentials do not match our records.',
             ]);
@@ -38,10 +38,24 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
         $user = Auth::user();
 
-        // Check if employee is Pending (status_id 4)
-        // if ($user->user_type_id == 1 && $user->status_id == 4) {
-        //     return redirect()->route('hr.profile');
-        // }
+        $allowedStatuses = [1, 4];
+
+        if (!in_array($user->status_id, $allowedStatuses)) {
+
+            Auth::logout();
+
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return back()->withErrors([
+                'username' => 'Your account is inactive or no longer allowed to access the system.',
+            ]);
+        }
+
+        // Pending users go to profile first
+        if ($user->user_type_id == 1 && $user->status_id == 4) {
+            return redirect()->route('hr.profile');
+        }
 
         if ($user->user_type_id == 2 && $user->status_id == 4) {
             return redirect()->route('employee.profile');
@@ -52,7 +66,7 @@ class AuthenticatedSessionController extends Controller
         }
 
         /**
-         * Redirect based on user type for Active users
+         * Redirect Active users to dashboard
          */
         return redirect()->intended(
             match ((int) $user->user_type_id) {

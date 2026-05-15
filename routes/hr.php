@@ -23,7 +23,7 @@ use App\Http\Controllers\Hr\SalaryPayrollController;
 use Illuminate\Support\Facades\Route;
 
 // hr.php
-Route::middleware(['auth', 'user_type:HR'])->prefix('hr')->name('hr.')->group(function () {
+Route::middleware(['auth', 'user.status', 'user_type:HR'])->prefix('hr')->name('hr.')->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/notification', [NotificationController::class, 'index'])->name('notification.index');

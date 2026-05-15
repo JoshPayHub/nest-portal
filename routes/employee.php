@@ -18,7 +18,7 @@ use App\Http\Controllers\Employee\UndertimeFormController;
 use Illuminate\Support\Facades\Route;
 
 // hr.php
-Route::middleware(['auth', 'user_type:Employee'])->prefix('employee')->name('employee.')->group(function () {
+Route::middleware(['auth', 'user.status', 'user_type:Employee'])->prefix('employee')->name('employee.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/notification', [NotificationController::class, 'index'])->name('notification.index');
 
