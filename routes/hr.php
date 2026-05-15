@@ -43,6 +43,7 @@ Route::middleware(['auth', 'user_type:HR'])->prefix('hr')->name('hr.')->group(fu
     });
 
     Route::get('/list-employee', [EmployeeListController::class, 'index'])->name('employee.index');
+    Route::put('/list-employee/update/{user}', [EmployeeListController::class, 'update'])->name('employee.update');
 
     Route::controller(DepartmentController::class)->group(function () {
         Route::get('/department', 'index')->name('department.index');

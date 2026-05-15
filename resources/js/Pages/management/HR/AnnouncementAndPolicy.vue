@@ -82,7 +82,6 @@ const form = useForm({
     selected_departments: [],
 });
 
-// Manual trigger for filtering instead of auto-watch to prevent unwanted reloads
 const handleFilter = () => {
     router.get(
         "/hr/announcements-policies",
@@ -105,10 +104,9 @@ const openModal = (type, item = null) => {
         form.description = item.description;
         form.status_id = item.status_id;
 
-        // This ensures "All Departments" (null) results in an empty array []
         form.selected_departments = (item.filters || [])
             .map((f) => f.department_id)
-            .filter((id) => id !== null); // Remove nulls so length is 0
+            .filter((id) => id !== null);
     } else {
         form.reset();
         form.types = type === "all" ? "announcements" : type;
@@ -138,17 +136,15 @@ const submitForm = () => {
         onError: (errors) => {
             const firstError = Object.values(errors)[0];
 
-            // Trigger Toast Error
             toastStore.show(
                 firstError || "Please check your inputs.",
-                "danger", // or "destructive" depending on your store's accepted types
+                "danger",
             );
         },
     });
 };
 
 const toggleDepartment = (id) => {
-    // Ensure we aren't adding null to the array
     if (id === null) return;
 
     const index = form.selected_departments.indexOf(id);
@@ -177,7 +173,7 @@ watch(searchQuery, (value) => {
 
 <template>
     <div class="p-6 space-y-8">
-        <Card class="shadow-sm border-blue-100 max-w-7xl mx-auto">
+        <Card class="shadow-sm border-blue-100">
             <CardHeader class="border-b border-slate-50">
                 <div
                     class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"

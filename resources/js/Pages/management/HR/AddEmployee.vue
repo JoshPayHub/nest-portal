@@ -155,7 +155,7 @@ const submit = () => {
 
 <template>
     <div class="p-6 space-y-6">
-        <Card class="shadow-sm border-blue-100 max-w-6xl mx-auto">
+        <Card class="shadow-sm border-blue-100">
             <CardHeader class="space-y-4 border-b border-blue-50/50 pb-6">
                 <nav
                     class="flex items-center gap-2 text-xs uppercase tracking-wider text-slate-400"

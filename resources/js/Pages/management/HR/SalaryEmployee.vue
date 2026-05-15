@@ -205,7 +205,7 @@ const formatCurrency = (v) =>
 
 <template>
     <div class="p-6 space-y-8 font-sans">
-        <Card class="shadow-sm border-blue-100 max-w-7xl mx-auto">
+        <Card class="shadow-sm border-blue-100">
             <CardHeader class="border-b border-slate-50">
                 <div
                     class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"

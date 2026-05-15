@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch } from "vue";
-import { Link } from "@inertiajs/vue3";
+import { Link, router } from "@inertiajs/vue3";
 import {
     Pencil,
     Plus,
@@ -8,11 +8,15 @@ import {
     Briefcase,
     Search,
     FileText,
+    Settings2,
 } from "lucide-vue-next";
+
+import { toastStore } from "@/stores/toast";
 
 // UI Components
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
+
 import {
     Card,
     CardHeader,
@@ -20,6 +24,7 @@ import {
     CardDescription,
     CardContent,
 } from "@/Components/ui/card";
+
 import {
     Table,
     TableBody,
@@ -29,25 +34,37 @@ import {
     TableRow,
 } from "@/Components/ui/table";
 
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "@/Components/ui/dialog";
+
 import Pagination from "@/Components/Pagination/Index.vue";
 
 const props = defineProps({
-    employees: Object, // Paginated object containing .data
+    employees: Object,
     departments: Array,
     statuses: Array,
     filters: Object,
 });
 
-// State for filtering
 const search = ref("");
 const selectedDept = ref("");
 const selectedEmplo = ref("");
 const selectedStatus = ref("");
 
-// 1. Filter the list of employees shown in the "All Employees" dropdown
-// This ensures that if a department is picked, only those users appear in the list.
+// Modal state
+const showStatusModal = ref(false);
+const selectedEmployee = ref(null);
+const newStatus = ref("");
+
 const employeeOptions = computed(() => {
     const allEmployees = props.employees.data || [];
+
     if (!selectedDept.value) return allEmployees;
 
     return allEmployees.filter(
@@ -55,33 +72,27 @@ const employeeOptions = computed(() => {
     );
 });
 
-// 2. Reset the specific employee selection if the department changes
 watch(selectedDept, () => {
     selectedEmplo.value = "";
 });
 
-// 3. Table Filter Logic
 const filteredEmployees = computed(() => {
     let data = props.employees.data || [];
     const term = search.value.toLowerCase();
 
     return data.filter((emp) => {
-        // Search by Name, ID, or Username
         const matchesSearch =
             !term ||
             emp.employee_id?.toLowerCase().includes(term) ||
             emp.username?.toLowerCase().includes(term) ||
             emp.company_email?.toLowerCase().includes(term);
 
-        // Filter by Department
         const matchesDept =
             !selectedDept.value || emp.department_id == selectedDept.value;
 
-        // Filter by Specific Employee (The Username Select)
         const matchesSpecificEmp =
             !selectedEmplo.value || emp.id == selectedEmplo.value;
 
-        // Filter by Status
         const matchesStatus =
             !selectedStatus.value || emp.status_id == selectedStatus.value;
 
@@ -90,11 +101,68 @@ const filteredEmployees = computed(() => {
         );
     });
 });
+
+const openStatusModal = (employee) => {
+    if (employee.status_id === 4) {
+        toastStore.show("Pending employee status cannot be updated.", "danger");
+        return;
+    }
+
+    selectedEmployee.value = employee;
+    newStatus.value = employee.status_id;
+    showStatusModal.value = true;
+};
+
+const updateEmployeeStatus = () => {
+    if (!selectedEmployee.value || !newStatus.value) {
+        toastStore.show("Please select a valid employee status.", "danger");
+        return;
+    }
+
+    // Prevent same status update
+    if (Number(newStatus.value) === Number(selectedEmployee.value.status_id)) {
+        toastStore.show("Please choose a different status.", "danger");
+        return;
+    }
+
+    const url = `/hr/list-employee/update/${selectedEmployee.value.id}`;
+
+    router.put(
+        url,
+        {
+            status_id: newStatus.value,
+        },
+        {
+            preserveScroll: true,
+
+            onSuccess: () => {
+                showStatusModal.value = false;
+
+                selectedEmployee.value = null;
+                newStatus.value = "";
+
+                toastStore.show(
+                    "Employee status updated successfully.",
+                    "success",
+                );
+            },
+
+            onError: (errors) => {
+                const firstError = Object.values(errors)[0];
+
+                toastStore.show(
+                    firstError || "Failed to update employee status.",
+                    "danger",
+                );
+            },
+        },
+    );
+};
 </script>
 
 <template>
     <div class="p-6 space-y-8">
-        <Card class="shadow-sm border-blue-100 max-w-7xl mx-auto">
+        <Card class="shadow-sm border-blue-100">
             <CardHeader class="border-b border-slate-50">
                 <div
                     class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
@@ -105,21 +173,25 @@ const filteredEmployees = computed(() => {
                         >
                             Employee Directory
                         </CardTitle>
+
                         <CardDescription class="text-base mt-1 text-slate-500">
                             View and manage workforce assignments.
                         </CardDescription>
                     </div>
+
                     <Link href="/hr/add-employees">
                         <Button
-                            class="bg-brand-blue hover:bg-brand-blue/90 h-12 px-8 font-bold shadow-md transition-all active:scale-95"
+                            class="bg-brand-blue hover:bg-brand-blue/90 h-12 px-8 font-bold shadow-md"
                         >
-                            <Plus class="w-5 h-5 mr-2" /> Register Employee
+                            <Plus class="w-5 h-5 mr-2" />
+                            Register Employee
                         </Button>
                     </Link>
                 </div>
             </CardHeader>
 
             <CardContent>
+                <!-- Filters -->
                 <div
                     class="flex flex-col md:flex-row gap-3 mb-6 items-center pt-3"
                 >
@@ -136,9 +208,10 @@ const filteredEmployees = computed(() => {
 
                     <select
                         v-model="selectedDept"
-                        class="h-12 w-full md:w-1/4 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
+                        class="h-12 w-full md:w-1/4 rounded-md border px-3"
                     >
                         <option value="">All Departments</option>
+
                         <option
                             v-for="d in departments"
                             :key="d.id"
@@ -150,9 +223,10 @@ const filteredEmployees = computed(() => {
 
                     <select
                         v-model="selectedEmplo"
-                        class="h-12 w-full md:w-1/4 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
+                        class="h-12 w-full md:w-1/4 rounded-md border px-3"
                     >
                         <option value="">All Employees</option>
+
                         <option
                             v-for="emp in employeeOptions"
                             :key="emp.id"
@@ -164,131 +238,141 @@ const filteredEmployees = computed(() => {
 
                     <select
                         v-model="selectedStatus"
-                        class="h-12 w-full md:w-1/4 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-blue transition-all cursor-pointer"
+                        class="h-12 w-full md:w-1/4 rounded-md border px-3"
                     >
                         <option value="">All Statuses</option>
+
                         <option v-for="s in statuses" :key="s.id" :value="s.id">
                             {{ s.name }}
                         </option>
                     </select>
                 </div>
 
-                <div class="rounded-md border border-slate-200 overflow-hidden">
+                <!-- Table -->
+                <div class="rounded-md border overflow-hidden">
                     <Table>
                         <TableHeader class="bg-slate-50/50">
                             <TableRow>
-                                <TableHead
-                                    class="font-bold text-slate-600 uppercase text-xs tracking-wider"
-                                    >ID & USERNAME</TableHead
-                                >
-                                <TableHead
-                                    class="font-bold text-slate-600 uppercase text-xs tracking-wider"
-                                    >COMPANY EMAIL</TableHead
-                                >
-                                <TableHead
-                                    class="font-bold text-slate-600 uppercase text-xs tracking-wider"
-                                    >DEPARTMENT & POSITION</TableHead
-                                >
-                                <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs tracking-wider"
-                                    >STATUS</TableHead
-                                >
-                                <TableHead
-                                    class="text-right font-bold text-slate-600 uppercase text-xs tracking-wider px-6"
-                                    >ACTIONS</TableHead
-                                >
+                                <TableHead>ID & USERNAME</TableHead>
+                                <TableHead>COMPANY EMAIL</TableHead>
+                                <TableHead>DEPARTMENT & POSITION</TableHead>
+                                <TableHead class="text-center">
+                                    STATUS
+                                </TableHead>
+                                <TableHead class="text-right">
+                                    ACTIONS
+                                </TableHead>
                             </TableRow>
                         </TableHeader>
+
                         <TableBody>
                             <template v-if="filteredEmployees.length > 0">
                                 <TableRow
                                     v-for="emp in filteredEmployees"
                                     :key="emp.id"
-                                    class="hover:bg-blue-50/30 transition-colors group"
                                 >
                                     <TableCell>
                                         <div class="flex flex-col">
-                                            <span
-                                                class="font-bold text-slate-800"
-                                            >
+                                            <span class="font-bold">
                                                 {{ emp.employee_id || "N/A" }}
                                             </span>
+
                                             <span
-                                                class="text-xs text-brand-blue font-medium"
+                                                class="text-xs text-brand-blue"
                                             >
                                                 @{{ emp.username }}
                                             </span>
                                         </div>
                                     </TableCell>
+
                                     <TableCell>
-                                        <span
-                                            class="text-slate-600 font-medium"
-                                        >
-                                            {{ emp.company_email || emp.email }}
-                                        </span>
+                                        {{ emp.company_email || emp.email }}
                                     </TableCell>
+
                                     <TableCell>
                                         <div class="flex flex-col gap-1">
                                             <span
-                                                class="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700"
+                                                class="inline-flex items-center gap-1"
                                             >
-                                                <Users
-                                                    class="w-4 h-4 text-slate-400"
-                                                />
+                                                <Users class="w-4 h-4" />
                                                 {{
-                                                    emp.department?.name ||
+                                                    emp.department?.name ??
                                                     "Unassigned"
                                                 }}
                                             </span>
+
                                             <span
-                                                class="inline-flex items-center gap-1.5 text-xs text-slate-500"
+                                                class="inline-flex items-center gap-1 text-xs text-slate-500"
                                             >
-                                                <Briefcase
-                                                    class="w-3.5 h-3.5 text-slate-400"
-                                                />
+                                                <Briefcase class="w-4 h-4" />
                                                 {{
-                                                    emp.position?.name ||
+                                                    emp.position?.name ??
                                                     "No Position"
                                                 }}
                                             </span>
                                         </div>
                                     </TableCell>
+
                                     <TableCell class="text-center">
                                         <span
                                             :class="[
                                                 'inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase',
+
                                                 emp.status_id === 1
                                                     ? 'bg-green-100 text-green-700'
-                                                    : 'bg-red-100 text-red-700',
+                                                    : emp.status_id === 2
+                                                      ? 'bg-gray-100 text-gray-700'
+                                                      : emp.status_id === 3
+                                                        ? 'bg-orange-100 text-orange-700'
+                                                        : emp.status_id === 4
+                                                          ? 'bg-yellow-100 text-yellow-700'
+                                                          : emp.status_id === 9
+                                                            ? 'bg-red-100 text-red-700'
+                                                            : 'bg-slate-100 text-slate-700',
                                             ]"
                                         >
                                             {{ emp.status?.name }}
                                         </span>
                                     </TableCell>
-                                    <TableCell class="text-right px-6">
+
+                                    <TableCell
+                                        class="text-right flex justify-end gap-2"
+                                    >
+                                        <!-- Update Status -->
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            :disabled="emp.status_id === 4"
+                                            @click="openStatusModal(emp)"
+                                        >
+                                            <Settings2
+                                                class="w-4 h-4 text-blue-600"
+                                            />
+                                        </Button>
+
+                                        <!-- Edit -->
                                         <Link
                                             :href="`/hr/employees/edit/${emp.id}`"
                                         >
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                class="h-8 w-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                                            >
-                                                <Pencil class="w-4 h-4" />
+                                            <Button variant="ghost" size="sm">
+                                                <Pencil
+                                                    class="w-4 h-4 text-amber-600"
+                                                />
                                             </Button>
                                         </Link>
                                     </TableCell>
                                 </TableRow>
                             </template>
+
                             <TableRow v-else>
                                 <TableCell
                                     colspan="5"
-                                    class="text-center text-slate-500 py-10 italic"
+                                    class="text-center py-10"
                                 >
                                     <FileText
-                                        class="w-10 h-10 mx-auto mb-2 opacity-20"
+                                        class="w-10 h-10 mx-auto opacity-20"
                                     />
-                                    No employees found matching your criteria.
+                                    No employees found.
                                 </TableCell>
                             </TableRow>
                         </TableBody>
@@ -298,5 +382,46 @@ const filteredEmployees = computed(() => {
                 <Pagination :links="employees" />
             </CardContent>
         </Card>
+
+        <!-- STATUS MODAL -->
+        <Dialog v-model:open="showStatusModal">
+            <DialogContent class="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle> Update Employee Status </DialogTitle>
+
+                    <DialogDescription>
+                        Change the status of
+                        <strong> @{{ selectedEmployee?.username }} </strong>
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div class="space-y-2 py-4">
+                    <label class="text-sm font-medium"> Select Status </label>
+
+                    <select
+                        v-model="newStatus"
+                        class="w-full border rounded-md px-3 py-2"
+                    >
+                        <option
+                            v-for="status in statuses"
+                            :key="status.id"
+                            :value="status.id"
+                        >
+                            {{ status.name }}
+                        </option>
+                    </select>
+                </div>
+
+                <DialogFooter>
+                    <Button variant="outline" @click="showStatusModal = false">
+                        Cancel
+                    </Button>
+
+                    <Button class="bg-brand-blue" @click="updateEmployeeStatus">
+                        Update Status
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
 </template>

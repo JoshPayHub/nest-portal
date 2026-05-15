@@ -8,10 +8,11 @@ use App\Models\Department;
 use App\Models\Position;
 use App\Models\Status;
 use App\Models\UserType;
-use App\Models\Leave; // ✅ ADD THIS
+use App\Models\Leave;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
 
 class EmployeeController extends Controller
@@ -46,11 +47,13 @@ class EmployeeController extends Controller
             'leave_pay' => 'required|numeric|min:0',
         ]);
 
-        User::create([
+        $defaultPassword = 'password';
+
+        $user = User::create([
             'employee_id' => $validated['employee_id'],
             'username' => $validated['username'],
             'company_email' => $validated['company_email'],
-            'password' => Hash::make('password'),
+            'password' => Hash::make($defaultPassword),
             'user_type_id' => $validated['user_type_id'],
             'department_id' => $validated['department_id'],
             'position_id' => $validated['position_id'],
@@ -66,7 +69,57 @@ class EmployeeController extends Controller
             'company_email_verified_at' => Carbon::now('Asia/Manila'),
         ]);
 
-        return redirect()->back()->with('success', 'Employee onboarded successfully.');
+        // Send Email Notification
+        try {
+            Mail::html("
+                <div style='font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;'>
+
+                    <h2 style='text-align: center;'>
+                        Welcome to HAPPIEST-NEST
+                    </h2>
+
+                    <p>Hello <strong>{$validated['username']}</strong>,</p>
+
+                    <p>
+                        Your employee account has been successfully created.
+                        You can now access the system by logging in using your account credentials below:
+                    </p>
+
+                    <div style='background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;'>
+                        <p style='margin: 5px 0;'>
+                            <strong>Username:</strong> {$validated['username']}
+                        </p>
+
+                        <p style='margin: 5px 0;'>
+                            <strong>Password:</strong> {$defaultPassword}
+                        </p>
+                    </div>
+
+                    <p>
+                        Please log in and complete your information to access the full system.
+                    </p>
+
+                    <p>
+                        For security purposes, we strongly recommend changing your password immediately to a strong password after logging in.
+                    </p>
+
+                    <br>
+
+                    <p>Best Regards,</p>
+                    <strong>HAPPIEST-NEST HR Team</strong>
+                </div>
+            ", function ($message) use ($validated) {
+                $message->to($validated['company_email'])
+                    ->subject('Your Employee Account Has Been Created');
+            });
+        } catch (\Exception $e) {
+            \Log::error('Employee email sending failed: ' . $e->getMessage());
+        }
+
+        return redirect()->back()->with(
+            'success',
+            'Employee onboarded successfully and email notification sent.'
+        );
     }
 
     public function edit(User $user)
@@ -124,6 +177,8 @@ class EmployeeController extends Controller
 
         $user->update($validated);
 
-        return redirect()->route('hr.employee.index')->with('success', 'Employee updated successfully.');
+        return redirect()
+            ->route('hr.employee.index')
+            ->with('success', 'Employee updated successfully.');
     }
 }

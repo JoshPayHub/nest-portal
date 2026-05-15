@@ -92,14 +92,10 @@ watch(
 const isExporting = ref(false);
 
 const exportPdf = () => {
-    // Remove 'item' parameter
-    // Check if the overall cutoff status allows export (adjust status_id logic if needed)
-    // If the cutoff itself has a status, use props.cutoff.status_id
     if (isExporting.value) return;
 
     isExporting.value = true;
 
-    // Use props.cutoff.id just like your Excel function does
     window.location.href = `/hr/salary-payroll/${props.cutoff.id}/export`;
 
     setTimeout(() => {

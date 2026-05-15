@@ -113,7 +113,7 @@ const submit = () => {
 </script>
 
 <template>
-    <div class="p-6 max-w-7xl mx-auto space-y-6">
+    <div class="p-6 space-y-6">
         <Card>
             <CardHeader class="flex flex-row items-center justify-between">
                 <CardTitle class="text-3xl font-bold text-brand-blue">

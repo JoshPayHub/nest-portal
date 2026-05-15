@@ -1,12 +1,14 @@
 <script setup>
 import { ref, watch } from "vue";
 import { router } from "@inertiajs/vue3";
+
 import { Search, FileText, Megaphone, ShieldCheck, Eye } from "lucide-vue-next";
 
 // UI Components
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
 import { Label } from "@/Components/ui/label";
+
 import {
     Card,
     CardHeader,
@@ -14,6 +16,7 @@ import {
     CardDescription,
     CardContent,
 } from "@/Components/ui/card";
+
 import {
     Dialog,
     DialogContent,
@@ -21,6 +24,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/Components/ui/dialog";
+
 import {
     Table,
     TableHeader,
@@ -29,6 +33,7 @@ import {
     TableCell,
     TableHead,
 } from "@/Components/ui/table";
+
 import Pagination from "@/Components/Pagination/Index.vue";
 
 const props = defineProps({
@@ -39,7 +44,9 @@ const props = defineProps({
 });
 
 const isDialogOpen = ref(false);
+
 const searchQuery = ref(props.filters.search || "");
+
 const activeTab = ref(props.filters.tab || "all");
 
 const viewData = ref({
@@ -62,25 +69,67 @@ const handleFilter = () => {
             search: searchQuery.value,
             tab: activeTab.value,
         },
-        { preserveState: true, replace: true },
+        {
+            preserveState: true,
+            replace: true,
+        },
     );
 };
 
 const openViewModal = (item) => {
+    if (!item) return;
+
     viewData.value = {
         types: item.types,
         title: item.title,
         description: item.description || "No description provided.",
     };
+
     isDialogOpen.value = true;
 };
 
-watch(searchQuery, (value) => {
+watch(searchQuery, () => {
     clearTimeout(window._searchTimeout);
+
     window._searchTimeout = setTimeout(() => {
         handleFilter();
     }, 300);
 });
+
+const checkUrlForModal = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+
+    const openId = urlParams.get("open");
+
+    if (!openId) return;
+
+    const parsedId = Number(openId);
+    const item = props.data?.data?.find((item) => Number(item.id) === parsedId);
+
+    if (!item) return;
+    openViewModal(item);
+
+    setTimeout(() => {
+        const url = new URL(window.location.href);
+
+        url.searchParams.delete("open");
+
+        window.history.replaceState({}, "", url.toString());
+    }, 100);
+};
+
+watch(
+    () => props.data?.data,
+    (newData) => {
+        if (!newData?.length) return;
+
+        checkUrlForModal();
+    },
+    {
+        immediate: true,
+        deep: true,
+    },
+);
 </script>
 
 <template>
@@ -125,7 +174,7 @@ watch(searchQuery, (value) => {
                         <select
                             v-model="activeTab"
                             @change="handleFilter"
-                            class="h-12 w-full md:w-1/4 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium"
+                            class="h-12 w-full md:w-1/3 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium"
                         >
                             <option value="all">All Types</option>
                             <option value="announcements">Announcements</option>
@@ -225,11 +274,9 @@ watch(searchQuery, (value) => {
         </Card>
 
         <Dialog :open="isDialogOpen" @update:open="isDialogOpen = $event">
-            <DialogContent class="sm:max-w-[600px]">
+            <DialogContent class="max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle
-                        class="text-2xl text-brand-blue font-extrabold"
-                    >
+                    <DialogTitle class="text-2xl font-bold text-brand-blue">
                         View
                         {{
                             viewData.types === "announcements"
