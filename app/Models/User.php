@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
@@ -80,6 +82,7 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $hidden = [
+        // Fixed: keep credentials hidden
         'password',
         'remember_token',
     ];
@@ -128,15 +131,17 @@ class User extends Authenticatable
         return $this->belongsTo(Status::class);
     }
 
-    public function salaryEmployee()
+    public function salaryEmployee(): HasOne
     {
         return $this->hasOne(SalaryEmployee::class, 'user_id');
     }
-    public function otps()
+
+    public function otps(): HasMany
     {
         return $this->hasMany(UserOtp::class);
     }
-    public function notifications()
+
+    public function notifications(): HasMany
     {
         return $this->hasMany(Notification::class);
     }

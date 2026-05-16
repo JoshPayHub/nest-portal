@@ -402,13 +402,16 @@ const updateEmployeeStatus = () => {
                         v-model="newStatus"
                         class="w-full border rounded-md px-3 py-2"
                     >
-                        <option
-                            v-for="status in statuses"
-                            :key="status.id"
-                            :value="status.id"
-                        >
-                            {{ status.name }}
-                        </option>
+                        <!-- 1. Loop through statuses using a invisible <template> tag -->
+                        <template v-for="status in statuses" :key="status.id">
+                            <!-- 2. Only render the <option> if it's NOT 'pending' -->
+                            <option
+                                v-if="status.name.toLowerCase() !== 'pending'"
+                                :value="status.id"
+                            >
+                                {{ status.name }}
+                            </option>
+                        </template>
                     </select>
                 </div>
 

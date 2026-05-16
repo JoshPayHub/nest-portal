@@ -28,18 +28,18 @@ class CheckUserType
                 in_array(strtolower($userType), $restrictedTypes) &&
                 $user->status_id == 4
             ) {
-                $profileRoutes = [
-                    'employee' => 'employee.profile',
-                    'head'     => 'head.profile',
-                    'hr'       => 'hr.profile',
-                ];
+              $profileRoutes = [
+    'employee' => ['employee.profile', 'employee.profile.update', 'employee.profile.change-password'],
+    'head'     => ['head.profile', 'head.profile.update', 'head.profile.change-password'],
+    'hr'       => ['hr.profile', 'hr.profile.update', 'hr.profile.change-password'],
+];
 
-                $route = $profileRoutes[strtolower($userType)] ?? null;
+               $route = $profileRoutes[strtolower($userType)] ?? null;
 
-                if ($route && !$request->routeIs($route)) {
-                    return redirect()->route($route)
-                        ->with('message', 'Please complete your profile first.');
-                }
+if ($route && !$request->routeIs(...$route)) {
+    return redirect()->route($route[0]) // redirect to the GET profile route
+        ->with('message', 'Please complete your profile first.');
+}
             }
 
             return $next($request);

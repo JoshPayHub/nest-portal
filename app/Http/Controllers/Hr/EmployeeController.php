@@ -13,6 +13,7 @@ use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Carbon\Carbon;
 
 class EmployeeController extends Controller
@@ -47,7 +48,7 @@ class EmployeeController extends Controller
             'leave_pay' => 'required|numeric|min:0',
         ]);
 
-        $defaultPassword = 'password';
+        $defaultPassword = Str::password(10, letters: true, numbers: true, symbols: false, spaces: false);
 
         $user = User::create([
             'employee_id' => $validated['employee_id'],
