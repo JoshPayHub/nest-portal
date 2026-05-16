@@ -63,6 +63,7 @@ class AccomplishmentReportController extends Controller
                     'id' => $report->id,
                     'user_id' => $report->user_id,
                     'employee_name' => $report->user->first_name . ' ' . $report->user->last_name,
+                    'profile_photo' => $report->user->profile_photo,
                     'department_name' => $report->user->department->name ?? 'N/A',
                     'report_date' => $report->created_at->format('M d, Y'),
                     'period_from' => $report->from_date ? Carbon::parse($report->from_date)->format('M d, Y') : '',

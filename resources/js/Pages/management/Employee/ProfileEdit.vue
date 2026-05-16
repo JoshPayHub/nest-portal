@@ -349,12 +349,12 @@ const submitPassword = () => {
                                     { key: 'first_name', label: 'First Name' },
                                     {
                                         key: 'middle_name',
-                                        label: 'Middle Name',
+                                        label: 'Middle Name (Optional)',
                                     },
                                     { key: 'last_name', label: 'Last Name' },
                                     {
                                         key: 'suffix',
-                                        label: 'Suffix',
+                                        label: 'Suffix (Optional)',
                                         type: 'select',
                                         options: [
                                             'N/A',
@@ -402,17 +402,22 @@ const submitPassword = () => {
                                     {{ field.label }}
                                 </label>
 
+                                <!-- Select Fields -->
                                 <select
                                     v-if="field.type === 'select'"
                                     v-model="form[field.key]"
-                                    class="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+                                    class="flex h-10 w-full rounded-md border bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
                                     :class="
                                         form.errors[field.key]
-                                            ? 'border-red-500'
-                                            : ''
+                                            ? 'border-red-500 text-red-500 focus-visible:ring-red-500'
+                                            : 'border-slate-200 text-slate-900'
                                     "
                                     @change="clearError(field.key)"
                                 >
+                                    <!-- Disabled Placeholder Option -->
+                                    <option value="" disabled selected hidden>
+                                        Select {{ field.label }}
+                                    </option>
                                     <option
                                         v-for="opt in field.options"
                                         :key="opt"
@@ -422,6 +427,7 @@ const submitPassword = () => {
                                     </option>
                                 </select>
 
+                                <!-- Input/Date Fields -->
                                 <Input
                                     v-else
                                     v-model="form[field.key]"
@@ -430,12 +436,13 @@ const submitPassword = () => {
                                     class="bg-white"
                                     :class="
                                         form.errors[field.key]
-                                            ? 'border-red-500'
-                                            : ''
+                                            ? 'border-red-500 focus-visible:ring-red-500'
+                                            : 'border-slate-200'
                                     "
                                     @input="clearError(field.key)"
                                 />
 
+                                <!-- Error Message text -->
                                 <span
                                     v-if="form.errors[field.key]"
                                     class="text-red-500 text-xs mt-1"
@@ -467,7 +474,7 @@ const submitPassword = () => {
                                     },
                                     {
                                         key: 'telephone_number',
-                                        label: 'Telephone',
+                                        label: 'Telephone (Optional)',
                                     },
                                     {
                                         key: 'present_address',
@@ -540,8 +547,18 @@ const submitPassword = () => {
                                     v-model="form[field.key]"
                                     class="bg-white"
                                     :placeholder="field.label"
+                                    :class="
+                                        form.errors[field.key]
+                                            ? 'border-red-500'
+                                            : ''
+                                    "
                                     @input="clearError(field.key)"
                                 />
+                                <span
+                                    v-if="form.errors[field.key]"
+                                    class="text-red-500 text-sm mt-1"
+                                    >{{ form.errors[field.key] }}</span
+                                >
                             </div>
                         </div>
                     </section>
