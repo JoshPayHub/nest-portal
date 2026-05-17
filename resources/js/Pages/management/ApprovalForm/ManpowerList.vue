@@ -266,10 +266,26 @@ watch(
                                         class="font-semibold text-slate-800"
                                     >
                                         <div class="flex items-center gap-3">
+                                            <!-- Fallback Icon -->
                                             <div
+                                                v-if="
+                                                    item.profile_photo == null
+                                                "
                                                 class="p-2 bg-blue-50 rounded text-brand-blue"
                                             >
-                                                <UserCircle class="w-4 h-4" />
+                                                <UserCircle class="w-8 h-8" />
+                                            </div>
+
+                                            <!-- Profile Photo Wrapper -->
+                                            <div
+                                                v-else
+                                                class="w-12 h-12 bg-blue-50 rounded overflow-hidden border-2 grid place-items-center"
+                                            >
+                                                <img
+                                                    :src="`/storage/${item.profile_photo}`"
+                                                    class="w-full h-full object-cover"
+                                                    alt="Profile photo"
+                                                />
                                             </div>
                                             <div>
                                                 <p>

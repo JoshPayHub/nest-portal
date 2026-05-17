@@ -72,7 +72,8 @@ class ChangeOffController extends Controller
                 return [
                     'id'              => $req->id,
                     'employee_name'   => $req->user->first_name . ' ' . $req->user->last_name,
-                    'department_name' => $req->user->department->name ?? 'N/A', // Added department_name
+                    'department_name' => $req->user->department->name ?? 'N/A',
+                    'profile_photo'   => $req->user->profile_photo,
                     'date_filed'      => $req->created_at->format('M d, Y'),
                     'request_type'    => $req->label->off->name ?? 'N/A',
                     'original_date'   => $req->label ? Carbon::parse($req->label->original_date)->format('M d, Y') : 'N/A',

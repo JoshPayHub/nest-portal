@@ -9,6 +9,7 @@ import {
     Search,
     FileText,
     Settings2,
+    UserCircle,
 } from "lucide-vue-next";
 
 import { toastStore } from "@/stores/toast";
@@ -272,16 +273,46 @@ const updateEmployeeStatus = () => {
                                     :key="emp.id"
                                 >
                                     <TableCell>
-                                        <div class="flex flex-col">
-                                            <span class="font-bold">
-                                                {{ emp.employee_id || "N/A" }}
-                                            </span>
+                                        <div class="flex gap-2 items-center">
+                                            <div>
+                                                <!-- Fallback Icon -->
+                                                <div
+                                                    v-if="
+                                                        emp.profile_photo ==
+                                                        null
+                                                    "
+                                                    class="p-2 bg-blue-50 rounded text-brand-blue"
+                                                >
+                                                    <UserCircle
+                                                        class="w-8 h-8"
+                                                    />
+                                                </div>
 
-                                            <span
-                                                class="text-xs text-brand-blue"
-                                            >
-                                                @{{ emp.username }}
-                                            </span>
+                                                <!-- Profile Photo Wrapper -->
+                                                <div
+                                                    v-else
+                                                    class="w-12 h-12 bg-blue-50 rounded overflow-hidden border-2 grid place-items-center"
+                                                >
+                                                    <img
+                                                        :src="`/storage/${emp.profile_photo}`"
+                                                        class="w-full h-full object-cover"
+                                                        alt="Profile photo"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div class="flex flex-col">
+                                                <span class="font-bold">
+                                                    {{
+                                                        emp.employee_id || "N/A"
+                                                    }}
+                                                </span>
+
+                                                <span
+                                                    class="text-xs text-brand-blue"
+                                                >
+                                                    @{{ emp.username }}
+                                                </span>
+                                            </div>
                                         </div>
                                     </TableCell>
 
@@ -294,7 +325,6 @@ const updateEmployeeStatus = () => {
                                             <span
                                                 class="inline-flex items-center gap-1"
                                             >
-                                                <Users class="w-4 h-4" />
                                                 {{
                                                     emp.department?.name ??
                                                     "Unassigned"
@@ -304,7 +334,6 @@ const updateEmployeeStatus = () => {
                                             <span
                                                 class="inline-flex items-center gap-1 text-xs text-slate-500"
                                             >
-                                                <Briefcase class="w-4 h-4" />
                                                 {{
                                                     emp.position?.name ??
                                                     "No Position"

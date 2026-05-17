@@ -446,6 +446,7 @@ class PayrollCutOffController extends Controller
                     'id' => $item->id,
                     'user_id' => $item->user_id,
                     'employee_name' => $item->employee_name,
+                    'profile_photo' => $item->user?->profile_photo,
                     'department_name' => $item->department?->name ?? 'N/A',
                     'hr_status_id' => $item->hr_status_id,
                     'report_date' => $item->created_at->format('Y-m-d H:i:s'),

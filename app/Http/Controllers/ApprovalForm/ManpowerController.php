@@ -76,7 +76,8 @@ class ManpowerController extends Controller
                 return [
                     'id'              => $item->id,
                     'employee_name'   => $item->user->first_name . ' ' . $item->user->last_name,
-                    'department_name' => $item->user->department->name ?? 'N/A', // Added department_name
+                    'department_name' => $item->user->department->name ?? 'N/A',
+                    'profile_photo'   => $item->user->profile_photo,
                     'date_filed'      => $item->created_at->format('M d, Y'),
                     'date_required'   => Carbon::parse($item->date_required)->format('M d, Y'),
                     'position_type'   => $item->position_type,

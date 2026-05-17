@@ -82,6 +82,7 @@ class BusinessNotificationController extends Controller
                     'id'                 => $item->id,
                     'employee_name'      => $item->user->first_name . ' ' . $item->user->last_name,
                     'department_name'    => $item->user->department->name ?? 'N/A',
+                    'profile_photo'      => $item->user->profile_photo,
                     'date_filed'         => $item->created_at->format('M d, Y'),
                     'exact_date'         => Carbon::parse($item->exact_date)->format('M d, Y'),
                     'purposes'           => $item->purposes,

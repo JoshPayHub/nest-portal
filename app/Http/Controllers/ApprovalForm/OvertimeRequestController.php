@@ -84,6 +84,7 @@ class OvertimeRequestController extends Controller
                     'id'                 => $report->id,
                     'user_id'            => $report->user_id,
                     'employee_name'      => $report->user->first_name . ' ' . $report->user->last_name,
+                    'profile_photo'      => $report->user->profile_photo,
                     'department_name'    => $report->user->department->name ?? 'N/A',
                     'date_filed'         => $report->created_at?->format('M d, Y') ?? '',
                     'cut_off_date'       => $report->cut_off_date

@@ -112,6 +112,7 @@ class LeaveController extends Controller
                     'id'              => $leave->id,
                     'reference_no'    => $leave->reference_no,
                     'employee_name'   => $leave->user->first_name . ' ' . $leave->user->last_name,
+                    'profile_photo'   => $leave->user->profile_photo,
                     'department_name' => $leave->user->department->name ?? 'N/A',
                     'date_filed'      => $leave->created_at->format('M d, Y'),
                     'type_leave'      => $leave->type_leave,
