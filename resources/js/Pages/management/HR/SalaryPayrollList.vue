@@ -391,12 +391,30 @@ const goBack = () => router.get("/hr/salary-payroll");
                     <Table>
                         <TableHeader class="bg-slate-50">
                             <TableRow>
-                                <TableHead>Employee</TableHead>
-                                <TableHead>Total Earnings</TableHead>
-                                <TableHead>Total Deduction</TableHead>
-                                <TableHead>Take Home Pay</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead class="text-right">Action</TableHead>
+                                <TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs"
+                                    >Employee</TableHead
+                                >
+                                <TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs"
+                                    >Total Earnings</TableHead
+                                >
+                                <TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs"
+                                    >Total Deduction</TableHead
+                                >
+                                <TableHead
+                                    class="font-bold text-slate-600 uppercase text-xs"
+                                    >Take Home Pay</TableHead
+                                >
+                                <TableHead
+                                    class="font-bold text-slate-600 uppercase text-center text-xs"
+                                    >Status</TableHead
+                                >
+                                <TableHead
+                                    class="text-right font-bold text-slate-600 uppercase text-xs"
+                                    >Action</TableHead
+                                >
                             </TableRow>
                         </TableHeader>
 
@@ -407,9 +425,49 @@ const goBack = () => router.get("/hr/salary-payroll");
                                     :key="item.id"
                                     class="hover:bg-blue-50/30"
                                 >
-                                    <TableCell class="font-semibold">
-                                        {{ item.user.first_name }}
-                                        {{ item.user.last_name }}
+                                    <TableCell
+                                        class="font-semibold text-slate-800"
+                                    >
+                                        <div class="flex items-center gap-3">
+                                            <!-- Fallback Icon -->
+                                            <div
+                                                v-if="
+                                                    item.user.profile_photo ==
+                                                    null
+                                                "
+                                                class="p-2 bg-blue-50 rounded text-brand-blue"
+                                            >
+                                                <UserCircle class="w-8 h-8" />
+                                            </div>
+
+                                            <!-- Profile Photo Wrapper -->
+                                            <div
+                                                v-else
+                                                class="w-12 h-12 bg-blue-50 rounded overflow-hidden border-2 grid place-items-center"
+                                            >
+                                                <img
+                                                    :src="`/storage/${item.user.profile_photo}`"
+                                                    class="w-full h-full object-cover"
+                                                    alt="Profile photo"
+                                                />
+                                            </div>
+
+                                            <!-- Text Details -->
+                                            <div>
+                                                <p>
+                                                    {{ item.user.first_name }}
+                                                    {{ item.user.last_name }}
+                                                </p>
+                                                <p
+                                                    class="text-xs text-slate-500 font-normal"
+                                                >
+                                                    {{
+                                                        item.user.department
+                                                            ?.name
+                                                    }}
+                                                </p>
+                                            </div>
+                                        </div>
                                     </TableCell>
 
                                     <TableCell
@@ -432,7 +490,7 @@ const goBack = () => router.get("/hr/salary-payroll");
                                         }}
                                     </TableCell>
 
-                                    <TableCell>
+                                    <TableCell class="text-center">
                                         <span
                                             :class="[
                                                 'px-3 py-1 text-xs rounded-full font-bold',

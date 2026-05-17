@@ -209,6 +209,29 @@ watch(
     },
     { deep: true },
 );
+
+const tableScrollRef = ref(null);
+const isDragging = ref(false);
+const startX = ref(0);
+const scrollLeft = ref(0);
+
+function onDragStart(e) {
+    isDragging.value = true;
+    startX.value = e.pageX - tableScrollRef.value.offsetLeft;
+    scrollLeft.value = tableScrollRef.value.scrollLeft;
+}
+
+function onDragMove(e) {
+    if (!isDragging.value) return;
+    e.preventDefault();
+    const x = e.pageX - tableScrollRef.value.offsetLeft;
+    const walk = (x - startX.value) * 1.5; // scroll speed multiplier
+    tableScrollRef.value.scrollLeft = scrollLeft.value - walk;
+}
+
+function onDragEnd() {
+    isDragging.value = false;
+}
 </script>
 <template>
     <div class="p-6 space-y-8">
@@ -319,634 +342,671 @@ watch(
                 </div>
 
                 <div class="rounded-md border border-slate-200 overflow-hidden">
-                    <Table>
-                        <TableHeader class="bg-slate-50/50">
-                            <TableRow>
-                                <TableHead
-                                    class="font-bold text-slate-600 uppercase text-xs tracking-wider"
-                                    >Employee & Department</TableHead
-                                >
-
-                                <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs"
-                                    >Lates (hr)</TableHead
-                                >
-                                <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs"
-                                    >Undertime (hr)</TableHead
-                                >
-                                <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs"
-                                >
-                                    Absences
-                                </TableHead>
-
-                                <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs"
-                                >
-                                    Holiday
-                                </TableHead>
-                                <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs"
-                                    >Overtime (hr)</TableHead
-                                >
-
-                                <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs"
-                                    >Total</TableHead
-                                >
-                                <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs"
-                                    >Dept. Head</TableHead
-                                >
-                                <TableHead
-                                    class="text-center font-bold text-slate-600 uppercase text-xs"
-                                    >HR Status</TableHead
-                                >
-                                <TableHead
-                                    class="text-right font-bold text-slate-600 uppercase text-xs px-6"
-                                    >Actions</TableHead
-                                >
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            <template v-if="filteredReports.length > 0">
-                                <TableRow
-                                    v-for="report in filteredReports"
-                                    :key="report.id"
-                                    class="hover:bg-blue-50/30 transition-colors group items-start"
-                                >
-                                    <TableCell
-                                        class="font-semibold align-top text-slate-800"
+                    <div
+                        ref="tableScrollRef"
+                        class="overflow-x-auto cursor-grab active:cursor-grabbing select-none"
+                        @mousedown="onDragStart"
+                        @mousemove="onDragMove"
+                        @mouseup="onDragEnd"
+                        @mouseleave="onDragEnd"
+                    >
+                        <Table
+                            style="min-width: max-content; width: max-content"
+                        >
+                            <TableHeader class="bg-slate-50/50">
+                                <TableRow>
+                                    <TableHead
+                                        class="font-bold text-slate-600 uppercase text-xs tracking-wider"
+                                        >Employee & Department</TableHead
                                     >
-                                        <div class="flex items-center gap-3">
-                                            <div>
-                                                <!-- Fallback Icon -->
-                                                <div
+
+                                    <TableHead
+                                        class="text-center font-bold text-slate-600 uppercase text-xs"
+                                        >Lates (hr)</TableHead
+                                    >
+                                    <TableHead
+                                        class="text-center font-bold text-slate-600 uppercase text-xs"
+                                        >Undertime (hr)</TableHead
+                                    >
+                                    <TableHead
+                                        class="text-center font-bold text-slate-600 uppercase text-xs"
+                                    >
+                                        Absences
+                                    </TableHead>
+
+                                    <TableHead
+                                        class="text-center font-bold text-slate-600 uppercase text-xs"
+                                    >
+                                        Holiday
+                                    </TableHead>
+                                    <TableHead
+                                        class="text-center font-bold text-slate-600 uppercase text-xs"
+                                        >Overtime (hr)</TableHead
+                                    >
+
+                                    <TableHead
+                                        class="text-center font-bold text-slate-600 uppercase text-xs"
+                                        >Total</TableHead
+                                    >
+                                    <TableHead
+                                        class="text-center font-bold text-slate-600 uppercase text-xs"
+                                        >Dept. Head</TableHead
+                                    >
+                                    <TableHead
+                                        class="text-center font-bold text-slate-600 uppercase text-xs"
+                                        >HR Status</TableHead
+                                    >
+                                    <TableHead
+                                        class="text-right font-bold text-slate-600 uppercase text-xs px-6"
+                                        >Actions</TableHead
+                                    >
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                <template v-if="filteredReports.length > 0">
+                                    <TableRow
+                                        v-for="report in filteredReports"
+                                        :key="report.id"
+                                        class="hover:bg-blue-50/30 transition-colors group items-start"
+                                    >
+                                        <TableCell
+                                            class="font-semibold align-top text-slate-800"
+                                        >
+                                            <div
+                                                class="flex items-center gap-3"
+                                            >
+                                                <div>
+                                                    <!-- Fallback Icon -->
+                                                    <div
+                                                        v-if="
+                                                            report.profile_photo ==
+                                                            null
+                                                        "
+                                                        class="p-2 bg-blue-50 rounded text-brand-blue"
+                                                    >
+                                                        <UserCircle
+                                                            class="w-8 h-8"
+                                                        />
+                                                    </div>
+
+                                                    <!-- Profile Photo Wrapper -->
+                                                    <div
+                                                        v-else
+                                                        class="w-12 h-12 bg-blue-50 rounded overflow-hidden border-2 grid place-items-center"
+                                                    >
+                                                        <img
+                                                            :src="`/storage/${report.profile_photo}`"
+                                                            class="w-full h-full object-cover"
+                                                            alt="Profile photo"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <p>
+                                                        {{
+                                                            report.employee_name
+                                                        }}
+                                                    </p>
+                                                    <p
+                                                        class="text-xs text-slate-500 font-normal"
+                                                    >
+                                                        {{
+                                                            report.department_name
+                                                        }}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+
+                                        <TableCell
+                                            class="font-semibold align-top text-center text-slate-800"
+                                        >
+                                            <span
+                                                v-if="report.late_minutes > 0"
+                                            >
+                                                <template
                                                     v-if="
-                                                        report.profile_photo ==
-                                                        null
+                                                        report.late_minutes >=
+                                                        60
                                                     "
-                                                    class="p-2 bg-blue-50 rounded text-brand-blue"
                                                 >
-                                                    <UserCircle
-                                                        class="w-8 h-8"
-                                                    />
-                                                </div>
+                                                    {{
+                                                        Math.floor(
+                                                            report.late_minutes /
+                                                                60,
+                                                        )
+                                                    }}h
+                                                </template>
+                                                <template
+                                                    v-if="
+                                                        report.late_minutes %
+                                                            60 !==
+                                                        0
+                                                    "
+                                                >
+                                                    {{
+                                                        report.late_minutes %
+                                                        60
+                                                    }}m
+                                                </template>
+                                            </span>
+                                            <span v-else>0</span>
+                                        </TableCell>
 
-                                                <!-- Profile Photo Wrapper -->
-                                                <div
-                                                    v-else
-                                                    class="w-12 h-12 bg-blue-50 rounded overflow-hidden border-2 grid place-items-center"
-                                                >
-                                                    <img
-                                                        :src="`/storage/${report.profile_photo}`"
-                                                        class="w-full h-full object-cover"
-                                                        alt="Profile photo"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <p>
-                                                    {{ report.employee_name }}
-                                                </p>
-                                                <p
-                                                    class="text-xs text-slate-500 font-normal"
-                                                >
-                                                    {{ report.department_name }}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-
-                                    <TableCell
-                                        class="font-semibold align-top text-center text-slate-800"
-                                    >
-                                        <span v-if="report.late_minutes > 0">
-                                            <template
-                                                v-if="report.late_minutes >= 60"
+                                        <TableCell
+                                            class="font-semibold text-center align-top text-slate-800"
+                                        >
+                                            <span
+                                                v-if="
+                                                    (report.undertime_hours
+                                                        ?.h ?? 0) > 0
+                                                "
                                             >
                                                 {{
-                                                    Math.floor(
-                                                        report.late_minutes /
-                                                            60,
-                                                    )
+                                                    report.undertime_hours?.h ??
+                                                    0
                                                 }}h
-                                            </template>
-                                            <template
-                                                v-if="
-                                                    report.late_minutes % 60 !==
-                                                    0
-                                                "
-                                            >
-                                                {{ report.late_minutes % 60 }}m
-                                            </template>
-                                        </span>
-                                        <span v-else>0</span>
-                                    </TableCell>
+                                            </span>
 
-                                    <TableCell
-                                        class="font-semibold text-center align-top text-slate-800"
-                                    >
-                                        <span
-                                            v-if="
-                                                (report.undertime_hours?.h ??
-                                                    0) > 0
-                                            "
-                                        >
-                                            {{
-                                                report.undertime_hours?.h ?? 0
-                                            }}h
-                                        </span>
-
-                                        <span
-                                            v-if="
-                                                (report.undertime_hours?.m ??
-                                                    0) > 0
-                                            "
-                                        >
-                                            {{
-                                                report.undertime_hours?.m ?? 0
-                                            }}m
-                                        </span>
-
-                                        <span
-                                            v-if="
-                                                (report.undertime_hours?.h ??
-                                                    0) === 0 &&
-                                                (report.undertime_hours?.m ??
-                                                    0) === 0
-                                            "
-                                        >
-                                            0
-                                        </span>
-                                    </TableCell>
-
-                                    <TableCell
-                                        class="p-2 w-[150px] min-w-[150px] align-top"
-                                    >
-                                        <div
-                                            class="grid grid-cols-2 text-center font-semibold text-[11px]"
-                                        >
-                                            <div
-                                                class="border-b border-r border-slate-100 p-1"
-                                            >
-                                                <span
-                                                    class="block text-[9px] uppercase text-slate-500"
-                                                    >Paid</span
-                                                >
-                                                <span>{{
-                                                    report.paid_leaves || 0
-                                                }}</span>
-                                            </div>
-
-                                            <div
-                                                class="border-b border-slate-100 p-1"
-                                            >
-                                                <span
-                                                    class="block text-[9px] uppercase text-slate-500"
-                                                    >Unpaid</span
-                                                >
-                                                <span class="text-[9px]">{{
-                                                    report.unpaid_leaves || 0
-                                                }}</span>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-
-                                    <TableCell
-                                        class="p-2 w-[150px] min-w-[150px] align-top"
-                                    >
-                                        <div
-                                            class="grid grid-cols-2 text-center font-semibold text-[11px]"
-                                        >
-                                            <div
-                                                class="border-b border-r border-slate-100 p-1"
-                                            >
-                                                <span
-                                                    class="block text-[9px] uppercase text-slate-500"
-                                                    >Regular</span
-                                                >
-                                                <span>{{
-                                                    report.regular_holiday_count ||
-                                                    0
-                                                }}</span>
-                                            </div>
-
-                                            <div
-                                                class="border-b border-slate-100 p-1"
-                                            >
-                                                <span
-                                                    class="block text-[9px] uppercase text-slate-500"
-                                                    >Special</span
-                                                >
-                                                <span>{{
-                                                    report.special_holiday_count ||
-                                                    0
-                                                }}</span>
-                                            </div>
-
-                                            <div
-                                                class="border-slate-100 border-r p-1"
-                                            >
-                                                <span
-                                                    class="block text-[9px] uppercase text-slate-500"
-                                                    >RD Reg</span
-                                                >
-                                                <span>{{
-                                                    report.rd_regular_holiday_count ||
-                                                    0
-                                                }}</span>
-                                            </div>
-
-                                            <div class="border-slate-100 p-1">
-                                                <span
-                                                    class="block text-[9px] uppercase text-slate-500"
-                                                    >RD Spec</span
-                                                >
-                                                <span>{{
-                                                    report.rd_special_holiday_count ||
-                                                    0
-                                                }}</span>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-
-                                    <TableCell
-                                        class="p-2 w-[250px] min-w-[250px] align-top"
-                                    >
-                                        <div
-                                            class="grid grid-cols-3 text-center font-semibold text-[11px]"
-                                        >
-                                            <div
-                                                class="border-b border-r border-slate-100 p-1"
-                                            >
-                                                <span
-                                                    class="block text-[9px] uppercase text-slate-500"
-                                                    >Reg OT</span
-                                                >
-                                                <template
-                                                    v-if="
-                                                        (report
-                                                            .regular_overtime_hours
-                                                            ?.h || 0) > 0 ||
-                                                        (report
-                                                            .regular_overtime_hours
-                                                            ?.m || 0) > 0
-                                                    "
-                                                >
-                                                    <span
-                                                        v-if="
-                                                            report
-                                                                .regular_overtime_hours
-                                                                ?.h
-                                                        "
-                                                        >{{
-                                                            report
-                                                                .regular_overtime_hours
-                                                                .h
-                                                        }}h
-                                                    </span>
-                                                    <span
-                                                        v-if="
-                                                            report
-                                                                .regular_overtime_hours
-                                                                ?.m
-                                                        "
-                                                        >{{
-                                                            report
-                                                                .regular_overtime_hours
-                                                                .m
-                                                        }}m</span
-                                                    >
-                                                </template>
-                                                <span v-else>0</span>
-                                            </div>
-
-                                            <div
-                                                class="border-b border-r border-slate-100 p-1"
-                                            >
-                                                <span
-                                                    class="block text-[9px] uppercase text-slate-500"
-                                                    >RD OT</span
-                                                >
-                                                <template
-                                                    v-if="
-                                                        (report
-                                                            .rd_overtime_hours
-                                                            ?.h || 0) > 0 ||
-                                                        (report
-                                                            .rd_overtime_hours
-                                                            ?.m || 0) > 0
-                                                    "
-                                                >
-                                                    <span
-                                                        v-if="
-                                                            report
-                                                                .rd_overtime_hours
-                                                                ?.h
-                                                        "
-                                                        >{{
-                                                            report
-                                                                .rd_overtime_hours
-                                                                .h
-                                                        }}h
-                                                    </span>
-                                                    <span
-                                                        v-if="
-                                                            report
-                                                                .rd_overtime_hours
-                                                                ?.m
-                                                        "
-                                                        >{{
-                                                            report
-                                                                .rd_overtime_hours
-                                                                .m
-                                                        }}m</span
-                                                    >
-                                                </template>
-                                                <span v-else>0</span>
-                                            </div>
-
-                                            <div
-                                                class="border-b border-slate-100 p-1"
-                                            >
-                                                <span
-                                                    class="block text-[9px] uppercase text-slate-500"
-                                                    >Reg Hol OT</span
-                                                >
-                                                <template
-                                                    v-if="
-                                                        (report
-                                                            .regular_holiday_overtime_hours
-                                                            ?.h || 0) > 0 ||
-                                                        (report
-                                                            .regular_holiday_overtime_hours
-                                                            ?.m || 0) > 0
-                                                    "
-                                                >
-                                                    <span
-                                                        v-if="
-                                                            report
-                                                                .regular_holiday_overtime_hours
-                                                                ?.h
-                                                        "
-                                                        >{{
-                                                            report
-                                                                .regular_holiday_overtime_hours
-                                                                .h
-                                                        }}h
-                                                    </span>
-                                                    <span
-                                                        v-if="
-                                                            report
-                                                                .regular_holiday_overtime_hours
-                                                                ?.m
-                                                        "
-                                                        >{{
-                                                            report
-                                                                .regular_holiday_overtime_hours
-                                                                .m
-                                                        }}m</span
-                                                    >
-                                                </template>
-                                                <span v-else>0</span>
-                                            </div>
-
-                                            <div
-                                                class="border-r border-slate-100 p-1"
-                                            >
-                                                <span
-                                                    class="block text-[9px] uppercase text-slate-500"
-                                                    >Spec Hol OT</span
-                                                >
-                                                <template
-                                                    v-if="
-                                                        (report
-                                                            .special_overtime_hours
-                                                            ?.h || 0) > 0 ||
-                                                        (report
-                                                            .special_overtime_hours
-                                                            ?.m || 0) > 0
-                                                    "
-                                                >
-                                                    <span
-                                                        v-if="
-                                                            report
-                                                                .special_overtime_hours
-                                                                ?.h
-                                                        "
-                                                        >{{
-                                                            report
-                                                                .special_overtime_hours
-                                                                .h
-                                                        }}h
-                                                    </span>
-                                                    <span
-                                                        v-if="
-                                                            report
-                                                                .special_overtime_hours
-                                                                ?.m
-                                                        "
-                                                        >{{
-                                                            report
-                                                                .special_overtime_hours
-                                                                .m
-                                                        }}m</span
-                                                    >
-                                                </template>
-                                                <span v-else>0</span>
-                                            </div>
-
-                                            <div
-                                                class="border-r border-slate-100 p-1"
-                                            >
-                                                <span
-                                                    class="block text-[9px] uppercase text-slate-500"
-                                                    >RD Reg Hol OT</span
-                                                >
-                                                <template
-                                                    v-if="
-                                                        (report
-                                                            .rd_regular_overtime_hours
-                                                            ?.h || 0) > 0 ||
-                                                        (report
-                                                            .rd_regular_overtime_hours
-                                                            ?.m || 0) > 0
-                                                    "
-                                                >
-                                                    <span
-                                                        v-if="
-                                                            report
-                                                                .rd_regular_overtime_hours
-                                                                ?.h
-                                                        "
-                                                        >{{
-                                                            report
-                                                                .rd_regular_overtime_hours
-                                                                .h
-                                                        }}h
-                                                    </span>
-                                                    <span
-                                                        v-if="
-                                                            report
-                                                                .rd_regular_overtime_hours
-                                                                ?.m
-                                                        "
-                                                        >{{
-                                                            report
-                                                                .rd_regular_overtime_hours
-                                                                .m
-                                                        }}m</span
-                                                    >
-                                                </template>
-                                                <span v-else>0</span>
-                                            </div>
-
-                                            <div class="p-1">
-                                                <span
-                                                    class="block text-[9px] uppercase text-slate-500"
-                                                    >RD Spec Hol OT</span
-                                                >
-                                                <template
-                                                    v-if="
-                                                        (report
-                                                            .rd_special_overtime_hours
-                                                            ?.h || 0) > 0 ||
-                                                        (report
-                                                            .rd_special_overtime_hours
-                                                            ?.m || 0) > 0
-                                                    "
-                                                >
-                                                    <span
-                                                        v-if="
-                                                            report
-                                                                .rd_special_overtime_hours
-                                                                ?.h
-                                                        "
-                                                        >{{
-                                                            report
-                                                                .rd_special_overtime_hours
-                                                                .h
-                                                        }}h
-                                                    </span>
-                                                    <span
-                                                        v-if="
-                                                            report
-                                                                .rd_special_overtime_hours
-                                                                ?.m
-                                                        "
-                                                        >{{
-                                                            report
-                                                                .rd_special_overtime_hours
-                                                                .m
-                                                        }}m</span
-                                                    >
-                                                </template>
-                                                <span v-else>0</span>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-
-                                    <TableCell
-                                        class="font-semibold text-center align-top p-2 text-slate-800"
-                                    >
-                                        <div>
                                             <span
                                                 v-if="
-                                                    report.total_summary.days >
+                                                    (report.undertime_hours
+                                                        ?.m ?? 0) > 0
+                                                "
+                                            >
+                                                {{
+                                                    report.undertime_hours?.m ??
                                                     0
-                                                "
-                                                >{{
-                                                    report.total_summary.days
-                                                }}d</span
-                                            >
-                                            <span
-                                                v-if="
-                                                    report.total_summary.hours >
-                                                    0
-                                                "
-                                                >{{
-                                                    report.total_summary.hours
-                                                }}h</span
-                                            >
-                                            <span
-                                                v-if="
-                                                    report.total_summary
-                                                        .minutes > 0
-                                                "
-                                                >{{
-                                                    report.total_summary
-                                                        .minutes
-                                                }}m</span
-                                            >
-                                            <span
-                                                v-if="
-                                                    report.total_summary
-                                                        .days === 0 &&
-                                                    report.total_summary
-                                                        .hours === 0 &&
-                                                    report.total_summary
-                                                        .minutes === 0
-                                                "
-                                                >0m</span
-                                            >
-                                        </div>
-                                    </TableCell>
+                                                }}m
+                                            </span>
 
-                                    <TableCell class="text-center align-top">
-                                        <Badge
-                                            variant="outline"
-                                            :class="
-                                                getStatusClass(
-                                                    report.leader_status_name,
-                                                )
-                                            "
+                                            <span
+                                                v-if="
+                                                    (report.undertime_hours
+                                                        ?.h ?? 0) === 0 &&
+                                                    (report.undertime_hours
+                                                        ?.m ?? 0) === 0
+                                                "
+                                            >
+                                                0
+                                            </span>
+                                        </TableCell>
+
+                                        <TableCell
+                                            class="p-2 w-[150px] min-w-[150px] align-top"
                                         >
-                                            {{
-                                                report.leader_status_name ||
-                                                "Pending"
-                                            }}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell class="text-center align-top">
-                                        <Badge
-                                            variant="outline"
-                                            :class="
-                                                getStatusClass(
-                                                    report.hr_status_name,
-                                                )
-                                            "
+                                            <div
+                                                class="grid grid-cols-2 text-center font-semibold text-[11px]"
+                                            >
+                                                <div
+                                                    class="border-b border-r border-slate-100 p-1"
+                                                >
+                                                    <span
+                                                        class="block text-[9px] uppercase text-slate-500"
+                                                        >Paid</span
+                                                    >
+                                                    <span>{{
+                                                        report.paid_leaves || 0
+                                                    }}</span>
+                                                </div>
+
+                                                <div
+                                                    class="border-b border-slate-100 p-1"
+                                                >
+                                                    <span
+                                                        class="block text-[9px] uppercase text-slate-500"
+                                                        >Unpaid</span
+                                                    >
+                                                    <span class="text-[9px]">{{
+                                                        report.unpaid_leaves ||
+                                                        0
+                                                    }}</span>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+
+                                        <TableCell
+                                            class="p-2 w-[150px] min-w-[150px] align-top"
                                         >
-                                            {{
-                                                report.hr_status_name ||
-                                                "Pending"
-                                            }}
-                                        </Badge>
-                                    </TableCell>
+                                            <div
+                                                class="grid grid-cols-2 text-center font-semibold text-[11px]"
+                                            >
+                                                <div
+                                                    class="border-b border-r border-slate-100 p-1"
+                                                >
+                                                    <span
+                                                        class="block text-[9px] uppercase text-slate-500"
+                                                        >Regular</span
+                                                    >
+                                                    <span>{{
+                                                        report.regular_holiday_count ||
+                                                        0
+                                                    }}</span>
+                                                </div>
+
+                                                <div
+                                                    class="border-b border-slate-100 p-1"
+                                                >
+                                                    <span
+                                                        class="block text-[9px] uppercase text-slate-500"
+                                                        >Special</span
+                                                    >
+                                                    <span>{{
+                                                        report.special_holiday_count ||
+                                                        0
+                                                    }}</span>
+                                                </div>
+
+                                                <div
+                                                    class="border-slate-100 border-r p-1"
+                                                >
+                                                    <span
+                                                        class="block text-[9px] uppercase text-slate-500"
+                                                        >RD Reg</span
+                                                    >
+                                                    <span>{{
+                                                        report.rd_regular_holiday_count ||
+                                                        0
+                                                    }}</span>
+                                                </div>
+
+                                                <div
+                                                    class="border-slate-100 p-1"
+                                                >
+                                                    <span
+                                                        class="block text-[9px] uppercase text-slate-500"
+                                                        >RD Spec</span
+                                                    >
+                                                    <span>{{
+                                                        report.rd_special_holiday_count ||
+                                                        0
+                                                    }}</span>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+
+                                        <TableCell
+                                            class="p-2 w-[250px] min-w-[250px] align-top"
+                                        >
+                                            <div
+                                                class="grid grid-cols-3 text-center font-semibold text-[11px]"
+                                            >
+                                                <div
+                                                    class="border-b border-r border-slate-100 p-1"
+                                                >
+                                                    <span
+                                                        class="block text-[9px] uppercase text-slate-500"
+                                                        >Reg OT</span
+                                                    >
+                                                    <template
+                                                        v-if="
+                                                            (report
+                                                                .regular_overtime_hours
+                                                                ?.h || 0) > 0 ||
+                                                            (report
+                                                                .regular_overtime_hours
+                                                                ?.m || 0) > 0
+                                                        "
+                                                    >
+                                                        <span
+                                                            v-if="
+                                                                report
+                                                                    .regular_overtime_hours
+                                                                    ?.h
+                                                            "
+                                                            >{{
+                                                                report
+                                                                    .regular_overtime_hours
+                                                                    .h
+                                                            }}h
+                                                        </span>
+                                                        <span
+                                                            v-if="
+                                                                report
+                                                                    .regular_overtime_hours
+                                                                    ?.m
+                                                            "
+                                                            >{{
+                                                                report
+                                                                    .regular_overtime_hours
+                                                                    .m
+                                                            }}m</span
+                                                        >
+                                                    </template>
+                                                    <span v-else>0</span>
+                                                </div>
+
+                                                <div
+                                                    class="border-b border-r border-slate-100 p-1"
+                                                >
+                                                    <span
+                                                        class="block text-[9px] uppercase text-slate-500"
+                                                        >RD OT</span
+                                                    >
+                                                    <template
+                                                        v-if="
+                                                            (report
+                                                                .rd_overtime_hours
+                                                                ?.h || 0) > 0 ||
+                                                            (report
+                                                                .rd_overtime_hours
+                                                                ?.m || 0) > 0
+                                                        "
+                                                    >
+                                                        <span
+                                                            v-if="
+                                                                report
+                                                                    .rd_overtime_hours
+                                                                    ?.h
+                                                            "
+                                                            >{{
+                                                                report
+                                                                    .rd_overtime_hours
+                                                                    .h
+                                                            }}h
+                                                        </span>
+                                                        <span
+                                                            v-if="
+                                                                report
+                                                                    .rd_overtime_hours
+                                                                    ?.m
+                                                            "
+                                                            >{{
+                                                                report
+                                                                    .rd_overtime_hours
+                                                                    .m
+                                                            }}m</span
+                                                        >
+                                                    </template>
+                                                    <span v-else>0</span>
+                                                </div>
+
+                                                <div
+                                                    class="border-b border-slate-100 p-1"
+                                                >
+                                                    <span
+                                                        class="block text-[9px] uppercase text-slate-500"
+                                                        >Reg Hol OT</span
+                                                    >
+                                                    <template
+                                                        v-if="
+                                                            (report
+                                                                .regular_holiday_overtime_hours
+                                                                ?.h || 0) > 0 ||
+                                                            (report
+                                                                .regular_holiday_overtime_hours
+                                                                ?.m || 0) > 0
+                                                        "
+                                                    >
+                                                        <span
+                                                            v-if="
+                                                                report
+                                                                    .regular_holiday_overtime_hours
+                                                                    ?.h
+                                                            "
+                                                            >{{
+                                                                report
+                                                                    .regular_holiday_overtime_hours
+                                                                    .h
+                                                            }}h
+                                                        </span>
+                                                        <span
+                                                            v-if="
+                                                                report
+                                                                    .regular_holiday_overtime_hours
+                                                                    ?.m
+                                                            "
+                                                            >{{
+                                                                report
+                                                                    .regular_holiday_overtime_hours
+                                                                    .m
+                                                            }}m</span
+                                                        >
+                                                    </template>
+                                                    <span v-else>0</span>
+                                                </div>
+
+                                                <div
+                                                    class="border-r border-slate-100 p-1"
+                                                >
+                                                    <span
+                                                        class="block text-[9px] uppercase text-slate-500"
+                                                        >Spec Hol OT</span
+                                                    >
+                                                    <template
+                                                        v-if="
+                                                            (report
+                                                                .special_overtime_hours
+                                                                ?.h || 0) > 0 ||
+                                                            (report
+                                                                .special_overtime_hours
+                                                                ?.m || 0) > 0
+                                                        "
+                                                    >
+                                                        <span
+                                                            v-if="
+                                                                report
+                                                                    .special_overtime_hours
+                                                                    ?.h
+                                                            "
+                                                            >{{
+                                                                report
+                                                                    .special_overtime_hours
+                                                                    .h
+                                                            }}h
+                                                        </span>
+                                                        <span
+                                                            v-if="
+                                                                report
+                                                                    .special_overtime_hours
+                                                                    ?.m
+                                                            "
+                                                            >{{
+                                                                report
+                                                                    .special_overtime_hours
+                                                                    .m
+                                                            }}m</span
+                                                        >
+                                                    </template>
+                                                    <span v-else>0</span>
+                                                </div>
+
+                                                <div
+                                                    class="border-r border-slate-100 p-1"
+                                                >
+                                                    <span
+                                                        class="block text-[9px] uppercase text-slate-500"
+                                                        >RD Reg Hol OT</span
+                                                    >
+                                                    <template
+                                                        v-if="
+                                                            (report
+                                                                .rd_regular_overtime_hours
+                                                                ?.h || 0) > 0 ||
+                                                            (report
+                                                                .rd_regular_overtime_hours
+                                                                ?.m || 0) > 0
+                                                        "
+                                                    >
+                                                        <span
+                                                            v-if="
+                                                                report
+                                                                    .rd_regular_overtime_hours
+                                                                    ?.h
+                                                            "
+                                                            >{{
+                                                                report
+                                                                    .rd_regular_overtime_hours
+                                                                    .h
+                                                            }}h
+                                                        </span>
+                                                        <span
+                                                            v-if="
+                                                                report
+                                                                    .rd_regular_overtime_hours
+                                                                    ?.m
+                                                            "
+                                                            >{{
+                                                                report
+                                                                    .rd_regular_overtime_hours
+                                                                    .m
+                                                            }}m</span
+                                                        >
+                                                    </template>
+                                                    <span v-else>0</span>
+                                                </div>
+
+                                                <div class="p-1">
+                                                    <span
+                                                        class="block text-[9px] uppercase text-slate-500"
+                                                        >RD Spec Hol OT</span
+                                                    >
+                                                    <template
+                                                        v-if="
+                                                            (report
+                                                                .rd_special_overtime_hours
+                                                                ?.h || 0) > 0 ||
+                                                            (report
+                                                                .rd_special_overtime_hours
+                                                                ?.m || 0) > 0
+                                                        "
+                                                    >
+                                                        <span
+                                                            v-if="
+                                                                report
+                                                                    .rd_special_overtime_hours
+                                                                    ?.h
+                                                            "
+                                                            >{{
+                                                                report
+                                                                    .rd_special_overtime_hours
+                                                                    .h
+                                                            }}h
+                                                        </span>
+                                                        <span
+                                                            v-if="
+                                                                report
+                                                                    .rd_special_overtime_hours
+                                                                    ?.m
+                                                            "
+                                                            >{{
+                                                                report
+                                                                    .rd_special_overtime_hours
+                                                                    .m
+                                                            }}m</span
+                                                        >
+                                                    </template>
+                                                    <span v-else>0</span>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+
+                                        <TableCell
+                                            class="font-semibold text-center align-top p-2 text-slate-800"
+                                        >
+                                            <div>
+                                                <span
+                                                    v-if="
+                                                        report.total_summary
+                                                            .days > 0
+                                                    "
+                                                    >{{
+                                                        report.total_summary
+                                                            .days
+                                                    }}d</span
+                                                >
+                                                <span
+                                                    v-if="
+                                                        report.total_summary
+                                                            .hours > 0
+                                                    "
+                                                    >{{
+                                                        report.total_summary
+                                                            .hours
+                                                    }}h</span
+                                                >
+                                                <span
+                                                    v-if="
+                                                        report.total_summary
+                                                            .minutes > 0
+                                                    "
+                                                    >{{
+                                                        report.total_summary
+                                                            .minutes
+                                                    }}m</span
+                                                >
+                                                <span
+                                                    v-if="
+                                                        report.total_summary
+                                                            .days === 0 &&
+                                                        report.total_summary
+                                                            .hours === 0 &&
+                                                        report.total_summary
+                                                            .minutes === 0
+                                                    "
+                                                    >0m</span
+                                                >
+                                            </div>
+                                        </TableCell>
+
+                                        <TableCell
+                                            class="text-center align-top"
+                                        >
+                                            <Badge
+                                                variant="outline"
+                                                :class="
+                                                    getStatusClass(
+                                                        report.leader_status_name,
+                                                    )
+                                                "
+                                            >
+                                                {{
+                                                    report.leader_status_name ||
+                                                    "Pending"
+                                                }}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell
+                                            class="text-center align-top"
+                                        >
+                                            <Badge
+                                                variant="outline"
+                                                :class="
+                                                    getStatusClass(
+                                                        report.hr_status_name,
+                                                    )
+                                                "
+                                            >
+                                                {{
+                                                    report.hr_status_name ||
+                                                    "Pending"
+                                                }}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell
+                                            class="text-right px-6 align-top"
+                                        >
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                @click="openView(report)"
+                                                class="h-8 w-8 p-0 text-brand-blue hover:bg-blue-50"
+                                            >
+                                                <Eye class="w-4 h-4" />
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                </template>
+                                <TableRow v-else>
                                     <TableCell
-                                        class="text-right px-6 align-top"
+                                        colspan="12"
+                                        class="text-center text-slate-500 py-10 italic"
+                                        >No records found.</TableCell
                                     >
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            @click="openView(report)"
-                                            class="h-8 w-8 p-0 text-brand-blue hover:bg-blue-50"
-                                        >
-                                            <Eye class="w-4 h-4" />
-                                        </Button>
-                                    </TableCell>
                                 </TableRow>
-                            </template>
-                            <TableRow v-else>
-                                <TableCell
-                                    colspan="12"
-                                    class="text-center text-slate-500 py-10 italic"
-                                    >No records found.</TableCell
-                                >
-                            </TableRow>
-                        </TableBody>
-                    </Table>
+                            </TableBody>
+                        </Table>
+                    </div>
                 </div>
                 <Pagination :links="reports" />
             </CardContent>
