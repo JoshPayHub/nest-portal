@@ -59,15 +59,15 @@ const form = useForm({
 const totalDaysRequested = computed(() => {
     if (!form.start_date || !form.end_date) return 0;
 
-    const start = new Date(form.start_date);
-    const end = new Date(form.end_date);
+    const start = new Date(form.start_date + "T00:00:00");
+    const end = new Date(form.end_date + "T00:00:00");
 
-    const diff = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    const diffTime = end.getTime() - start.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
-    return diff > 0 ? diff : 0;
+    return diffDays > 0 ? diffDays : 0;
 });
 
-// ❗ validation ONLY (not balance computation)
 const isBalanceInvalid = computed(() => {
     return (
         form.type_leave === "Leave with Pay" &&
@@ -250,11 +250,12 @@ const submit = () => {
 
                 <div class="col-span-12 md:col-span-4">
                     <Label class="p-1">Total Days</Label>
-                    <Input
-                        :value="totalDaysRequested"
-                        readonly
-                        class="bg-slate-50 font-extrabold text-center"
-                    />
+
+                    <div
+                        class="h-10 w-full rounded-md border border-input bg-slate-50 px-3 py-2 text-center font-extrabold flex items-center justify-center"
+                    >
+                        {{ totalDaysRequested }}
+                    </div>
                 </div>
 
                 <!-- Reason -->

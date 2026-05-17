@@ -52,7 +52,10 @@ class ChangeOffController extends Controller
     public function create(Request $request)
     {
         $user = $request->user()->load(['department', 'position']);
-        $days = DB::table('offs')->get();
+        $days = DB::table('offs')
+        ->whereNotIn('name', ['time', 'day'])
+        ->orderBy('id')
+        ->get();
 
         return Inertia::render('management/Employee/ChangeOff', [
             'authUser' => [
@@ -105,7 +108,10 @@ class ChangeOffController extends Controller
     public function edit(Request $request, $id)
     {
         $user = $request->user()->load(['department', 'position']);
-        $days = DB::table('offs')->get();
+        $days = DB::table('offs')
+        ->whereNotIn('name', ['time', 'day'])
+        ->orderBy('id')
+        ->get();
 
         $report = ChangeOff::with(['label', 'approvalStatuses.status'])->find($id);
         $userTypeId = $request->user()->user_type_id;

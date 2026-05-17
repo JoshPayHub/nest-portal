@@ -56,6 +56,11 @@ const menuItems = {
             icon: "fa-solid fa-gauge",
         },
         {
+            label: "My Profile",
+            href: "/hr/profile",
+            icon: "fa-solid fa-user-gear",
+        },
+        {
             label: "Announcements & Policies",
             href: "/hr/announcements-policies",
             icon: "fa-solid fa-scroll",

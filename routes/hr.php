@@ -17,6 +17,7 @@ use App\Http\Controllers\Hr\EmployeeListController;
 use App\Http\Controllers\Hr\HolidayController;
 use App\Http\Controllers\Hr\PayrollCutOffController;
 use App\Http\Controllers\Hr\PositionController;
+use App\Http\Controllers\Hr\ProfileController;
 use App\Http\Controllers\Hr\SalaryDeductionsController;
 use App\Http\Controllers\Hr\SalaryEmployeeController;
 use App\Http\Controllers\Hr\SalaryPayrollController;
@@ -27,6 +28,13 @@ Route::middleware(['auth', 'user.status', 'user_type:HR'])->prefix('hr')->name('
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/notification', [NotificationController::class, 'index'])->name('notification.index');
+
+    // Profile
+    Route::controller(ProfileController::class)->group(function () {
+        Route::get('/profile', 'index')->name('profile');
+        Route::put('/profile/update', 'update')->name('profile.update');
+        Route::put('/profile/change-password', 'changePassword')->name('profile.change-password');
+    });
 
     Route::controller(AnnouncementPolicyController::class)->group(function () {
         Route::get('/announcements-policies', 'index')->name('announcementpolicy.index');
