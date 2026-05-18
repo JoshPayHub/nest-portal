@@ -22,17 +22,30 @@ Route::post('/notifications/mark-all-read', [NotificationController::class, 'mar
 Route::get('/storage-link', function () {
     $target = storage_path('app/public');
     $link = public_path('storage');
+
+    $info = [
+        'target_path' => $target,
+        'link_path' => $link,
+        'target_exists' => file_exists($target),
+        'link_is_symlink' => is_link($link),
+        'link_is_dir' => is_dir($link),
+        'link_exists' => file_exists($link),
+    ];
+
     if (is_link($link)) {
-        return 'Symlink already exists!';
+        return response()->json(array_merge($info, ['status' => '⚠️ Symlink already exists!']));
     }
 
     if (is_dir($link)) {
         rmdir($link);
     }
 
-    if (symlink($target, $link)) {
-        return 'Symlink created successfully!';
-    }
+    $result = symlink($target, $link);
+
+    return response()->json(array_merge($info, [
+        'status' => $result ? '✅ Symlink created!' : '❌ symlink() failed',
+        'symlink_enabled' => function_exists('symlink'),
+    ]));
 });
 
 require __DIR__ . '/auth.php';
