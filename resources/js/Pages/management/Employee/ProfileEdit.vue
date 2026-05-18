@@ -97,12 +97,14 @@ const preview = ref(null);
 // ✅ FIX: now reactive (NO MORE refresh issue)
 const existingPhoto = computed(() =>
     employee.value?.profile_photo
-        ? `/storage/${employee.value.profile_photo}`
+        ? `/storage/app/public/${employee.value.profile_photo}`
         : null,
 );
 
 const existingResume = computed(() =>
-    employee.value?.resume ? `/storage/${employee.value.resume}` : null,
+    employee.value?.resume
+        ? `/storage/app/public/${employee.value.resume}`
+        : null,
 );
 
 const loading = ref(false);
