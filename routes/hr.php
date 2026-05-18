@@ -32,8 +32,8 @@ Route::middleware(['auth', 'user.status', 'user_type:HR'])->prefix('hr')->name('
     // Profile
     Route::controller(ProfileController::class)->group(function () {
         Route::get('/profile', 'index')->name('profile');
-        Route::put('/profile/update', 'update')->name('profile.update');
-        Route::put('/profile/change-password', 'changePassword')->name('profile.change-password');
+        Route::post('/profile/update', 'update')->name('profile.update');
+        Route::post('/profile/change-password', 'changePassword')->name('profile.change-password');
     });
 
     Route::controller(AnnouncementPolicyController::class)->group(function () {
