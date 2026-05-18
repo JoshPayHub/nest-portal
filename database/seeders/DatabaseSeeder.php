@@ -13,8 +13,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
         StatusSeeder::class,
         UserTypeSeeder::class,
-        DepartmentSeeder::class,
-        PositionSeeder::class,
+        // DepartmentSeeder::class,
+        // PositionSeeder::class,
         OffSeeder::class,
         DeductionSettingSeeder::class,
         TaxBracketSeeder::class,
@@ -36,38 +36,38 @@ class DatabaseSeeder extends Seeder
                 'username' => 'hradmin',
                 'mobile' => '09123123121'
             ],
-            [
-                'user_type_id' => 2,
-                'first_name' => 'Standard',
-                'last_name' => 'Employee',
-                'email' => 'employee@gmail.com',
-                'username' => 'standard_user',
-                'mobile' => '09123123122'
-            ],
-            [
-                'user_type_id' => 3,
-                'first_name' => 'Department',
-                'last_name' => 'Head',
-                'email' => 'head@gmail.com',
-                'username' => 'depthead',
-                'mobile' => '09123123123'
-            ],
-            [
-                'user_type_id' => 4,
-                'first_name' => 'Super',
-                'last_name' => 'Admin',
-                'email' => 'superadmin@gmail.com',
-                'username' => 'superadmin',
-                'mobile' => '09123123124'
-            ],
-            [
-                'user_type_id' => 5,
-                'first_name' => 'Supervisor',
-                'last_name' => 'User',
-                'email' => 'supervisor@gmail.com',
-                'username' => 'supervisor',
-                'mobile' => '09123123321'
-            ],
+            // [
+            //     'user_type_id' => 2,
+            //     'first_name' => 'Standard',
+            //     'last_name' => 'Employee',
+            //     'email' => 'employee@gmail.com',
+            //     'username' => 'standard_user',
+            //     'mobile' => '09123123122'
+            // ],
+            // [
+            //     'user_type_id' => 3,
+            //     'first_name' => 'Department',
+            //     'last_name' => 'Head',
+            //     'email' => 'head@gmail.com',
+            //     'username' => 'depthead',
+            //     'mobile' => '09123123123'
+            // ],
+            // [
+            //     'user_type_id' => 4,
+            //     'first_name' => 'Super',
+            //     'last_name' => 'Admin',
+            //     'email' => 'superadmin@gmail.com',
+            //     'username' => 'superadmin',
+            //     'mobile' => '09123123124'
+            // ],
+            // [
+            //     'user_type_id' => 5,
+            //     'first_name' => 'Supervisor',
+            //     'last_name' => 'User',
+            //     'email' => 'supervisor@gmail.com',
+            //     'username' => 'supervisor',
+            //     'mobile' => '09123123321'
+            // ],
         ];
 
         // 4. Create Specific Test Users
