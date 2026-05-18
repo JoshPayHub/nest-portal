@@ -30,11 +30,11 @@ class DatabaseSeeder extends Seeder
         $testUsers = [
             [
                 'user_type_id' => 1,
-                'first_name' => 'HR',
-                'last_name' => 'Admin',
-                'email' => 'hr@gmail.com',
-                'username' => 'hradmin',
-                'mobile' => '09123123121'
+                'first_name' => 'Cherry-lynn',
+                'last_name' => 'Allapitan',
+                'email' => 'cherry.allapitan@happiestnestmcs.com',
+                'username' => 'cherry.allapitan',
+                'mobile' => '09173696462'
             ],
             // [
             //     'user_type_id' => 2,
