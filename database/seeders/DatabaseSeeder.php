@@ -13,8 +13,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
         StatusSeeder::class,
         UserTypeSeeder::class,
-        DepartmentSeeder::class,
-        PositionSeeder::class,
+        // DepartmentSeeder::class,
+        // PositionSeeder::class,
         OffSeeder::class,
         DeductionSettingSeeder::class,
         TaxBracketSeeder::class,
@@ -22,8 +22,8 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // 2. Setup Default Values
-        $defaultDept = 1;
-        $defaultPos = 1;
+        // $defaultDept = 1;
+        // $defaultPos = 1;
         $defaultStatus = 1;
 
         // 3. Define the specific users you need
@@ -79,8 +79,8 @@ class DatabaseSeeder extends Seeder
                 'username'     => $user['username'],
                 'company_email' => $user['email'],
                 'mobile_number' => $user['mobile'],
-                'department_id' => $defaultDept,
-                'position_id'   => $defaultPos,
+                // 'department_id' => $defaultDept,
+                // 'position_id'   => $defaultPos,
                 'status_id'     => $defaultStatus,
             ]);
         }

@@ -13,8 +13,8 @@ class UserTypeSeeder extends Seeder
             ['id' => 1, 'name' => 'HR'],
             ['id' => 2, 'name' => 'Employee'],
             ['id' => 3, 'name' => 'Head'],
-            ['id' => 4, 'name' => 'Admin'],
-            ['id' => 5, 'name' => 'Supervisor'],
+            // ['id' => 4, 'name' => 'Admin'],
+            // ['id' => 5, 'name' => 'Supervisor'],
         ]);
     }
 }

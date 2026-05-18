@@ -17,8 +17,8 @@ class UserFactory extends Factory
         return [
             // Foreign Keys (Defaults)
             'user_type_id' => 2,
-            'department_id' => 1,
-            'position_id' => 1,
+            // 'department_id' => 1,
+            // 'position_id' => 1,
             'status_id' => 1,
 
             // Basic Info
