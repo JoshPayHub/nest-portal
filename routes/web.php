@@ -22,12 +22,17 @@ Route::post('/notifications/mark-all-read', [NotificationController::class, 'mar
 Route::get('/storage-link', function () {
     $target = storage_path('app/public');
     $link = public_path('storage');
-
-    if (!file_exists($link)) {
-        mkdir($link, 0755, true);
+    if (is_link($link)) {
+        return 'Symlink already exists!';
     }
 
-    return 'Storage folder ready';
+    if (is_dir($link)) {
+        rmdir($link);
+    }
+
+    if (symlink($target, $link)) {
+        return 'Symlink created successfully!';
+    }
 });
 
 require __DIR__ . '/auth.php';
