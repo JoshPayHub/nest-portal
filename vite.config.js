@@ -23,23 +23,24 @@ export default defineConfig({
             "@": path.resolve(__dirname, "./resources/js"),
         },
     },
-    // 3. Add the build block to manage chunk splitting
+    // 3. Optimized build block to eliminate circular chunk warnings
     build: {
-        chunkSizeWarningLimit: 600, // Slightly raise warning cap from 500kB to 600kB if needed
+        chunkSizeWarningLimit: 600,
         rollupOptions: {
             output: {
                 manualChunks(id) {
-                    // Split vendor libraries inside node_modules
                     if (id.includes("node_modules")) {
-                        // Isolate Vue core and related ecosystem pieces
-                        if (id.includes("vue") || id.includes("@vue/")) {
-                            return "vendor-vue";
+                        // Grouping Vue ecosystem + shared utils into one core chunk
+                        // completely stops the circular loop.
+                        if (
+                            id.includes("vue") ||
+                            id.includes("@vue") ||
+                            id.includes("axios") ||
+                            id.includes("@vueuse")
+                        ) {
+                            return "vendor-core";
                         }
-                        // Isolate utilities like axios, @vueuse, etc.
-                        if (id.includes("axios") || id.includes("@vueuse")) {
-                            return "vendor-utils";
-                        }
-                        // Fallback generic chunk name for everything else in node_modules
+                        // Fallback generic chunk name for other dependencies (Inertia, etc.)
                         return "vendor";
                     }
                 },
