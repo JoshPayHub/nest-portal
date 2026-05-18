@@ -91,12 +91,14 @@ const form = useForm({
 
 const existingPhoto = computed(() => {
     return props.employee?.profile_photo
-        ? `/storage/${props.employee.profile_photo}`
+        ? `/storage/app/public/${props.employee.profile_photo}`
         : null;
 });
 
 const existingResume = computed(() => {
-    return props.employee?.resume ? `/storage/${props.employee.resume}` : null;
+    return props.employee?.resume
+        ? `/storage/app/public/${props.employee.resume}`
+        : null;
 });
 
 const preview = ref(null);

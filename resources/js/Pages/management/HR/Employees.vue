@@ -294,7 +294,7 @@ const updateEmployeeStatus = () => {
                                                     class="w-12 h-12 bg-blue-50 rounded overflow-hidden border-2 grid place-items-center"
                                                 >
                                                     <img
-                                                        :src="`/storage/${emp.profile_photo}`"
+                                                        :src="`/storage/app/public/${emp.profile_photo}`"
                                                         class="w-full h-full object-cover"
                                                         alt="Profile photo"
                                                     />

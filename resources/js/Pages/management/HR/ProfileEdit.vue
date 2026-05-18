@@ -61,7 +61,7 @@ const preview = ref(null);
 
 const existingPhoto = computed(() =>
     employee.value?.profile_photo
-        ? `/storage/${employee.value.profile_photo}`
+        ? `/storage/app/public/${employee.value.profile_photo}`
         : null,
 );
 

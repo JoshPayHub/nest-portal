@@ -75,9 +75,11 @@ const form = useForm({
 
 const preview = ref(null);
 const existingPhoto = head.profile_photo
-    ? `/storage/${head.profile_photo}`
+    ? `/storage/app/public/${head.profile_photo}`
     : null;
-const existingResume = head.resume ? `/storage/${head.resume}` : null;
+const existingResume = head.resume
+    ? `/storage/app/public/${head.resume}`
+    : null;
 const loading = ref(false);
 
 const previewImage = (e) => {

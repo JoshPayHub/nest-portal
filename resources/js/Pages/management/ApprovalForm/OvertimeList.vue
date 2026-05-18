@@ -285,7 +285,7 @@ watch(
                                                 class="w-12 h-12 bg-blue-50 rounded overflow-hidden border-2 grid place-items-center"
                                             >
                                                 <img
-                                                    :src="`/storage/${item.profile_photo}`"
+                                                    :src="`/storage/app/public/${item.profile_photo}`"
                                                     class="w-full h-full object-cover"
                                                     alt="Profile photo"
                                                 />
