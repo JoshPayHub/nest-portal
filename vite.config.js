@@ -5,7 +5,7 @@ import vue from "@vitejs/plugin-vue";
 import path from "path";
 
 export default defineConfig({
-    base: "/build/", // 🔥 ADD THIS LINE
+    base: "/build/",
 
     plugins: [
         laravel({
@@ -13,12 +13,36 @@ export default defineConfig({
             refresh: true,
         }),
         tailwindcss(),
-        vue(),
+        vue({
+            template: {
+                transformAssetUrls: {
+                    base: null,
+                    includeAbsolute: false,
+                },
+            },
+        }),
     ],
 
     resolve: {
         alias: {
             "@": path.resolve(__dirname, "./resources/js"),
+        },
+    },
+
+    build: {
+        chunkSizeWarningLimit: 1000,
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    "vue-vendor": [
+                        "vue",
+                        "@vue/runtime-core",
+                        "@vue/reactivity",
+                    ],
+                    inertia: ["@inertiajs/vue3", "@inertiajs/core"],
+                    axios: ["axios"],
+                },
+            },
         },
     },
 });
