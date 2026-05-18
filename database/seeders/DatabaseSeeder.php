@@ -13,8 +13,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
         StatusSeeder::class,
         UserTypeSeeder::class,
-        // DepartmentSeeder::class,
-        // PositionSeeder::class,
+        DepartmentSeeder::class,
+        PositionSeeder::class,
         OffSeeder::class,
         DeductionSettingSeeder::class,
         TaxBracketSeeder::class,
@@ -79,8 +79,8 @@ class DatabaseSeeder extends Seeder
                 'username'     => $user['username'],
                 'company_email' => $user['email'],
                 'mobile_number' => $user['mobile'],
-                // 'department_id' => $defaultDept,
-                // 'position_id'   => $defaultPos,
+                'department_id' => $defaultDept,
+                'position_id'   => $defaultPos,
                 'status_id'     => $defaultStatus,
             ]);
         }
