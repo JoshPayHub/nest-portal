@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import laravel from "laravel-vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import vue from "@vitejs/plugin-vue";
-import path from "path";
+import path from "path"; // 1. Import the path module
 
 export default defineConfig({
     plugins: [
@@ -17,21 +17,10 @@ export default defineConfig({
         tailwindcss(),
         vue(),
     ],
+    // 2. Add the resolve block to handle the "@" alias
     resolve: {
         alias: {
             "@": path.resolve(__dirname, "./resources/js"),
-        },
-    },
-    build: {
-        chunkSizeWarningLimit: 600,
-        rollupOptions: {
-            output: {
-                manualChunks(id) {
-                    if (id.includes("node_modules")) {
-                        return "vendor";
-                    }
-                },
-            },
         },
     },
 });
