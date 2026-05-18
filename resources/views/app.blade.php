@@ -6,7 +6,7 @@
     <!-- Prevent mobile scaling -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 
-    <link rel="shortcut icon" href="{{ Vite::asset('resources/js/assets/dashboard/logo.png') }}">
+    <link rel="shortcut icon" href="{{ asset('assets/dashboard/logo.png') }}">
 
     <title>NEST PORTAL</title>
 
