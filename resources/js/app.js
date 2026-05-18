@@ -8,11 +8,10 @@ import Layout from "./Layouts/Layout.vue";
 
 createInertiaApp({
     title: (title) => `My App ${title}`,
-    resolve: (name) => {
-        const pages = import.meta.glob("./Pages/**/*.vue", { eager: true });
-        const page = pages[`./Pages/${name}.vue`];
+    resolve: async (name) => {
+        const pages = import.meta.glob("./Pages/**/*.vue", { eager: false });
+        const page = await pages[`./Pages/${name}.vue`]();
 
-        // Layout.vue only
         if (name.startsWith("management/")) {
             page.default.layout = page.default.layout || Layout;
         }
