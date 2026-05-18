@@ -19,6 +19,16 @@ Route::get('/forgot-password', function () {
 Route::post('/notifications/{id}/mark-as-read', [NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
 Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead'])->name('notifications.markAllRead');
 
+Route::get('/storage-link', function () {
+    $target = storage_path('app/public');
+    $link = public_path('storage');
+
+    if (!file_exists($link)) {
+        mkdir($link, 0755, true);
+    }
+
+    return 'Storage folder ready';
+});
 
 require __DIR__ . '/auth.php';
 require __DIR__ . '/hr.php';
