@@ -37,9 +37,8 @@ const routeMap = {
 
 const baseRoute = routeMap[auth_user_type_id];
 
+// PROFILE FORM
 const form = useForm({
-    _method: "put",
-
     // editable
     first_name: employee.value.first_name ?? "",
     middle_name: employee.value.middle_name ?? "",
@@ -98,6 +97,8 @@ const submit = () => {
 
         onSuccess: () => {
             toastStore.show("Profile updated successfully!", "success");
+
+            form.clearErrors();
 
             router.reload({
                 only: ["employee"],
@@ -163,7 +164,7 @@ const submitPassword = () => {
 
     passwordForm.clearErrors();
 
-    passwordForm.put(`/${baseRoute}/profile/change-password`, {
+    passwordForm.post(`/${baseRoute}/profile/change-password`, {
         preserveScroll: true,
 
         onSuccess: () => {
@@ -172,6 +173,8 @@ const submitPassword = () => {
             isPasswordModalOpen.value = false;
 
             passwordForm.reset();
+
+            passwordForm.clearErrors();
         },
 
         onError: () => {
