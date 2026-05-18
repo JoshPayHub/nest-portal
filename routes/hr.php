@@ -81,9 +81,9 @@ Route::middleware(['auth', 'user.status', 'user_type:HR'])->prefix('hr')->name('
     });
 
     Route::controller(SalaryEmployeeController::class)->group(function () {
-        Route::get('/salary-employee', 'index')->name('payrollcutoff.index');
-        Route::post('/salary-employee/store', 'store')->name('payrollcutoff.store');
-        Route::post('/salary-employee/update/{id}', 'update')->name('payrollcutoff.update');
+        Route::get('/salary-employee', 'index')->name('salaryemployee.index');
+        Route::post('/salary-employee/store', 'store')->name('salaryemployee.store');
+        Route::post('/salary-employee/update/{id}', 'update')->name('salaryemployee.update');
     });
 
     Route::controller(SalaryDeductionsController::class)->group(function () {
