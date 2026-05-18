@@ -23,29 +23,11 @@ Route::get('/storage-link', function () {
     $target = storage_path('app/public');
     $link = public_path('storage');
 
-    $info = [
-        'target_path' => $target,
-        'link_path' => $link,
-        'target_exists' => file_exists($target),
-        'link_is_symlink' => is_link($link),
-        'link_is_dir' => is_dir($link),
-        'link_exists' => file_exists($link),
-    ];
-
-    if (is_link($link)) {
-        return response()->json(array_merge($info, ['status' => '⚠️ Symlink already exists!']));
+    if (!file_exists($link)) {
+        mkdir($link, 0755, true);
     }
 
-    if (is_dir($link)) {
-        rmdir($link);
-    }
-
-    $result = symlink($target, $link);
-
-    return response()->json(array_merge($info, [
-        'status' => $result ? '✅ Symlink created!' : '❌ symlink() failed',
-        'symlink_enabled' => function_exists('symlink'),
-    ]));
+    return 'Storage folder ready';
 });
 
 require __DIR__ . '/auth.php';
