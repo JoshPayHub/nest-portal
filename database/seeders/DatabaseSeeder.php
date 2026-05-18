@@ -13,8 +13,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
         StatusSeeder::class,
         UserTypeSeeder::class,
-        // DepartmentSeeder::class,
-        // PositionSeeder::class,
+        DepartmentSeeder::class,
+        PositionSeeder::class,
         OffSeeder::class,
         DeductionSettingSeeder::class,
         TaxBracketSeeder::class,
