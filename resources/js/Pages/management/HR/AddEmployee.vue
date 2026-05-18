@@ -151,10 +151,6 @@ const submit = () => {
         },
     });
 };
-
-const filteredUserTypes = computed(() => {
-    return props.userTypes.filter((type) => [2, 3].includes(type.id));
-});
 </script>
 
 <template>
@@ -313,10 +309,8 @@ const filteredUserTypes = computed(() => {
                                         'text-red-500':
                                             form.errors.user_type_id,
                                     }"
+                                    >User Type (Role)</label
                                 >
-                                    User Type (Role)
-                                </label>
-
                                 <select
                                     v-model="form.user_type_id"
                                     class="flex h-10 w-full rounded-md border bg-white px-3 text-sm focus:border-brand-blue outline-none transition-colors"
@@ -328,16 +322,14 @@ const filteredUserTypes = computed(() => {
                                     }"
                                 >
                                     <option value="">Select Role</option>
-
                                     <option
-                                        v-for="type in filteredUserTypes"
+                                        v-for="type in userTypes"
                                         :key="type.id"
                                         :value="type.id"
                                     >
                                         {{ type.name }}
                                     </option>
                                 </select>
-
                                 <p
                                     v-if="form.errors.user_type_id"
                                     class="text-xs text-red-500 mt-1"
