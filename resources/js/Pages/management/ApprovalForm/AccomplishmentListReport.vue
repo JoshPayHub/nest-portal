@@ -18,7 +18,7 @@ import { toastStore } from "@/stores/toast";
 
 // UI Components
 import { Button } from "@/Components/ui/button";
-import { Input } from "@/Components/ui/input";
+import { Input } from "@/Components/ui/Input";
 import {
     Card,
     CardHeader,
